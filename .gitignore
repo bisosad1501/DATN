@@ -1,0 +1,188 @@
+# ============================================
+# Environment Variables
+# ============================================
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# Go
+# ============================================
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.txt
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# ============================================
+# IDEs and Editors
+# ============================================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (GoLand, IntelliJ IDEA, etc.)
+.idea/
+*.iml
+*.iws
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# Operating System
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
+# Docker
+# ============================================
+# Docker volumes (managed by docker-compose)
+# Note: We keep docker-compose.yml versioned
+
+# ============================================
+# Database
+# ============================================
+# Backup files
+*.sql.gz
+*.sql.bak
+backup_*.sql
+
+# PostgreSQL
+*.pid
+postmaster.pid
+
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Uploads & Media
+# ============================================
+uploads/
+temp/
+tmp/
+*.mp3
+*.wav
+*.m4a
+*.mp4
+*.avi
+*.mov
+
+# Exceptions (keep sample files if any)
+!samples/
+
+# ============================================
+# AI Models
+# ============================================
+models/
+*.h5
+*.pkl
+*.pt
+*.pth
+*.onnx
+*.pb
+
+# ============================================
+# Certificates & Keys
+# ============================================
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Service account keys
+*-key.json
+serviceAccountKey.json
+
+# ============================================
+# Documentation Build
+# ============================================
+docs/_build/
+docs/.doctrees/
+site/
+
+# ============================================
+# Testing
+# ============================================
+.test/
+test-results/
+coverage/
+
+# ============================================
+# Miscellaneous
+# ============================================
+.cache/
+.npm/
+.yarn/
+node_modules/
+package-lock.json
+yarn.lock
+
+# ============================================
+# Project Specific
+# ============================================
+# Don't ignore example files
+!.env.example
+!database/schemas/
+!database/init/
+
+# Ignore actual database data (Docker volumes handle this)
+postgres_data/
+redis_data/
+rabbitmq_data/
+
+# Ignore compiled binaries
+api-gateway/api-gateway
+services/*/cmd/main
