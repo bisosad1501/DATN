@@ -1,0 +1,350 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL Databases
+  # ============================================
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: ielts_postgres
+    environment:
+      POSTGRES_USER: ielts_admin
+      POSTGRES_PASSWORD: ielts_password_2025
+      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,course_db,exercise_db,ai_db,notification_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/schemas:/schemas
+    networks:
+      - ielts_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ielts_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis Cache
+  # ============================================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: ielts_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ielts_network
+    command: redis-server --appendonly yes --requirepass ielts_redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ============================================
+  # RabbitMQ Message Queue
+  # ============================================
+  
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ielts_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ielts_admin
+      RABBITMQ_DEFAULT_PASS: ielts_rabbitmq_password
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ielts_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # PgAdmin - Database Management UI
+  # ============================================
+  
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ielts_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ielts.local
+      PGADMIN_DEFAULT_PASSWORD: admin_password
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - ielts_network
+    depends_on:
+      - postgres
+
+  # ============================================
+  # API Gateway
+  # ============================================
+  
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: ielts_api_gateway
+    environment:
+      - PORT=8080
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - COURSE_SERVICE_URL=http://course-service:8083
+      - EXERCISE_SERVICE_URL=http://exercise-service:8084
+      - AI_SERVICE_URL=http://ai-service:8085
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8086
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - JWT_SECRET=your_jwt_secret_key_change_in_production
+    ports:
+      - "8080:8080"
+    networks:
+      - ielts_network
+    depends_on:
+      - redis
+      - rabbitmq
+    restart: unless-stopped
+
+  # ============================================
+  # Auth Service
+  # ============================================
+  
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: ielts_auth_service
+    environment:
+      - PORT=8081
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ielts_admin
+      - DB_PASSWORD=ielts_password_2025
+      - DB_NAME=auth_db
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - JWT_SECRET=your_jwt_secret_key_change_in_production
+      - JWT_EXPIRY=24h
+      - REFRESH_TOKEN_EXPIRY=168h
+    ports:
+      - "8081:8081"
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================
+  # User Service
+  # ============================================
+  
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: ielts_user_service
+    environment:
+      - PORT=8082
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ielts_admin
+      - DB_PASSWORD=ielts_password_2025
+      - DB_NAME=user_db
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
+    ports:
+      - "8082:8082"
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================
+  # Course Service
+  # ============================================
+  
+  course-service:
+    build:
+      context: ./services/course-service
+      dockerfile: Dockerfile
+    container_name: ielts_course_service
+    environment:
+      - PORT=8083
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ielts_admin
+      - DB_PASSWORD=ielts_password_2025
+      - DB_NAME=course_db
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
+      - VIDEO_STORAGE_PATH=/uploads/videos
+      - MATERIALS_STORAGE_PATH=/uploads/materials
+    ports:
+      - "8083:8083"
+    volumes:
+      - course_uploads:/uploads
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================
+  # Exercise Service
+  # ============================================
+  
+  exercise-service:
+    build:
+      context: ./services/exercise-service
+      dockerfile: Dockerfile
+    container_name: ielts_exercise_service
+    environment:
+      - PORT=8084
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ielts_admin
+      - DB_PASSWORD=ielts_password_2025
+      - DB_NAME=exercise_db
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
+      - AUDIO_STORAGE_PATH=/uploads/audio
+    ports:
+      - "8084:8084"
+    volumes:
+      - exercise_uploads:/uploads
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================
+  # AI Service
+  # ============================================
+  
+  ai-service:
+    build:
+      context: ./services/ai-service
+      dockerfile: Dockerfile
+    container_name: ielts_ai_service
+    environment:
+      - PORT=8085
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ielts_admin
+      - DB_PASSWORD=ielts_password_2025
+      - DB_NAME=ai_db
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AUDIO_STORAGE_PATH=/uploads/audio
+      # Add other AI service API keys as needed
+    ports:
+      - "8085:8085"
+    volumes:
+      - ai_uploads:/uploads
+      - ai_models:/models
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================
+  # Notification Service
+  # ============================================
+  
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: ielts_notification_service
+    environment:
+      - PORT=8086
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ielts_admin
+      - DB_PASSWORD=ielts_password_2025
+      - DB_NAME=notification_db
+      - REDIS_URL=redis://:ielts_redis_password@redis:6379
+      - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
+      # Firebase Cloud Messaging for push notifications
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      # Email service configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    ports:
+      - "8086:8086"
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ============================================
+# Networks
+# ============================================
+
+networks:
+  ielts_network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  course_uploads:
+    driver: local
+  exercise_uploads:
+    driver: local
+  ai_uploads:
+    driver: local
+  ai_models:
+    driver: local
