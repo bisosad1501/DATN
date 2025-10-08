@@ -16,9 +16,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Stores basic authentication credentials
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
+    phone VARCHAR(20),
+    
+    -- OAuth fields
+    google_id VARCHAR(255),
+    oauth_provider VARCHAR(50),
     
     -- Account status
     is_active BOOLEAN DEFAULT true,
@@ -38,9 +42,12 @@ CREATE TABLE users (
 );
 
 -- Indexes for users table
-CREATE INDEX idx_users_email ON users(email) WHERE deleted_at IS NULL;
-CREATE INDEX idx_users_phone ON users(phone) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_users_email_unique ON users(email) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_users_phone_unique ON users(phone) WHERE phone IS NOT NULL AND deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_users_google_id_unique ON users(google_id) WHERE google_id IS NOT NULL AND deleted_at IS NULL;
 CREATE INDEX idx_users_active ON users(is_active) WHERE deleted_at IS NULL;
+CREATE INDEX idx_users_created_at ON users(created_at) WHERE deleted_at IS NULL;
+CREATE INDEX idx_users_oauth_provider ON users(oauth_provider) WHERE deleted_at IS NULL;
 
 -- ============================================
 -- ROLES TABLE

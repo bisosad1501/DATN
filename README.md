@@ -1,6 +1,37 @@
 # IELTS Learning Platform - Backend Microservices
 
-## 📋 Tổng quan
+## 🚀 Quick Start (cho Team Members)
+
+```bash
+# Clone và khởi động hệ thống
+git clone https://github.com/bisosad1501/DATN.git
+cd DATN
+make start
+
+# Đợi ~30 giây để hệ thống khởi động, sau đó:
+# ✅ Auth Service: http://localhost:8081
+# ✅ PgAdmin: http://localhost:5050 (admin@ielts.local / admin_password)
+# ✅ RabbitMQ: http://localhost:15672 (admin / admin123)
+```
+
+**Chi tiết**: Xem [TEAM_SETUP.md](./TEAM_SETUP.md) để hướng dẫn đầy đủ.
+
+---ng Platform - Backend Microservices
+
+## � Quick Start (cho Team Members)
+
+```bash
+# Clone và khởi động hệ thống trong 2 lệnh
+git clone <repository-url>
+cd DATN
+make start
+```
+
+**Chi tiết**: Xem [TEAM_SETUP.md](./TEAM_SETUP.md) để hướng dẫn đầy đủ.
+
+---
+
+## �📋 Tổng quan
 
 Hệ thống học IELTS trực tuyến với kiến trúc microservices, được xây dựng bằng Golang và PostgreSQL.
 
