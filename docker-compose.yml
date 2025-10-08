@@ -75,8 +75,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: ielts_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@ielts.local
-      PGADMIN_DEFAULT_PASSWORD: admin_password
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "5050:80"
