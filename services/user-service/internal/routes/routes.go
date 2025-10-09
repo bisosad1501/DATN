@@ -31,6 +31,37 @@ func SetupRoutes(handler *handlers.UserHandler, authMiddleware *middleware.AuthM
 			// Study sessions
 			user.POST("/sessions", handler.StartSession)
 			user.POST("/sessions/:id/end", handler.EndSession)
+
+			// Study goals
+			user.POST("/goals", handler.CreateGoal)
+			user.GET("/goals", handler.GetGoals)
+			user.GET("/goals/:id", handler.GetGoalByID)
+			user.PUT("/goals/:id", handler.UpdateGoal)
+			user.POST("/goals/:id/complete", handler.CompleteGoal)
+			user.DELETE("/goals/:id", handler.DeleteGoal)
+
+			// Statistics
+			user.GET("/statistics", handler.GetStatistics)
+			user.GET("/statistics/:skill", handler.GetSkillStatistics)
+
+			// Achievements
+			user.GET("/achievements", handler.GetAchievements)
+			user.GET("/achievements/earned", handler.GetEarnedAchievements)
+
+			// Preferences
+			user.GET("/preferences", handler.GetPreferences)
+			user.PUT("/preferences", handler.UpdatePreferences)
+
+			// Study reminders
+			user.POST("/reminders", handler.CreateReminder)
+			user.GET("/reminders", handler.GetReminders)
+			user.PUT("/reminders/:id", handler.UpdateReminder)
+			user.DELETE("/reminders/:id", handler.DeleteReminder)
+			user.PUT("/reminders/:id/toggle", handler.ToggleReminder)
+
+			// Leaderboard
+			user.GET("/leaderboard", handler.GetLeaderboard)
+			user.GET("/leaderboard/rank", handler.GetUserRank)
 		}
 	}
 

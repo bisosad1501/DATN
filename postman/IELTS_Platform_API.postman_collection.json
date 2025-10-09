@@ -1406,11 +1406,591 @@
 								}
 							]
 						},
-					"description": "Get study session history"
+						"description": "Get study session history"
+					}
+				},
+				{
+					"name": "User Preferences",
+					"item": [
+						{
+							"name": "Get Preferences",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Preferences retrieved', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('theme');",
+											"    pm.expect(jsonData.data).to.have.property('font_size');",
+											"    pm.expect(jsonData.data).to.have.property('email_notifications');",
+											"    console.log('User preferences:', jsonData.data);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/preferences",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "preferences"]
+								},
+								"description": "Get user preferences. Auto-creates defaults if not exists."
+							}
+						},
+						{
+							"name": "Update Preferences",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Preferences updated', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.message).to.include('updated');",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"theme\": \"dark\",\n    \"font_size\": \"large\",\n    \"email_notifications\": true,\n    \"push_notifications\": true,\n    \"study_reminders\": true,\n    \"auto_play_next_lesson\": false,\n    \"show_answer_explanation\": true,\n    \"playback_speed\": 1.5\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/preferences",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "preferences"]
+								},
+								"description": "Update user preferences. All fields are optional."
+							}
+						}
+					]
+				},
+				{
+					"name": "Study Goals",
+					"item": [
+						{
+							"name": "Create Goal",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function() {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Goal created successfully', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('id');",
+											"    pm.expect(jsonData.data).to.have.property('title');",
+											"    pm.expect(jsonData.data).to.have.property('status');",
+											"    pm.environment.set('test_goal_id', jsonData.data.id);",
+											"    console.log('Goal created:', jsonData.data.title);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"goal_type\": \"weekly\",\n    \"title\": \"Complete 10 listening exercises\",\n    \"description\": \"Practice listening skills for IELTS\",\n    \"target_value\": 10,\n    \"target_unit\": \"exercises\",\n    \"skill_type\": \"listening\",\n    \"end_date\": \"2025-10-17\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/goals",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "goals"]
+								},
+								"description": "Create a new study goal. goal_type: daily, weekly, monthly, custom"
+							}
+						},
+						{
+							"name": "Get All Goals",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Goals retrieved', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('goals');",
+											"    pm.expect(jsonData.data).to.have.property('count');",
+											"    console.log('Total goals:', jsonData.data.count);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/goals",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "goals"]
+								},
+								"description": "Get all user goals with enriched data (completion %, days remaining)"
+							}
+						},
+						{
+							"name": "Get Goal by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/goals/{{test_goal_id}}",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "goals", "{{test_goal_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Update Goal",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"current_value\": 5,\n    \"description\": \"Updated description\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/goals/{{test_goal_id}}",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "goals", "{{test_goal_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Complete Goal",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/goals/{{test_goal_id}}/complete",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "goals", "{{test_goal_id}}", "complete"]
+								}
+							}
+						},
+						{
+							"name": "Delete Goal",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/goals/{{test_goal_id}}",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "goals", "{{test_goal_id}}"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Statistics & Achievements",
+					"item": [
+						{
+							"name": "Get Detailed Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/statistics/detailed",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "statistics", "detailed"]
+								},
+								"description": "Get comprehensive statistics with skill breakdown"
+							}
+						},
+						{
+							"name": "Get Skill Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/statistics/listening",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "statistics", "listening"]
+								},
+								"description": "Get statistics for specific skill: listening, reading, writing, speaking"
+							}
+						},
+						{
+							"name": "Get All Achievements",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/achievements",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "achievements"]
+								}
+							}
+						},
+						{
+							"name": "Get Earned Achievements",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/achievements/earned",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "achievements", "earned"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Study Reminders",
+					"item": [
+						{
+							"name": "Create Reminder",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"Morning Study Session\",\n    \"message\": \"Time to practice IELTS!\",\n    \"reminder_type\": \"daily\",\n    \"reminder_time\": \"09:00:00\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/reminders",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "reminders"]
+								}
+							}
+						},
+						{
+							"name": "Get All Reminders",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/reminders",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "reminders"]
+								}
+							}
+						},
+						{
+							"name": "Update Reminder",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"reminder_time\": \"10:00:00\",\n    \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/reminders/:id",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "reminders", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Delete Reminder",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/reminders/:id",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "reminders", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Toggle Reminder",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/reminders/:id/toggle",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "reminders", ":id", "toggle"],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
+										}
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Leaderboard",
+					"item": [
+						{
+							"name": "Get Top Learners",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/leaderboard?limit=10",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "leaderboard"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Number of top learners (default: 10)"
+										}
+									]
+								},
+								"description": "Get top learners ranked by achievements and study hours"
+							}
+						},
+						{
+							"name": "Get My Rank",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Rank retrieved', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('rank');",
+											"    pm.expect(jsonData.data).to.have.property('total_points');",
+											"    console.log('My rank:', jsonData.data.rank);",
+											"    console.log('Total points:', jsonData.data.total_points);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8082/api/v1/user/leaderboard/rank",
+									"protocol": "http",
+									"host": ["localhost"],
+									"port": "8082",
+									"path": ["api", "v1", "user", "leaderboard", "rank"]
+								},
+								"description": "Get current user's rank on leaderboard"
+							}
+						}
+					]
 				}
-			}
-		]
-	},
+			]
+		},
 	{
 		"name": "Course Service",
 		"item": [

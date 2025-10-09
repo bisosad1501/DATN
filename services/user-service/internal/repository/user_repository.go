@@ -354,3 +354,503 @@ func (r *UserRepository) GetUserAchievements(userID uuid.UUID) ([]models.UserAch
 
 	return achievements, nil
 }
+
+// ============= Study Goals =============
+
+// CreateGoal creates a new study goal
+func (r *UserRepository) CreateGoal(goal *models.StudyGoal) error {
+	query := `
+		INSERT INTO study_goals (id, user_id, goal_type, title, description, target_value, target_unit, current_value, skill_type, start_date, end_date, status, reminder_enabled, reminder_time, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+	`
+	_, err := r.db.DB.Exec(query, goal.ID, goal.UserID, goal.GoalType, goal.Title, goal.Description, goal.TargetValue, goal.TargetUnit, goal.CurrentValue, goal.SkillType, goal.StartDate, goal.EndDate, goal.Status, goal.ReminderEnabled, goal.ReminderTime)
+	if err != nil {
+		return fmt.Errorf("failed to create goal: %w", err)
+	}
+	return nil
+}
+
+// GetUserGoals retrieves all goals for a user
+func (r *UserRepository) GetUserGoals(userID uuid.UUID) ([]models.StudyGoal, error) {
+	query := `
+		SELECT id, user_id, goal_type, title, description, target_value, target_unit, current_value, skill_type, start_date, end_date, 
+		       status, completed_at, reminder_enabled, reminder_time, created_at, updated_at
+		FROM study_goals
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+	rows, err := r.db.DB.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user goals: %w", err)
+	}
+	defer rows.Close()
+
+	goals := []models.StudyGoal{}
+	for rows.Next() {
+		goal := models.StudyGoal{}
+		err := rows.Scan(&goal.ID, &goal.UserID, &goal.GoalType, &goal.Title, &goal.Description, &goal.TargetValue, &goal.TargetUnit, &goal.CurrentValue,
+			&goal.SkillType, &goal.StartDate, &goal.EndDate, &goal.Status, &goal.CompletedAt,
+			&goal.ReminderEnabled, &goal.ReminderTime, &goal.CreatedAt, &goal.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan goal: %w", err)
+		}
+		goals = append(goals, goal)
+	}
+	return goals, nil
+}
+
+// GetGoalByID retrieves a specific goal by ID
+func (r *UserRepository) GetGoalByID(goalID uuid.UUID, userID uuid.UUID) (*models.StudyGoal, error) {
+	query := `
+		SELECT id, user_id, goal_type, title, description, target_value, target_unit, current_value, skill_type, start_date, end_date, 
+		       status, completed_at, reminder_enabled, reminder_time, created_at, updated_at
+		FROM study_goals
+		WHERE id = $1 AND user_id = $2
+	`
+	goal := &models.StudyGoal{}
+	err := r.db.DB.QueryRow(query, goalID, userID).Scan(
+		&goal.ID, &goal.UserID, &goal.GoalType, &goal.Title, &goal.Description, &goal.TargetValue, &goal.TargetUnit, &goal.CurrentValue,
+		&goal.SkillType, &goal.StartDate, &goal.EndDate, &goal.Status, &goal.CompletedAt,
+		&goal.ReminderEnabled, &goal.ReminderTime, &goal.CreatedAt, &goal.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("goal not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get goal: %w", err)
+	}
+	return goal, nil
+}
+
+// UpdateGoal updates a study goal
+func (r *UserRepository) UpdateGoal(goal *models.StudyGoal) error {
+	query := `
+		UPDATE study_goals
+		SET title = $1, description = $2, target_value = $3, target_unit = $4, current_value = $5, 
+		    skill_type = $6, end_date = $7, status = $8, completed_at = $9, 
+		    reminder_enabled = $10, reminder_time = $11, updated_at = NOW()
+		WHERE id = $12 AND user_id = $13
+	`
+	_, err := r.db.DB.Exec(query, goal.Title, goal.Description, goal.TargetValue, goal.TargetUnit, goal.CurrentValue,
+		goal.SkillType, goal.EndDate, goal.Status, goal.CompletedAt,
+		goal.ReminderEnabled, goal.ReminderTime, goal.ID, goal.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update goal: %w", err)
+	}
+	return nil
+}
+
+// UpdateGoalProgress updates the current progress of a goal
+func (r *UserRepository) UpdateGoalProgress(goalID uuid.UUID, userID uuid.UUID, currentValue int) error {
+	query := `
+		UPDATE study_goals
+		SET current_value = $1, updated_at = NOW()
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err := r.db.DB.Exec(query, currentValue, goalID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update goal progress: %w", err)
+	}
+	return nil
+}
+
+// CompleteGoal marks a goal as completed
+func (r *UserRepository) CompleteGoal(goalID uuid.UUID, userID uuid.UUID) error {
+	now := time.Now()
+	query := `
+		UPDATE study_goals
+		SET status = 'completed', completed_at = $1, updated_at = NOW()
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err := r.db.DB.Exec(query, now, goalID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to complete goal: %w", err)
+	}
+	return nil
+}
+
+// DeleteGoal deletes a study goal
+func (r *UserRepository) DeleteGoal(goalID uuid.UUID, userID uuid.UUID) error {
+	query := `DELETE FROM study_goals WHERE id = $1 AND user_id = $2`
+	_, err := r.db.DB.Exec(query, goalID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete goal: %w", err)
+	}
+	return nil
+}
+
+// ============= Skill Statistics =============
+
+// GetSkillStatistics retrieves statistics for a specific skill
+func (r *UserRepository) GetSkillStatistics(userID uuid.UUID, skillType string) (*models.SkillStatistics, error) {
+	query := `
+		SELECT id, user_id, skill_type, total_practices, completed_practices, average_score, best_score, 
+		       total_time_minutes, last_practice_date, last_practice_score, score_trend, weak_areas, created_at, updated_at
+		FROM skill_statistics
+		WHERE user_id = $1 AND skill_type = $2
+	`
+	stats := &models.SkillStatistics{}
+	err := r.db.DB.QueryRow(query, userID, skillType).Scan(
+		&stats.ID, &stats.UserID, &stats.SkillType, &stats.TotalPractices, &stats.CompletedPractices,
+		&stats.AverageScore, &stats.BestScore, &stats.TotalTimeMinutes, &stats.LastPracticeDate,
+		&stats.LastPracticeScore, &stats.ScoreTrend, &stats.WeakAreas, &stats.CreatedAt, &stats.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil // Return nil if no statistics exist yet
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get skill statistics: %w", err)
+	}
+	return stats, nil
+}
+
+// GetAllSkillStatistics retrieves all skill statistics for a user
+func (r *UserRepository) GetAllSkillStatistics(userID uuid.UUID) (map[string]*models.SkillStatistics, error) {
+	query := `
+		SELECT id, user_id, skill_type, total_practices, completed_practices, average_score, best_score, 
+		       total_time_minutes, last_practice_date, last_practice_score, score_trend, weak_areas, created_at, updated_at
+		FROM skill_statistics
+		WHERE user_id = $1
+	`
+	rows, err := r.db.DB.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all skill statistics: %w", err)
+	}
+	defer rows.Close()
+
+	statsMap := make(map[string]*models.SkillStatistics)
+	for rows.Next() {
+		stats := &models.SkillStatistics{}
+		err := rows.Scan(&stats.ID, &stats.UserID, &stats.SkillType, &stats.TotalPractices, &stats.CompletedPractices,
+			&stats.AverageScore, &stats.BestScore, &stats.TotalTimeMinutes, &stats.LastPracticeDate,
+			&stats.LastPracticeScore, &stats.ScoreTrend, &stats.WeakAreas, &stats.CreatedAt, &stats.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan skill statistics: %w", err)
+		}
+		statsMap[stats.SkillType] = stats
+	}
+	return statsMap, nil
+}
+
+// UpsertSkillStatistics creates or updates skill statistics
+func (r *UserRepository) UpsertSkillStatistics(stats *models.SkillStatistics) error {
+	query := `
+		INSERT INTO skill_statistics (user_id, skill_type, total_practices, completed_practices, average_score, best_score, 
+		                               total_time_minutes, last_practice_date, last_practice_score, score_trend, weak_areas, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+		ON CONFLICT (user_id, skill_type) 
+		DO UPDATE SET 
+			total_practices = EXCLUDED.total_practices,
+			completed_practices = EXCLUDED.completed_practices,
+			average_score = EXCLUDED.average_score,
+			best_score = CASE WHEN EXCLUDED.best_score > skill_statistics.best_score THEN EXCLUDED.best_score ELSE skill_statistics.best_score END,
+			total_time_minutes = EXCLUDED.total_time_minutes,
+			last_practice_date = EXCLUDED.last_practice_date,
+			last_practice_score = EXCLUDED.last_practice_score,
+			score_trend = EXCLUDED.score_trend,
+			weak_areas = EXCLUDED.weak_areas,
+			updated_at = NOW()
+	`
+	_, err := r.db.DB.Exec(query, stats.UserID, stats.SkillType, stats.TotalPractices, stats.CompletedPractices,
+		stats.AverageScore, stats.BestScore, stats.TotalTimeMinutes, stats.LastPracticeDate,
+		stats.LastPracticeScore, stats.ScoreTrend, stats.WeakAreas)
+	if err != nil {
+		return fmt.Errorf("failed to upsert skill statistics: %w", err)
+	}
+	return nil
+}
+
+// ============= Achievements =============
+
+// GetAllAchievements retrieves all available achievements
+func (r *UserRepository) GetAllAchievements() ([]models.Achievement, error) {
+	query := `
+		SELECT id, code, name, description, criteria_type, criteria_value, 
+		       icon_url, badge_color, points, created_at
+		FROM achievements
+		ORDER BY points
+	`
+	rows, err := r.db.DB.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get achievements: %w", err)
+	}
+	defer rows.Close()
+
+	achievements := []models.Achievement{}
+	for rows.Next() {
+		achievement := models.Achievement{}
+		err := rows.Scan(&achievement.ID, &achievement.Code, &achievement.Name, &achievement.Description,
+			&achievement.CriteriaType, &achievement.CriteriaValue, &achievement.IconURL,
+			&achievement.BadgeColor, &achievement.Points, &achievement.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan achievement: %w", err)
+		}
+		achievements = append(achievements, achievement)
+	}
+	return achievements, nil
+}
+
+// UnlockAchievement unlocks an achievement for a user
+func (r *UserRepository) UnlockAchievement(userID uuid.UUID, achievementID uuid.UUID) error {
+	query := `
+		INSERT INTO user_achievements (id, user_id, achievement_id, earned_at)
+		VALUES ($1, $2, $3, NOW())
+		ON CONFLICT (user_id, achievement_id) DO NOTHING
+	`
+	id := uuid.New()
+	_, err := r.db.DB.Exec(query, id, userID, achievementID)
+	if err != nil {
+		return fmt.Errorf("failed to unlock achievement: %w", err)
+	}
+	return nil
+}
+
+// CheckAchievementUnlocked checks if a user has unlocked a specific achievement
+func (r *UserRepository) CheckAchievementUnlocked(userID uuid.UUID, achievementID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM user_achievements WHERE user_id = $1 AND achievement_id = $2)`
+	var exists bool
+	err := r.db.DB.QueryRow(query, userID, achievementID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check achievement: %w", err)
+	}
+	return exists, nil
+}
+
+// ============= User Preferences =============
+
+// GetPreferences retrieves user preferences
+func (r *UserRepository) GetPreferences(userID uuid.UUID) (*models.UserPreferences, error) {
+	query := `
+		SELECT user_id, email_notifications, push_notifications, study_reminders, weekly_report, 
+		       theme, font_size, auto_play_next_lesson, show_answer_explanation, playback_speed, 
+		       profile_visibility, show_study_stats, updated_at
+		FROM user_preferences
+		WHERE user_id = $1
+	`
+	prefs := &models.UserPreferences{}
+	err := r.db.DB.QueryRow(query, userID).Scan(
+		&prefs.UserID, &prefs.EmailNotifications, &prefs.PushNotifications, &prefs.StudyReminders, &prefs.WeeklyReport,
+		&prefs.Theme, &prefs.FontSize, &prefs.AutoPlayNextLesson, &prefs.ShowAnswerExplanation, &prefs.PlaybackSpeed,
+		&prefs.ProfileVisibility, &prefs.ShowStudyStats, &prefs.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		// Create default preferences
+		return r.CreateDefaultPreferences(userID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get preferences: %w", err)
+	}
+	return prefs, nil
+}
+
+// CreateDefaultPreferences creates default preferences for a new user
+func (r *UserRepository) CreateDefaultPreferences(userID uuid.UUID) (*models.UserPreferences, error) {
+	query := `
+		INSERT INTO user_preferences (user_id, email_notifications, push_notifications, study_reminders, weekly_report, 
+		                              theme, font_size, auto_play_next_lesson, show_answer_explanation, playback_speed, 
+		                              profile_visibility, show_study_stats, updated_at)
+		VALUES ($1, true, true, true, true, 'light', 'medium', true, true, 1.0, 'private', true, NOW())
+		RETURNING user_id, email_notifications, push_notifications, study_reminders, weekly_report, 
+		          theme, font_size, auto_play_next_lesson, show_answer_explanation, playback_speed, 
+		          profile_visibility, show_study_stats, updated_at
+	`
+	prefs := &models.UserPreferences{}
+	err := r.db.DB.QueryRow(query, userID).Scan(
+		&prefs.UserID, &prefs.EmailNotifications, &prefs.PushNotifications, &prefs.StudyReminders, &prefs.WeeklyReport,
+		&prefs.Theme, &prefs.FontSize, &prefs.AutoPlayNextLesson, &prefs.ShowAnswerExplanation, &prefs.PlaybackSpeed,
+		&prefs.ProfileVisibility, &prefs.ShowStudyStats, &prefs.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default preferences: %w", err)
+	}
+	return prefs, nil
+}
+
+// UpdatePreferences updates user preferences
+func (r *UserRepository) UpdatePreferences(prefs *models.UserPreferences) error {
+	query := `
+		UPDATE user_preferences
+		SET email_notifications = $1, push_notifications = $2, study_reminders = $3, weekly_report = $4, 
+		    theme = $5, font_size = $6, auto_play_next_lesson = $7, show_answer_explanation = $8, playback_speed = $9, 
+		    profile_visibility = $10, show_study_stats = $11, updated_at = NOW()
+		WHERE user_id = $12
+	`
+	_, err := r.db.DB.Exec(query, prefs.EmailNotifications, prefs.PushNotifications, prefs.StudyReminders, prefs.WeeklyReport,
+		prefs.Theme, prefs.FontSize, prefs.AutoPlayNextLesson, prefs.ShowAnswerExplanation, prefs.PlaybackSpeed,
+		prefs.ProfileVisibility, prefs.ShowStudyStats, prefs.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update preferences: %w", err)
+	}
+	return nil
+}
+
+// ============= Study Reminders =============
+
+// CreateReminder creates a new study reminder
+func (r *UserRepository) CreateReminder(reminder *models.StudyReminder) error {
+	query := `
+		INSERT INTO study_reminders (id, user_id, title, message, reminder_type, reminder_time, 
+		                             days_of_week, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+	`
+	_, err := r.db.DB.Exec(query, reminder.ID, reminder.UserID, reminder.Title, reminder.Message,
+		reminder.ReminderType, reminder.ReminderTime, reminder.DaysOfWeek, reminder.IsActive)
+	if err != nil {
+		return fmt.Errorf("failed to create reminder: %w", err)
+	}
+	return nil
+}
+
+// GetUserReminders retrieves all reminders for a user
+func (r *UserRepository) GetUserReminders(userID uuid.UUID) ([]models.StudyReminder, error) {
+	query := `
+		SELECT id, user_id, title, message, reminder_type, reminder_time, days_of_week, 
+		       is_active, last_sent_at, next_send_at, created_at, updated_at
+		FROM study_reminders
+		WHERE user_id = $1
+		ORDER BY reminder_time
+	`
+	rows, err := r.db.DB.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reminders: %w", err)
+	}
+	defer rows.Close()
+
+	reminders := []models.StudyReminder{}
+	for rows.Next() {
+		reminder := models.StudyReminder{}
+		err := rows.Scan(&reminder.ID, &reminder.UserID, &reminder.Title, &reminder.Message,
+			&reminder.ReminderType, &reminder.ReminderTime, &reminder.DaysOfWeek, &reminder.IsActive,
+			&reminder.LastSentAt, &reminder.NextSendAt, &reminder.CreatedAt, &reminder.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan reminder: %w", err)
+		}
+		reminders = append(reminders, reminder)
+	}
+	return reminders, nil
+}
+
+// GetReminderByID retrieves a specific reminder
+func (r *UserRepository) GetReminderByID(reminderID uuid.UUID, userID uuid.UUID) (*models.StudyReminder, error) {
+	query := `
+		SELECT id, user_id, title, message, reminder_type, reminder_time, days_of_week, 
+		       is_active, last_sent_at, next_send_at, created_at, updated_at
+		FROM study_reminders
+		WHERE id = $1 AND user_id = $2
+	`
+	reminder := &models.StudyReminder{}
+	err := r.db.DB.QueryRow(query, reminderID, userID).Scan(
+		&reminder.ID, &reminder.UserID, &reminder.Title, &reminder.Message, &reminder.ReminderType,
+		&reminder.ReminderTime, &reminder.DaysOfWeek, &reminder.IsActive, &reminder.LastSentAt,
+		&reminder.NextSendAt, &reminder.CreatedAt, &reminder.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("reminder not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reminder: %w", err)
+	}
+	return reminder, nil
+}
+
+// UpdateReminder updates a study reminder
+func (r *UserRepository) UpdateReminder(reminder *models.StudyReminder) error {
+	query := `
+		UPDATE study_reminders
+		SET title = $1, message = $2, reminder_time = $3, days_of_week = $4, 
+		    is_active = $5, updated_at = NOW()
+		WHERE id = $6 AND user_id = $7
+	`
+	_, err := r.db.DB.Exec(query, reminder.Title, reminder.Message, reminder.ReminderTime,
+		reminder.DaysOfWeek, reminder.IsActive, reminder.ID, reminder.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update reminder: %w", err)
+	}
+	return nil
+}
+
+// DeleteReminder deletes a study reminder
+func (r *UserRepository) DeleteReminder(reminderID uuid.UUID, userID uuid.UUID) error {
+	query := `DELETE FROM study_reminders WHERE id = $1 AND user_id = $2`
+	_, err := r.db.DB.Exec(query, reminderID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete reminder: %w", err)
+	}
+	return nil
+}
+
+// ToggleReminder toggles the active status of a reminder
+func (r *UserRepository) ToggleReminder(reminderID uuid.UUID, userID uuid.UUID, isActive bool) error {
+	query := `UPDATE study_reminders SET is_active = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`
+	_, err := r.db.DB.Exec(query, isActive, reminderID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to toggle reminder: %w", err)
+	}
+	return nil
+}
+
+// ============= Leaderboard =============
+
+// GetTopLearners retrieves top learners by achievements count and study hours
+func (r *UserRepository) GetTopLearners(limit int) ([]models.LeaderboardEntry, error) {
+	query := `
+		SELECT 
+			ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC, lp.total_study_hours DESC) as rank,
+			up.user_id, up.full_name, up.avatar_url, 
+			(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
+			lp.current_streak_days, lp.total_study_hours,
+			(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
+		FROM user_profiles up
+		JOIN learning_progress lp ON up.user_id = lp.user_id
+		ORDER BY achievements_count DESC, lp.total_study_hours DESC
+		LIMIT $1
+	`
+	rows, err := r.db.DB.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get top learners: %w", err)
+	}
+	defer rows.Close()
+
+	entries := []models.LeaderboardEntry{}
+	for rows.Next() {
+		entry := models.LeaderboardEntry{}
+		err := rows.Scan(&entry.Rank, &entry.UserID, &entry.FullName, &entry.AvatarURL,
+			&entry.TotalPoints, &entry.CurrentStreakDays, &entry.TotalStudyHours, &entry.AchievementsCount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan leaderboard entry: %w", err)
+		}
+		entries = append(entries, entry)
+	}
+	return entries, nil
+}
+
+// GetUserRank retrieves the rank of a specific user
+func (r *UserRepository) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, error) {
+	query := `
+		WITH ranked_users AS (
+			SELECT 
+				ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC, lp.total_study_hours DESC) as rank,
+				up.user_id, up.full_name, up.avatar_url, 
+				(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
+				lp.current_streak_days, lp.total_study_hours,
+				(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
+			FROM user_profiles up
+			JOIN learning_progress lp ON up.user_id = lp.user_id
+		)
+		SELECT rank, user_id, full_name, avatar_url, total_points, current_streak_days, 
+		       total_study_hours, achievements_count
+		FROM ranked_users
+		WHERE user_id = $1
+	`
+	entry := &models.LeaderboardEntry{}
+	err := r.db.DB.QueryRow(query, userID).Scan(&entry.Rank, &entry.UserID, &entry.FullName,
+		&entry.AvatarURL, &entry.TotalPoints, &entry.CurrentStreakDays, &entry.TotalStudyHours,
+		&entry.AchievementsCount)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user rank not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user rank: %w", err)
+	}
+	return entry, nil
+}

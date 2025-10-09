@@ -99,3 +99,94 @@ type UserProfileWithProgress struct {
 	Profile  *UserProfile      `json:"profile"`
 	Progress *LearningProgress `json:"progress"`
 }
+
+// SkillStatistics represents detailed statistics for each skill (DB schema matched)
+type SkillStatistics struct {
+	ID                 int64      `json:"id" db:"id"`
+	UserID             uuid.UUID  `json:"user_id" db:"user_id"`
+	SkillType          string     `json:"skill_type" db:"skill_type"` // listening, reading, writing, speaking
+	TotalPractices     int        `json:"total_practices" db:"total_practices"`
+	CompletedPractices int        `json:"completed_practices" db:"completed_practices"`
+	AverageScore       float64    `json:"average_score" db:"average_score"`
+	BestScore          float64    `json:"best_score" db:"best_score"`
+	TotalTimeMinutes   int        `json:"total_time_minutes" db:"total_time_minutes"`
+	LastPracticeDate   *time.Time `json:"last_practice_date,omitempty" db:"last_practice_date"`
+	LastPracticeScore  *float64   `json:"last_practice_score,omitempty" db:"last_practice_score"`
+	ScoreTrend         *string    `json:"score_trend,omitempty" db:"score_trend"` // JSONB as string
+	WeakAreas          *string    `json:"weak_areas,omitempty" db:"weak_areas"`   // JSONB as string
+	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// StudyGoal represents a user's study goal (DB schema matched)
+type StudyGoal struct {
+	ID              uuid.UUID  `json:"id" db:"id"`
+	UserID          uuid.UUID  `json:"user_id" db:"user_id"`
+	GoalType        string     `json:"goal_type" db:"goal_type"` // daily, weekly, monthly, custom
+	Title           string     `json:"title" db:"title"`
+	Description     *string    `json:"description,omitempty" db:"description"`
+	TargetValue     int        `json:"target_value" db:"target_value"`
+	TargetUnit      string     `json:"target_unit" db:"target_unit"` // minutes, lessons, exercises
+	CurrentValue    int        `json:"current_value" db:"current_value"`
+	SkillType       *string    `json:"skill_type,omitempty" db:"skill_type"`
+	StartDate       time.Time  `json:"start_date" db:"start_date"`
+	EndDate         time.Time  `json:"end_date" db:"end_date"`
+	Status          string     `json:"status" db:"status"` // active, completed, cancelled, expired
+	CompletedAt     *time.Time `json:"completed_at,omitempty" db:"completed_at"`
+	ReminderEnabled bool       `json:"reminder_enabled" db:"reminder_enabled"`
+	ReminderTime    *string    `json:"reminder_time,omitempty" db:"reminder_time"` // TIME as string
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// UserPreferences represents user application preferences (DB schema matched)
+type UserPreferences struct {
+	UserID                uuid.UUID `json:"user_id" db:"user_id"`
+	EmailNotifications    bool      `json:"email_notifications" db:"email_notifications"`
+	PushNotifications     bool      `json:"push_notifications" db:"push_notifications"`
+	StudyReminders        bool      `json:"study_reminders" db:"study_reminders"`
+	WeeklyReport          bool      `json:"weekly_report" db:"weekly_report"`
+	Theme                 string    `json:"theme" db:"theme"`         // light, dark, auto
+	FontSize              string    `json:"font_size" db:"font_size"` // small, medium, large
+	AutoPlayNextLesson    bool      `json:"auto_play_next_lesson" db:"auto_play_next_lesson"`
+	ShowAnswerExplanation bool      `json:"show_answer_explanation" db:"show_answer_explanation"`
+	PlaybackSpeed         float64   `json:"playback_speed" db:"playback_speed"`         // 0.75, 1.0, 1.25, 1.5, 2.0
+	ProfileVisibility     string    `json:"profile_visibility" db:"profile_visibility"` // public, friends, private
+	ShowStudyStats        bool      `json:"show_study_stats" db:"show_study_stats"`
+	UpdatedAt             time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// StudyReminder represents a study reminder (DB schema matched)
+type StudyReminder struct {
+	ID           uuid.UUID  `json:"id" db:"id"`
+	UserID       uuid.UUID  `json:"user_id" db:"user_id"`
+	Title        string     `json:"title" db:"title"`
+	Message      *string    `json:"message,omitempty" db:"message"`
+	ReminderType string     `json:"reminder_type" db:"reminder_type"`         // daily, weekly, custom
+	ReminderTime string     `json:"reminder_time" db:"reminder_time"`         // TIME format "09:00:00"
+	DaysOfWeek   *string    `json:"days_of_week,omitempty" db:"days_of_week"` // INT[] as string (PostgreSQL array)
+	IsActive     bool       `json:"is_active" db:"is_active"`
+	LastSentAt   *time.Time `json:"last_sent_at,omitempty" db:"last_sent_at"`
+	NextSendAt   *time.Time `json:"next_send_at,omitempty" db:"next_send_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// AchievementWithProgress combines achievement with user progress
+type AchievementWithProgress struct {
+	Achievement        *Achievement `json:"achievement"`
+	IsEarned           bool         `json:"is_earned"`
+	EarnedAt           *time.Time   `json:"earned_at,omitempty"`
+	Progress           int          `json:"progress"`
+	ProgressPercentage float64      `json:"progress_percentage"`
+}
+
+// ProgressInsight represents AI-generated progress insights
+type ProgressInsight struct {
+	Type        string    `json:"type"` // strength, weakness, recommendation, prediction
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Score       *float64  `json:"score,omitempty"`
+	Confidence  float64   `json:"confidence"`
+	CreatedAt   time.Time `json:"created_at"`
+}
