@@ -42,24 +42,24 @@ type Exercise struct {
 
 // ExerciseSection represents a section within an exercise
 type ExerciseSection struct {
-	ID               uuid.UUID  `json:"id"`
-	ExerciseID       uuid.UUID  `json:"exercise_id"`
-	Title            string     `json:"title"`
-	Description      *string    `json:"description,omitempty"`
-	SectionNumber    int        `json:"section_number"`
-	AudioURL         *string    `json:"audio_url,omitempty"`
-	AudioStartTime   *int       `json:"audio_start_time,omitempty"`
-	AudioEndTime     *int       `json:"audio_end_time,omitempty"`
-	Transcript       *string    `json:"transcript,omitempty"`
-	PassageTitle     *string    `json:"passage_title,omitempty"`
-	PassageContent   *string    `json:"passage_content,omitempty"`
-	PassageWordCount *int       `json:"passage_word_count,omitempty"`
-	Instructions     *string    `json:"instructions,omitempty"`
-	TotalQuestions   int        `json:"total_questions"`
-	TimeLimitMinutes *int       `json:"time_limit_minutes,omitempty"`
-	DisplayOrder     int        `json:"display_order"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	ID               uuid.UUID `json:"id"`
+	ExerciseID       uuid.UUID `json:"exercise_id"`
+	Title            string    `json:"title"`
+	Description      *string   `json:"description,omitempty"`
+	SectionNumber    int       `json:"section_number"`
+	AudioURL         *string   `json:"audio_url,omitempty"`
+	AudioStartTime   *int      `json:"audio_start_time,omitempty"`
+	AudioEndTime     *int      `json:"audio_end_time,omitempty"`
+	Transcript       *string   `json:"transcript,omitempty"`
+	PassageTitle     *string   `json:"passage_title,omitempty"`
+	PassageContent   *string   `json:"passage_content,omitempty"`
+	PassageWordCount *int      `json:"passage_word_count,omitempty"`
+	Instructions     *string   `json:"instructions,omitempty"`
+	TotalQuestions   int       `json:"total_questions"`
+	TimeLimitMinutes *int      `json:"time_limit_minutes,omitempty"`
+	DisplayOrder     int       `json:"display_order"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // Question represents a question in an exercise
@@ -84,25 +84,25 @@ type Question struct {
 
 // QuestionOption represents an option for multiple choice questions
 type QuestionOption struct {
-	ID              uuid.UUID  `json:"id"`
-	QuestionID      uuid.UUID  `json:"question_id"`
-	OptionLabel     string     `json:"option_label"` // A, B, C, D
-	OptionText      string     `json:"option_text"`
-	OptionImageURL  *string    `json:"option_image_url,omitempty"`
-	IsCorrect       bool       `json:"is_correct"`
-	DisplayOrder    int        `json:"display_order"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID             uuid.UUID `json:"id"`
+	QuestionID     uuid.UUID `json:"question_id"`
+	OptionLabel    string    `json:"option_label"` // A, B, C, D
+	OptionText     string    `json:"option_text"`
+	OptionImageURL *string   `json:"option_image_url,omitempty"`
+	IsCorrect      bool      `json:"is_correct"`
+	DisplayOrder   int       `json:"display_order"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // QuestionAnswer represents correct answer for fill-in-blank, matching, etc.
 type QuestionAnswer struct {
-	ID                  uuid.UUID  `json:"id"`
-	QuestionID          uuid.UUID  `json:"question_id"`
-	AnswerText          string     `json:"answer_text"`
-	AlternativeAnswers  *string    `json:"alternative_answers,omitempty"` // JSON array
-	IsCaseSensitive     bool       `json:"is_case_sensitive"`
-	MatchingOrder       *int       `json:"matching_order,omitempty"`
-	CreatedAt           time.Time  `json:"created_at"`
+	ID                 uuid.UUID `json:"id"`
+	QuestionID         uuid.UUID `json:"question_id"`
+	AnswerText         string    `json:"answer_text"`
+	AlternativeAnswers *string   `json:"alternative_answers,omitempty"` // JSON array
+	IsCaseSensitive    bool      `json:"is_case_sensitive"`
+	MatchingOrder      *int      `json:"matching_order,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 // Submission represents a student's submission (maps to user_exercise_attempts table)
@@ -115,8 +115,8 @@ type Submission struct {
 	TotalQuestions    int        `json:"total_questions"`
 	QuestionsAnswered int        `json:"questions_answered"`
 	CorrectAnswers    int        `json:"correct_answers"`
-	Score             *float64   `json:"score,omitempty"`             // Percentage or points
-	BandScore         *float64   `json:"band_score,omitempty"`        // IELTS band score
+	Score             *float64   `json:"score,omitempty"`      // Percentage or points
+	BandScore         *float64   `json:"band_score,omitempty"` // IELTS band score
 	TimeLimitMinutes  *int       `json:"time_limit_minutes,omitempty"`
 	TimeSpentSeconds  int        `json:"time_spent_seconds"`
 	StartedAt         time.Time  `json:"started_at"`

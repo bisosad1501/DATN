@@ -17,20 +17,20 @@ type ExerciseListQuery struct {
 
 // ExerciseDetailResponse includes exercise with sections and questions
 type ExerciseDetailResponse struct {
-	Exercise *Exercise          `json:"exercise"`
+	Exercise *Exercise              `json:"exercise"`
 	Sections []SectionWithQuestions `json:"sections"`
 }
 
 // SectionWithQuestions includes section with its questions
 type SectionWithQuestions struct {
-	Section   *ExerciseSection `json:"section"`
+	Section   *ExerciseSection      `json:"section"`
 	Questions []QuestionWithOptions `json:"questions"`
 }
 
 // QuestionWithOptions includes question with its options
 type QuestionWithOptions struct {
-	Question *Question         `json:"question"`
-	Options  []QuestionOption  `json:"options,omitempty"`
+	Question *Question        `json:"question"`
+	Options  []QuestionOption `json:"options,omitempty"`
 }
 
 // SubmitAnswersRequest for submitting exercise answers
@@ -48,32 +48,32 @@ type SubmitAnswerItem struct {
 
 // SubmissionResultResponse includes detailed results
 type SubmissionResultResponse struct {
-	Submission   *Submission                    `json:"submission"`
-	Exercise     *Exercise                      `json:"exercise"`
-	Answers      []SubmissionAnswerWithQuestion `json:"answers"`
-	Performance  *PerformanceStats              `json:"performance"`
+	Submission  *Submission                    `json:"submission"`
+	Exercise    *Exercise                      `json:"exercise"`
+	Answers     []SubmissionAnswerWithQuestion `json:"answers"`
+	Performance *PerformanceStats              `json:"performance"`
 }
 
 // SubmissionAnswerWithQuestion includes answer with question details
 type SubmissionAnswerWithQuestion struct {
-	Answer       *SubmissionAnswer    `json:"answer"`
-	Question     *Question            `json:"question"`
-	CorrectAnswer interface{}         `json:"correct_answer,omitempty"`
+	Answer        *SubmissionAnswer `json:"answer"`
+	Question      *Question         `json:"question"`
+	CorrectAnswer interface{}       `json:"correct_answer,omitempty"`
 }
 
 // PerformanceStats for submission analysis
 type PerformanceStats struct {
-	TotalQuestions     int      `json:"total_questions"`
-	CorrectAnswers     int      `json:"correct_answers"`
-	IncorrectAnswers   int      `json:"incorrect_answers"`
-	SkippedAnswers     int      `json:"skipped_answers"`
-	Accuracy           float64  `json:"accuracy"`
-	Score              float64  `json:"score"`
-	Percentage         float64  `json:"percentage"`
-	BandScore          *float64 `json:"band_score,omitempty"` // IELTS band score
-	IsPassed           bool     `json:"is_passed"`
-	TimeSpentSeconds   int      `json:"time_spent_seconds"`
-	AverageTimePerQ    float64  `json:"average_time_per_question"`
+	TotalQuestions   int      `json:"total_questions"`
+	CorrectAnswers   int      `json:"correct_answers"`
+	IncorrectAnswers int      `json:"incorrect_answers"`
+	SkippedAnswers   int      `json:"skipped_answers"`
+	Accuracy         float64  `json:"accuracy"`
+	Score            float64  `json:"score"`
+	Percentage       float64  `json:"percentage"`
+	BandScore        *float64 `json:"band_score,omitempty"` // IELTS band score
+	IsPassed         bool     `json:"is_passed"`
+	TimeSpentSeconds int      `json:"time_spent_seconds"`
+	AverageTimePerQ  float64  `json:"average_time_per_question"`
 }
 
 // CreateExerciseRequest for creating new exercise

@@ -401,7 +401,7 @@ func (r *ExerciseRepository) SaveSubmissionAnswers(submissionID uuid.UUID, answe
 					FROM question_answers 
 					WHERE question_id = $1
 				`, answer.QuestionID).Scan(&answerText, &answerVariations)
-				
+
 				if err == nil {
 					// Case-insensitive comparison by default
 					userAnswer := strings.ToLower(strings.TrimSpace(*answer.TextAnswer))
