@@ -1,0 +1,562 @@
+package service
+
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/bisosad1501/ielts-platform/course-service/internal/models"
+	"github.com/bisosad1501/ielts-platform/course-service/internal/repository"
+	"github.com/google/uuid"
+)
+
+type CourseService struct {
+	repo *repository.CourseRepository
+}
+
+func NewCourseService(repo *repository.CourseRepository) *CourseService {
+	return &CourseService{repo: repo}
+}
+
+// GetCourses retrieves courses with filters
+func (s *CourseService) GetCourses(query *models.CourseListQuery) ([]models.Course, error) {
+	// Set defaults
+	if query.Page <= 0 {
+		query.Page = 1
+	}
+	if query.Limit <= 0 || query.Limit > 100 {
+		query.Limit = 20
+	}
+
+	return s.repo.GetCourses(query)
+}
+
+// GetCourseDetail retrieves detailed course with modules and lessons
+func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (*models.CourseDetailResponse, error) {
+	// Get course
+	course, err := s.repo.GetCourseByID(courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get course: %w", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+
+	// Get modules
+	modules, err := s.repo.GetModulesByCourseID(courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get modules: %w", err)
+	}
+
+	// Get lessons for each module
+	var modulesWithLessons []models.ModuleWithLessons
+	for _, module := range modules {
+		lessons, err := s.repo.GetLessonsByModuleID(module.ID)
+		if err != nil {
+			log.Printf("Warning: failed to get lessons for module %s: %v", module.ID, err)
+			lessons = []models.Lesson{}
+		}
+		modulesWithLessons = append(modulesWithLessons, models.ModuleWithLessons{
+			Module:  module,
+			Lessons: lessons,
+		})
+	}
+
+	response := &models.CourseDetailResponse{
+		Course:  *course,
+		Modules: modulesWithLessons,
+	}
+
+	// Check enrollment if user is authenticated
+	if userID != nil {
+		enrollment, err := s.repo.GetEnrollment(*userID, courseID)
+		if err != nil {
+			log.Printf("Warning: failed to get enrollment: %v", err)
+		} else if enrollment != nil {
+			response.IsEnrolled = true
+			response.EnrollmentDetails = enrollment
+		}
+	}
+
+	return response, nil
+}
+
+// GetLessonDetail retrieves detailed lesson with videos and materials
+func (s *CourseService) GetLessonDetail(lessonID uuid.UUID, userID *uuid.UUID) (*models.LessonDetailResponse, error) {
+	// Get lesson
+	lesson, err := s.repo.GetLessonByID(lessonID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get lesson: %w", err)
+	}
+	if lesson == nil {
+		return nil, fmt.Errorf("lesson not found")
+	}
+
+	// Get videos
+	videos, err := s.repo.GetVideosByLessonID(lessonID)
+	if err != nil {
+		log.Printf("Warning: failed to get videos: %v", err)
+		videos = []models.LessonVideo{}
+	}
+
+	// Get materials
+	materials, err := s.repo.GetMaterialsByLessonID(lessonID)
+	if err != nil {
+		log.Printf("Warning: failed to get materials: %v", err)
+		materials = []models.LessonMaterial{}
+	}
+
+	response := &models.LessonDetailResponse{
+		Lesson:    *lesson,
+		Videos:    videos,
+		Materials: materials,
+	}
+
+	// Get progress if user is authenticated
+	if userID != nil {
+		progress, err := s.repo.GetLessonProgress(*userID, lessonID)
+		if err != nil {
+			log.Printf("Warning: failed to get lesson progress: %v", err)
+		} else if progress != nil {
+			response.Progress = progress
+		}
+	}
+
+	return response, nil
+}
+
+// EnrollCourse enrolls a user in a course
+func (s *CourseService) EnrollCourse(userID uuid.UUID, req *models.EnrollmentRequest) (*models.CourseEnrollment, error) {
+	// Check if course exists
+	course, err := s.repo.GetCourseByID(req.CourseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get course: %w", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+
+	// Check if already enrolled
+	existingEnrollment, err := s.repo.GetEnrollment(userID, req.CourseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check enrollment: %w", err)
+	}
+	if existingEnrollment != nil {
+		return existingEnrollment, nil // Already enrolled
+	}
+
+	// Validate enrollment type
+	enrollmentType := req.EnrollmentType
+	if enrollmentType == "" {
+		enrollmentType = "free"
+	}
+
+	// For paid courses, validate enrollment type
+	if course.EnrollmentType != "free" && enrollmentType == "free" {
+		return nil, fmt.Errorf("this course requires payment")
+	}
+
+	// Create enrollment
+	enrollment := &models.CourseEnrollment{
+		ID:             uuid.New(),
+		UserID:         userID,
+		CourseID:       req.CourseID,
+		EnrollmentType: enrollmentType,
+		Status:         "active",
+	}
+
+	if enrollmentType == "purchased" {
+		enrollment.AmountPaid = &course.Price
+		enrollment.Currency = &course.Currency
+	}
+
+	err = s.repo.CreateEnrollment(enrollment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create enrollment: %w", err)
+	}
+
+	return enrollment, nil
+}
+
+// GetMyEnrollments retrieves user's enrollments
+func (s *CourseService) GetMyEnrollments(userID uuid.UUID) (*models.MyEnrollmentsResponse, error) {
+	enrollments, err := s.repo.GetUserEnrollments(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get enrollments: %w", err)
+	}
+
+	var enrollmentsWithCourses []models.EnrollmentWithCourse
+	for _, enrollment := range enrollments {
+		course, err := s.repo.GetCourseByID(enrollment.CourseID)
+		if err != nil {
+			log.Printf("Warning: failed to get course %s: %v", enrollment.CourseID, err)
+			continue
+		}
+		if course == nil {
+			continue
+		}
+
+		enrollmentsWithCourses = append(enrollmentsWithCourses, models.EnrollmentWithCourse{
+			Enrollment: enrollment,
+			Course:     *course,
+		})
+	}
+
+	return &models.MyEnrollmentsResponse{
+		Enrollments: enrollmentsWithCourses,
+		Total:       len(enrollmentsWithCourses),
+	}, nil
+}
+
+// UpdateLessonProgress updates lesson progress
+func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *models.UpdateLessonProgressRequest) (*models.LessonProgress, error) {
+	// Get lesson to validate
+	lesson, err := s.repo.GetLessonByID(lessonID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get lesson: %w", err)
+	}
+	if lesson == nil {
+		return nil, fmt.Errorf("lesson not found")
+	}
+
+	// Check enrollment
+	enrollment, err := s.repo.GetEnrollment(userID, lesson.CourseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check enrollment: %w", err)
+	}
+	if enrollment == nil {
+		return nil, fmt.Errorf("not enrolled in this course")
+	}
+
+	// Get existing progress or create new
+	progress, err := s.repo.GetLessonProgress(userID, lessonID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get progress: %w", err)
+	}
+
+	if progress == nil {
+		// Create new progress
+		progress = &models.LessonProgress{
+			ID:       uuid.New(),
+			UserID:   userID,
+			LessonID: lessonID,
+			CourseID: lesson.CourseID,
+			Status:   "in_progress",
+		}
+	}
+
+	// Update fields
+	if req.ProgressPercentage != nil {
+		progress.ProgressPercentage = *req.ProgressPercentage
+	}
+
+	if req.VideoWatchedSeconds != nil {
+		progress.VideoWatchedSeconds = *req.VideoWatchedSeconds
+	}
+
+	if req.VideoTotalSeconds != nil {
+		progress.VideoTotalSeconds = req.VideoTotalSeconds
+		if *req.VideoTotalSeconds > 0 {
+			progress.VideoWatchPercentage = float64(progress.VideoWatchedSeconds) / float64(*req.VideoTotalSeconds) * 100
+		}
+	}
+
+	if req.TimeSpentMinutes != nil {
+		progress.TimeSpentMinutes = *req.TimeSpentMinutes
+	}
+
+	// Check if completed
+	if req.IsCompleted != nil && *req.IsCompleted {
+		progress.Status = "completed"
+		now := time.Now()
+		progress.CompletedAt = &now
+		progress.ProgressPercentage = 100
+	} else if progress.ProgressPercentage >= 100 {
+		progress.Status = "completed"
+		if progress.CompletedAt == nil {
+			now := time.Now()
+			progress.CompletedAt = &now
+		}
+	}
+
+	// Save progress
+	err = s.repo.UpdateLessonProgress(progress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update progress: %w", err)
+	}
+
+	return progress, nil
+}
+
+// GetEnrollmentProgress retrieves detailed enrollment progress
+func (s *CourseService) GetEnrollmentProgress(userID, courseID uuid.UUID) (*models.EnrollmentProgressResponse, error) {
+	// Get enrollment
+	enrollment, err := s.repo.GetEnrollment(userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get enrollment: %w", err)
+	}
+	if enrollment == nil {
+		return nil, fmt.Errorf("not enrolled in this course")
+	}
+
+	// Get course
+	course, err := s.repo.GetCourseByID(courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get course: %w", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+
+	// Get modules
+	modules, err := s.repo.GetModulesByCourseID(courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get modules: %w", err)
+	}
+
+	// Calculate progress for each module
+	var modulesProgress []models.ModuleProgress
+	for _, module := range modules {
+		lessons, err := s.repo.GetLessonsByModuleID(module.ID)
+		if err != nil {
+			log.Printf("Warning: failed to get lessons for module %s: %v", module.ID, err)
+			continue
+		}
+
+		completedCount := 0
+		for _, lesson := range lessons {
+			progress, _ := s.repo.GetLessonProgress(userID, lesson.ID)
+			if progress != nil && progress.Status == "completed" {
+				completedCount++
+			}
+		}
+
+		progressPercentage := 0.0
+		if len(lessons) > 0 {
+			progressPercentage = float64(completedCount) / float64(len(lessons)) * 100
+		}
+
+		modulesProgress = append(modulesProgress, models.ModuleProgress{
+			Module:             module,
+			TotalLessons:       len(lessons),
+			CompletedLessons:   completedCount,
+			ProgressPercentage: progressPercentage,
+		})
+	}
+
+	return &models.EnrollmentProgressResponse{
+		Enrollment:      *enrollment,
+		Course:          *course,
+		ModulesProgress: modulesProgress,
+		RecentLessons:   []models.LessonWithProgress{}, // Can be enhanced later
+	}, nil
+}
+
+// CreateCourse creates a new course (Admin/Instructor only)
+func (s *CourseService) CreateCourse(instructorID uuid.UUID, instructorName string, req *models.CreateCourseRequest) (*models.Course, error) {
+	// Validate enrollment type and price
+	enrollmentType := "free"
+	if req.EnrollmentType != "" {
+		enrollmentType = req.EnrollmentType
+	}
+
+	course := &models.Course{
+		ID:               uuid.New(),
+		Title:            req.Title,
+		Slug:             req.Slug,
+		Description:      req.Description,
+		ShortDescription: req.ShortDescription,
+		SkillType:        req.SkillType,
+		Level:            req.Level,
+		TargetBandScore:  req.TargetBandScore,
+		ThumbnailURL:     req.ThumbnailURL,
+		PreviewVideoURL:  req.PreviewVideoURL,
+		InstructorID:     instructorID,
+		InstructorName:   &instructorName,
+		DurationHours:    req.DurationHours,
+		EnrollmentType:   enrollmentType,
+		Price:            req.Price,
+		Currency:         req.Currency,
+		Status:           "draft",
+		DisplayOrder:     0,
+	}
+
+	if course.Currency == "" {
+		course.Currency = "VND"
+	}
+
+	err := s.repo.CreateCourse(course)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create course: %w", err)
+	}
+
+	return course, nil
+}
+
+// UpdateCourse updates a course (Admin/Instructor only with ownership check)
+func (s *CourseService) UpdateCourse(courseID uuid.UUID, userID uuid.UUID, userRole string, req *models.UpdateCourseRequest) (*models.Course, error) {
+	// Check ownership if not admin
+	if userRole != "admin" {
+		isOwner, err := s.repo.CheckCourseOwnership(courseID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check ownership: %w", err)
+		}
+		if !isOwner {
+			return nil, fmt.Errorf("you don't have permission to update this course")
+		}
+	}
+
+	// Get existing course
+	course, err := s.repo.GetCourseByID(courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get course: %w", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+
+	// Build updates map
+	updates := make(map[string]interface{})
+	if req.Title != nil {
+		updates["title"] = *req.Title
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.ShortDescription != nil {
+		updates["short_description"] = *req.ShortDescription
+	}
+	if req.TargetBandScore != nil {
+		updates["target_band_score"] = *req.TargetBandScore
+	}
+	if req.ThumbnailURL != nil {
+		updates["thumbnail_url"] = *req.ThumbnailURL
+	}
+	if req.PreviewVideoURL != nil {
+		updates["preview_video_url"] = *req.PreviewVideoURL
+	}
+	if req.DurationHours != nil {
+		updates["duration_hours"] = *req.DurationHours
+	}
+	if req.Price != nil {
+		updates["price"] = *req.Price
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if req.IsFeatured != nil {
+		updates["is_featured"] = *req.IsFeatured
+	}
+	if req.IsRecommended != nil {
+		updates["is_recommended"] = *req.IsRecommended
+	}
+
+	err = s.repo.UpdateCourse(courseID, updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update course: %w", err)
+	}
+
+	// Return updated course
+	return s.repo.GetCourseByID(courseID)
+}
+
+// DeleteCourse deletes a course (Admin only)
+func (s *CourseService) DeleteCourse(courseID uuid.UUID) error {
+	return s.repo.DeleteCourse(courseID)
+}
+
+// CreateModule creates a new module (Admin/Instructor with ownership check)
+func (s *CourseService) CreateModule(userID uuid.UUID, userRole string, req *models.CreateModuleRequest) (*models.Module, error) {
+	// Check ownership if not admin
+	if userRole != "admin" {
+		isOwner, err := s.repo.CheckCourseOwnership(req.CourseID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check ownership: %w", err)
+		}
+		if !isOwner {
+			return nil, fmt.Errorf("you don't have permission to add modules to this course")
+		}
+	}
+
+	// Verify course exists
+	course, err := s.repo.GetCourseByID(req.CourseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get course: %w", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+
+	module := &models.Module{
+		ID:            uuid.New(),
+		CourseID:      req.CourseID,
+		Title:         req.Title,
+		Description:   req.Description,
+		DurationHours: req.DurationHours,
+		DisplayOrder:  req.DisplayOrder,
+		IsPublished:   true,
+	}
+
+	err = s.repo.CreateModule(module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create module: %w", err)
+	}
+
+	return module, nil
+}
+
+// CreateLesson creates a new lesson (Admin/Instructor with ownership check)
+func (s *CourseService) CreateLesson(userID uuid.UUID, userRole string, req *models.CreateLessonRequest) (*models.Lesson, error) {
+	// Get course_id from module
+	courseID, err := s.repo.GetModuleCourseID(req.ModuleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get module: %w", err)
+	}
+
+	// Check ownership if not admin
+	if userRole != "admin" {
+		isOwner, err := s.repo.CheckCourseOwnership(courseID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check ownership: %w", err)
+		}
+		if !isOwner {
+			return nil, fmt.Errorf("you don't have permission to add lessons to this course")
+		}
+	}
+
+	lesson := &models.Lesson{
+		ID:              uuid.New(),
+		ModuleID:        req.ModuleID,
+		CourseID:        courseID,
+		Title:           req.Title,
+		Description:     req.Description,
+		ContentType:     req.ContentType,
+		DurationMinutes: req.DurationMinutes,
+		DisplayOrder:    req.DisplayOrder,
+		IsFree:          req.IsFree,
+		IsPublished:     true,
+	}
+
+	err = s.repo.CreateLesson(lesson)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create lesson: %w", err)
+	}
+
+	return lesson, nil
+}
+
+// PublishCourse publishes a draft course (Admin/Instructor with ownership check)
+func (s *CourseService) PublishCourse(courseID uuid.UUID, userID uuid.UUID, userRole string) error {
+	// Check ownership if not admin
+	if userRole != "admin" {
+		isOwner, err := s.repo.CheckCourseOwnership(courseID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to check ownership: %w", err)
+		}
+		if !isOwner {
+			return fmt.Errorf("you don't have permission to publish this course")
+		}
+	}
+
+	return s.repo.PublishCourse(courseID)
+}
