@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/bisosad1501/DATN/services/user-service/internal/config"
 	"github.com/bisosad1501/DATN/services/user-service/internal/models"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthMiddleware struct {

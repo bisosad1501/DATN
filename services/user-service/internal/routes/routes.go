@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/bisosad1501/DATN/services/user-service/internal/handlers"
 	"github.com/bisosad1501/DATN/services/user-service/internal/middleware"
+	"github.com/gin-gonic/gin"
 )
 
 func SetupRoutes(handler *handlers.UserHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {

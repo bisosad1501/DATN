@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/bisosad1501/DATN/services/user-service/internal/models"
 	"github.com/bisosad1501/DATN/services/user-service/internal/service"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {

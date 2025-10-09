@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/bisosad1501/DATN/services/user-service/internal/models"
 	"github.com/bisosad1501/DATN/services/user-service/internal/repository"
+	"github.com/google/uuid"
 )
 
 type UserService struct {

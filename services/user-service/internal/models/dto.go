@@ -38,12 +38,12 @@ type EndSessionRequest struct {
 
 // ProgressStatsResponse represents progress statistics
 type ProgressStatsResponse struct {
-	Profile              *UserProfile      `json:"profile"`
-	Progress             *LearningProgress `json:"progress"`
-	RecentSessions       []StudySession    `json:"recent_sessions"`
-	Achievements         []UserAchievement `json:"achievements"`
-	TotalPoints          int               `json:"total_points"`
-	Rank                 int               `json:"rank,omitempty"`
+	Profile        *UserProfile      `json:"profile"`
+	Progress       *LearningProgress `json:"progress"`
+	RecentSessions []StudySession    `json:"recent_sessions"`
+	Achievements   []UserAchievement `json:"achievements"`
+	TotalPoints    int               `json:"total_points"`
+	Rank           int               `json:"rank,omitempty"`
 }
 
 // LeaderboardEntry represents a leaderboard entry

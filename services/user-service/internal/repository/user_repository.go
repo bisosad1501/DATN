@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/bisosad1501/DATN/services/user-service/internal/database"
 	"github.com/bisosad1501/DATN/services/user-service/internal/models"
+	"github.com/google/uuid"
 )
 
 type UserRepository struct {
@@ -96,7 +96,7 @@ func (r *UserRepository) UpdateProfile(userID uuid.UUID, req *models.UpdateProfi
 		paramCount++
 		query += fmt.Sprintf(", last_name = $%d", paramCount)
 		args = append(args, *req.LastName)
-		
+
 		// Auto-generate full_name if both first and last name are provided
 		if req.FirstName != nil {
 			paramCount++
@@ -244,7 +244,7 @@ func (r *UserRepository) CreateStudySession(session *models.StudySession) error 
 	`
 	_, err := r.db.DB.Exec(query, session.ID, session.UserID, session.SessionType,
 		session.SkillType, session.ResourceID, session.ResourceType, session.StartedAt, session.DeviceType)
-	
+
 	if err != nil {
 		log.Printf("❌ Error creating study session for user %s: %v", session.UserID, err)
 		return fmt.Errorf("failed to create study session: %w", err)
@@ -257,7 +257,7 @@ func (r *UserRepository) CreateStudySession(session *models.StudySession) error 
 // EndStudySession ends a study session
 func (r *UserRepository) EndStudySession(sessionID uuid.UUID, completionPercentage *float64, score *float64) error {
 	endedAt := time.Now()
-	
+
 	// First, get the session to calculate duration
 	var startedAt time.Time
 	var userID uuid.UUID

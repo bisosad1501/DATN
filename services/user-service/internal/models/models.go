@@ -33,25 +33,25 @@ type UserProfile struct {
 
 // LearningProgress represents overall learning progress
 type LearningProgress struct {
-	ID                       int64      `json:"id" db:"id"`
-	UserID                   uuid.UUID  `json:"user_id" db:"user_id"`
-	TotalStudyHours          float64    `json:"total_study_hours" db:"total_study_hours"`
-	TotalLessonsCompleted    int        `json:"total_lessons_completed" db:"total_lessons_completed"`
-	TotalExercisesCompleted  int        `json:"total_exercises_completed" db:"total_exercises_completed"`
-	ListeningProgress        float64    `json:"listening_progress" db:"listening_progress"`
-	ReadingProgress          float64    `json:"reading_progress" db:"reading_progress"`
-	WritingProgress          float64    `json:"writing_progress" db:"writing_progress"`
-	SpeakingProgress         float64    `json:"speaking_progress" db:"speaking_progress"`
-	ListeningScore           *float64   `json:"listening_score,omitempty" db:"listening_score"`
-	ReadingScore             *float64   `json:"reading_score,omitempty" db:"reading_score"`
-	WritingScore             *float64   `json:"writing_score,omitempty" db:"writing_score"`
-	SpeakingScore            *float64   `json:"speaking_score,omitempty" db:"speaking_score"`
-	OverallScore             *float64   `json:"overall_score,omitempty" db:"overall_score"`
-	CurrentStreakDays        int        `json:"current_streak_days" db:"current_streak_days"`
-	LongestStreakDays        int        `json:"longest_streak_days" db:"longest_streak_days"`
-	LastStudyDate            *time.Time `json:"last_study_date,omitempty" db:"last_study_date"`
-	CreatedAt                time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt                time.Time  `json:"updated_at" db:"updated_at"`
+	ID                      int64      `json:"id" db:"id"`
+	UserID                  uuid.UUID  `json:"user_id" db:"user_id"`
+	TotalStudyHours         float64    `json:"total_study_hours" db:"total_study_hours"`
+	TotalLessonsCompleted   int        `json:"total_lessons_completed" db:"total_lessons_completed"`
+	TotalExercisesCompleted int        `json:"total_exercises_completed" db:"total_exercises_completed"`
+	ListeningProgress       float64    `json:"listening_progress" db:"listening_progress"`
+	ReadingProgress         float64    `json:"reading_progress" db:"reading_progress"`
+	WritingProgress         float64    `json:"writing_progress" db:"writing_progress"`
+	SpeakingProgress        float64    `json:"speaking_progress" db:"speaking_progress"`
+	ListeningScore          *float64   `json:"listening_score,omitempty" db:"listening_score"`
+	ReadingScore            *float64   `json:"reading_score,omitempty" db:"reading_score"`
+	WritingScore            *float64   `json:"writing_score,omitempty" db:"writing_score"`
+	SpeakingScore           *float64   `json:"speaking_score,omitempty" db:"speaking_score"`
+	OverallScore            *float64   `json:"overall_score,omitempty" db:"overall_score"`
+	CurrentStreakDays       int        `json:"current_streak_days" db:"current_streak_days"`
+	LongestStreakDays       int        `json:"longest_streak_days" db:"longest_streak_days"`
+	LastStudyDate           *time.Time `json:"last_study_date,omitempty" db:"last_study_date"`
+	CreatedAt               time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // StudySession represents a study session

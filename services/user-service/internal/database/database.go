@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/bisosad1501/DATN/services/user-service/internal/config"
+	_ "github.com/lib/pq"
 )
 
 type Database struct {
