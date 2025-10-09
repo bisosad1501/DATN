@@ -2512,6 +2512,262 @@
 			}
 		],
 		"description": "Exercise Service APIs for exercises, questions, submissions, and auto-grading"
+	},
+	{
+		"name": "Notification Service",
+		"item": [
+			{
+				"name": "Student - Get Preferences",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/preferences",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "preferences"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Update Preferences",
+				"request": {
+					"method": "PUT",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"push_reminders\": false,\n  \"quiet_hours_enabled\": true,\n  \"quiet_hours_start\": \"22:00:00\",\n  \"quiet_hours_end\": \"08:00:00\",\n  \"max_notifications_per_day\": 20\n}"
+					},
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/preferences",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "preferences"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - List Notifications",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications?page=1&limit=10&is_read=false",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications"],
+						"query": [
+							{"key": "page", "value": "1"},
+							{"key": "limit", "value": "10"},
+							{"key": "is_read", "value": "false", "description": "Optional filter"}
+						]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Get Unread Count",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/unread-count",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "unread-count"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Get Notification by ID",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/{{notification_id}}",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "{{notification_id}}"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Mark as Read",
+				"request": {
+					"method": "PUT",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/{{notification_id}}/read",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "{{notification_id}}", "read"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Mark All as Read",
+				"request": {
+					"method": "PUT",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/mark-all-read",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "mark-all-read"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Delete Notification",
+				"request": {
+					"method": "DELETE",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/{{notification_id}}",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "{{notification_id}}"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Register Device",
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"device_token\": \"fcm_token_123456789\",\n  \"device_type\": \"android\",\n  \"device_name\": \"Samsung Galaxy S21\",\n  \"app_version\": \"1.0.0\",\n  \"os_version\": \"Android 12\"\n}"
+					},
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/devices",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "devices"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Admin - Create Notification",
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"type\": \"achievement\",\n  \"category\": \"success\",\n  \"title\": \"Congratulations!\",\n  \"message\": \"You have completed your first lesson\",\n  \"action_type\": \"navigate_to_course\",\n  \"action_data\": {\n    \"course_id\": \"123\",\n    \"lesson_id\": \"456\"\n  }\n}"
+					},
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/admin/notifications",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "admin", "notifications"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Admin - Send Bulk Notifications",
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"user_ids\": [\"{{user_id}}\"],\n  \"type\": \"reminder\",\n  \"category\": \"info\",\n  \"title\": \"Daily Practice Reminder\",\n  \"message\": \"Don't forget to practice your English today!\"\n}"
+					},
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/admin/notifications/bulk",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "admin", "notifications", "bulk"]
+					}
+				},
+				"response": []
+			}
+		],
+		"description": "Notification Service APIs for managing user notifications, preferences, and device tokens"
 	}
 	]
 }
