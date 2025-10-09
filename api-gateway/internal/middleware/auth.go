@@ -31,7 +31,7 @@ func (m *AuthMiddleware) ValidateToken() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "authorization_required",
+				"error":   "authorization_required",
 				"message": "Authorization header is required",
 			})
 			c.Abort()
@@ -41,7 +41,7 @@ func (m *AuthMiddleware) ValidateToken() gin.HandlerFunc {
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid_token_format",
+				"error":   "invalid_token_format",
 				"message": "Invalid authorization header format. Use: Bearer <token>",
 			})
 			c.Abort()
@@ -59,7 +59,7 @@ func (m *AuthMiddleware) ValidateToken() gin.HandlerFunc {
 
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid_token",
+				"error":   "invalid_token",
 				"message": "Invalid or expired token",
 			})
 			c.Abort()
@@ -69,7 +69,7 @@ func (m *AuthMiddleware) ValidateToken() gin.HandlerFunc {
 		claims, ok := token.Claims.(*Claims)
 		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid_claims",
+				"error":   "invalid_claims",
 				"message": "Invalid token claims",
 			})
 			c.Abort()

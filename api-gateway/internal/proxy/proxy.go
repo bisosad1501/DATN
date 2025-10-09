@@ -26,7 +26,7 @@ func ReverseProxy(targetURL string) gin.HandlerFunc {
 		req.Host = target.Host
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
-		
+
 		// Log the proxied request
 		log.Printf("[Proxy] %s %s → %s%s", req.Method, req.URL.Path, target.String(), req.URL.Path)
 	}
@@ -60,7 +60,7 @@ func ProxyWithPathRewrite(targetURL, stripPrefix string) gin.HandlerFunc {
 		req.Host = target.Host
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
-		
+
 		// Strip prefix from path
 		if stripPrefix != "" {
 			req.URL.Path = req.URL.Path[len(stripPrefix):]
@@ -68,8 +68,8 @@ func ProxyWithPathRewrite(targetURL, stripPrefix string) gin.HandlerFunc {
 				req.URL.Path = "/"
 			}
 		}
-		
-		log.Printf("[Proxy] %s %s (stripped: %s) → %s%s", 
+
+		log.Printf("[Proxy] %s %s (stripped: %s) → %s%s",
 			req.Method, originalPath, stripPrefix, target.String(), req.URL.Path)
 	}
 

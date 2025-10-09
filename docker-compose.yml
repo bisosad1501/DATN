@@ -88,31 +88,39 @@ services:
       - postgres
 
   # ============================================
-  # API Gateway - TODO: Uncomment when implemented
+  # API Gateway - Single Entry Point
   # ============================================
-  # api-gateway:
-  #   build:
-  #     context: ./api-gateway
-  #     dockerfile: Dockerfile
-  #   container_name: ielts_api_gateway
-  #   environment:
-  #     - PORT=8080
-  #     - AUTH_SERVICE_URL=http://auth-service:8081
-  #     - USER_SERVICE_URL=http://user-service:8082
-  #     - COURSE_SERVICE_URL=http://course-service:8083
-  #     - EXERCISE_SERVICE_URL=http://exercise-service:8084
-  #     - AI_SERVICE_URL=http://ai-service:8085
-  #     - NOTIFICATION_SERVICE_URL=http://notification-service:8086
-  #     - REDIS_URL=redis://:ielts_redis_password@redis:6379
-  #     - JWT_SECRET=your_jwt_secret_key_change_in_production
-  #   ports:
-  #     - "8080:8080"
-  #   networks:
-  #     - ielts_network
-  #   depends_on:
-  #     - redis
-  #     - rabbitmq
-  #   restart: unless-stopped
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: ielts_api_gateway
+    environment:
+      - SERVER_PORT=8080
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - COURSE_SERVICE_URL=http://course-service:8083
+      - EXERCISE_SERVICE_URL=http://exercise-service:8084
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8085
+      - RATE_LIMIT_RPM=100
+      - RATE_LIMIT_ENABLED=true
+    ports:
+      - "8080:8080"
+    networks:
+      - ielts_network
+    depends_on:
+      - auth-service
+      - course-service
+      - exercise-service
+      - notification-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
   # ============================================
   # Auth Service
