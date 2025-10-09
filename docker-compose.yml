@@ -189,36 +189,39 @@ services:
     restart: unless-stopped
 
   # ============================================
-  # Course Service - TODO: Uncomment when implemented
+  # Course Service
   # ============================================
-  # course-service:
-  #   build:
-  #     context: ./services/course-service
-  #     dockerfile: Dockerfile
-  #   container_name: ielts_course_service
-  #   environment:
-  #     - PORT=8083
-  #     - DB_HOST=postgres
-  #     - DB_PORT=5432
-  #     - DB_USER=ielts_admin
-  #     - DB_PASSWORD=ielts_password_2025
-  #     - DB_NAME=course_db
-  #     - REDIS_URL=redis://:ielts_redis_password@redis:6379
-  #     - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
-  #     - VIDEO_STORAGE_PATH=/uploads/videos
-  #     - MATERIALS_STORAGE_PATH=/uploads/materials
-  #   ports:
-  #     - "8083:8083"
-  #   volumes:
-  #     - course_uploads:/uploads
-  #   networks:
-  #     - ielts_network
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   restart: unless-stopped
+  course-service:
+    build:
+      context: .
+      dockerfile: ./services/course-service/Dockerfile
+    container_name: ielts_course_service
+    environment:
+      - SERVER_PORT=8083
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=course_db
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./database/schemas:/schemas:ro
+      - ./scripts:/scripts:ro
+    ports:
+      - "8083:8083"
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
   # ============================================
   # Exercise Service - TODO: Uncomment when implemented
