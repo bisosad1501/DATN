@@ -1406,10 +1406,771 @@
 								}
 							]
 						},
-						"description": "Get study session history"
-					}
+					"description": "Get study session history"
 				}
-			]
-		}
+			}
+		]
+	},
+	{
+		"name": "Course Service",
+		"item": [
+			{
+				"name": "Health Check",
+				"event": [
+					{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Status code is 200', function() {",
+								"    pm.response.to.have.status(200);",
+								"});",
+								"",
+								"pm.test('Service is healthy', function() {",
+								"    const jsonData = pm.response.json();",
+								"    pm.expect(jsonData.success).to.be.true;",
+								"    pm.expect(jsonData.data.service).to.eql('course-service');",
+								"    pm.expect(jsonData.data.status).to.eql('healthy');",
+								"});"
+							]
+						}
+					}
+				],
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{course_service_url}}/health",
+						"host": ["{{course_service_url}}"],
+						"path": ["health"]
+					},
+					"description": "Check Course Service health status"
+				}
+			},
+			{
+				"name": "Public APIs",
+				"item": [
+					{
+						"name": "Get All Courses",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has courses list', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('courses');",
+										"    pm.expect(jsonData.data).to.have.property('count');",
+										"    pm.expect(jsonData.data.courses).to.be.an('array');",
+										"});",
+										"",
+										"// Save first course ID for other tests",
+										"const jsonData = pm.response.json();",
+										"if (jsonData.data.courses.length > 0) {",
+										"    pm.environment.set('test_course_id', jsonData.data.courses[0].id);",
+										"    console.log('Saved course ID:', jsonData.data.courses[0].id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/courses?page=1&limit=20",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "courses"],
+								"query": [
+									{
+										"key": "page",
+										"value": "1",
+										"description": "Page number"
+									},
+									{
+										"key": "limit",
+										"value": "20",
+										"description": "Items per page"
+									},
+									{
+										"key": "skill_type",
+										"value": "listening",
+										"description": "Filter by skill: listening, reading, writing, speaking",
+										"disabled": true
+									},
+									{
+										"key": "level",
+										"value": "intermediate",
+										"description": "Filter by level: beginner, intermediate, advanced",
+										"disabled": true
+									},
+									{
+										"key": "enrollment_type",
+										"value": "free",
+										"description": "Filter by type: free, premium, subscription",
+										"disabled": true
+									},
+									{
+										"key": "is_featured",
+										"value": "true",
+										"description": "Show only featured courses",
+										"disabled": true
+									},
+									{
+										"key": "search",
+										"value": "IELTS",
+										"description": "Search in title and description",
+										"disabled": true
+									}
+								]
+							},
+							"description": "Get list of published courses with filtering and pagination. No authentication required."
+						}
+					},
+					{
+						"name": "Get Course Detail",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has course detail', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('course');",
+										"    pm.expect(jsonData.data).to.have.property('modules');",
+										"    pm.expect(jsonData.data.modules).to.be.an('array');",
+										"});",
+										"",
+										"// Save module and lesson IDs",
+										"const jsonData = pm.response.json();",
+										"if (jsonData.data.modules.length > 0) {",
+										"    pm.environment.set('test_module_id', jsonData.data.modules[0].id);",
+										"    if (jsonData.data.modules[0].lessons.length > 0) {",
+										"        pm.environment.set('test_lesson_id', jsonData.data.modules[0].lessons[0].id);",
+										"    }",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/courses/{{test_course_id}}",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "courses", "{{test_course_id}}"]
+							},
+							"description": "Get detailed information about a course including modules and lessons"
+						}
+					},
+					{
+						"name": "Get Lesson Detail",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has lesson detail', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('lesson');",
+										"    pm.expect(jsonData.data).to.have.property('videos');",
+										"    pm.expect(jsonData.data).to.have.property('materials');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/lessons/{{test_lesson_id}}",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "lessons", "{{test_lesson_id}}"]
+							},
+							"description": "Get detailed information about a lesson including videos and materials"
+						}
+					}
+				],
+				"description": "Public APIs for browsing courses (no authentication required)"
+			},
+			{
+				"name": "Student APIs",
+				"item": [
+					{
+						"name": "Enroll in Course",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 201', function() {",
+										"    pm.response.to.have.status(201);",
+										"});",
+										"",
+										"pm.test('Enrollment created successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('id');",
+										"    pm.expect(jsonData.data).to.have.property('course_id');",
+										"    pm.expect(jsonData.data).to.have.property('user_id');",
+										"    pm.expect(jsonData.data.status).to.eql('active');",
+										"});",
+										"",
+										"// Save enrollment ID",
+										"const jsonData = pm.response.json();",
+										"pm.environment.set('test_enrollment_id', jsonData.data.id);"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"course_id\": \"{{test_course_id}}\",\n    \"enrollment_type\": \"free\"\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/enrollments",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "enrollments"]
+							},
+							"description": "Enroll in a course (requires authentication)"
+						}
+					},
+					{
+						"name": "Get My Enrollments",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has enrollments', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('enrollments');",
+										"    pm.expect(jsonData.data.enrollments).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/enrollments/my",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "enrollments", "my"]
+							},
+							"description": "Get all enrollments for the authenticated user"
+						}
+					},
+					{
+						"name": "Get Enrollment Progress",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has progress detail', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('enrollment');",
+										"    pm.expect(jsonData.data).to.have.property('course');",
+										"    pm.expect(jsonData.data).to.have.property('modules_progress');",
+										"    pm.expect(jsonData.data.modules_progress).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/enrollments/{{test_enrollment_id}}/progress",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "enrollments", "{{test_enrollment_id}}", "progress"]
+							},
+							"description": "Get detailed progress for an enrollment including per-module completion"
+						}
+					},
+					{
+						"name": "Update Lesson Progress",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Progress updated successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('progress_percentage');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "PUT",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"progress_percentage\": 50,\n    \"video_watched_seconds\": 600,\n    \"time_spent\": 900,\n    \"is_completed\": false\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/progress/lessons/{{test_lesson_id}}",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "progress", "lessons", "{{test_lesson_id}}"]
+							},
+							"description": "Update progress for a specific lesson"
+						}
+					}
+				],
+				"description": "APIs for students to enroll and track their progress (requires authentication)"
+			},
+			{
+				"name": "Instructor APIs",
+				"item": [
+					{
+						"name": "Create Course",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 201', function() {",
+										"    pm.response.to.have.status(201);",
+										"});",
+										"",
+										"pm.test('Course created successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('id');",
+										"    pm.expect(jsonData.data).to.have.property('instructor_id');",
+										"    pm.expect(jsonData.data.status).to.eql('draft');",
+										"});",
+										"",
+										"// Save created course ID",
+										"const jsonData = pm.response.json();",
+										"pm.environment.set('instructor_course_id', jsonData.data.id);",
+										"console.log('Created course ID:', jsonData.data.id);"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{instructor_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"title\": \"IELTS Speaking Mastery\",\n    \"slug\": \"ielts-speaking-mastery\",\n    \"description\": \"Master IELTS Speaking with comprehensive practice and expert feedback\",\n    \"short_description\": \"Complete guide to IELTS Speaking\",\n    \"skill_type\": \"speaking\",\n    \"level\": \"intermediate\",\n    \"target_band_score\": 7.0,\n    \"enrollment_type\": \"premium\",\n    \"price\": 999000,\n    \"currency\": \"VND\",\n    \"thumbnail_url\": \"https://example.com/thumbnail.jpg\",\n    \"preview_video_url\": \"https://example.com/preview.mp4\"\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/courses",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "courses"]
+							},
+							"description": "Create a new course (Instructor or Admin only). Course starts in 'draft' status."
+						}
+					},
+					{
+						"name": "Update Course",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Course updated successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.message).to.include('updated');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{instructor_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "PUT",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"title\": \"IELTS Speaking Mastery - Updated\",\n    \"is_featured\": true,\n    \"price\": 899000\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/courses/{{instructor_course_id}}",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "courses", "{{instructor_course_id}}"]
+							},
+							"description": "Update course details. Instructors can only update their own courses. Partial updates supported."
+						}
+					},
+					{
+						"name": "Create Module",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 201', function() {",
+										"    pm.response.to.have.status(201);",
+										"});",
+										"",
+										"pm.test('Module created successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('id');",
+										"    pm.expect(jsonData.data).to.have.property('course_id');",
+										"});",
+										"",
+										"// Save module ID",
+										"const jsonData = pm.response.json();",
+										"pm.environment.set('instructor_module_id', jsonData.data.id);"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{instructor_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"course_id\": \"{{instructor_course_id}}\",\n    \"title\": \"Module 1: Introduction to IELTS Speaking\",\n    \"description\": \"Understanding the format and assessment criteria\",\n    \"duration_hours\": 3.0,\n    \"display_order\": 1\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/modules",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "modules"]
+							},
+							"description": "Create a module for a course. Instructors can only create modules for their own courses."
+						}
+					},
+					{
+						"name": "Create Lesson",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 201', function() {",
+										"    pm.response.to.have.status(201);",
+										"});",
+										"",
+										"pm.test('Lesson created successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('id');",
+										"    pm.expect(jsonData.data).to.have.property('module_id');",
+										"    pm.expect(jsonData.data).to.have.property('course_id');",
+										"});",
+										"",
+										"// Save lesson ID",
+										"const jsonData = pm.response.json();",
+										"pm.environment.set('instructor_lesson_id', jsonData.data.id);"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{instructor_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"module_id\": \"{{instructor_module_id}}\",\n    \"title\": \"Lesson 1: IELTS Speaking Overview\",\n    \"description\": \"Understanding the three parts of IELTS Speaking test\",\n    \"content_type\": \"video\",\n    \"duration_minutes\": 45,\n    \"display_order\": 1,\n    \"is_free\": true\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/lessons",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "lessons"]
+							},
+							"description": "Create a lesson for a module. Instructors can only create lessons for their own courses."
+						}
+					},
+					{
+						"name": "Publish Course",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Course published successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.message).to.include('published');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{instructor_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/courses/{{instructor_course_id}}/publish",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "courses", "{{instructor_course_id}}", "publish"]
+							},
+							"description": "Publish a draft course to make it visible to students. Instructors can only publish their own courses."
+						}
+					}
+				],
+				"description": "APIs for instructors to create and manage their own courses"
+			},
+			{
+				"name": "Admin APIs",
+				"item": [
+					{
+						"name": "Delete Course",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Course deleted successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.message).to.include('deleted');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{admin_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "DELETE",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/courses/{{course_to_delete}}",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "courses", "{{course_to_delete}}"]
+							},
+							"description": "Soft delete a course (Admin only). This is a soft delete - course is marked as deleted but not removed from database."
+						}
+					},
+					{
+						"name": "Update Any Course",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Course updated by admin', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{admin_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "PUT",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"is_featured\": true,\n    \"is_recommended\": true\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/courses/{{test_course_id}}",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "courses", "{{test_course_id}}"]
+							},
+							"description": "Admin can update ANY course regardless of ownership"
+						}
+					}
+				],
+				"description": "Admin-only APIs with full permissions"
+			}
+		],
+		"description": "Course Service APIs for managing courses, modules, lessons, and student enrollments"
+	}
 	]
 }

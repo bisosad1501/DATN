@@ -67,6 +67,40 @@ instructor_5678@test.com
 7. **Change Password** - Update password
 8. **Logout** - Invalidate refresh token
 
+### User Service (8 endpoints)
+1. **Health Check** - Verify service status
+2. **Get Profile** - Get current user profile
+3. **Update Profile** - Update user information
+4. **Upload Avatar** - Upload profile picture
+5. **Get User Stats** - Get learning statistics
+6. **Update Preferences** - Update user preferences
+7. **Update Progress** - Update learning progress
+8. **Get Progress History** - Get study session history
+
+### Course Service (16 endpoints)
+
+#### Public APIs (3 endpoints)
+1. **Get All Courses** - List courses with filters (no auth required)
+2. **Get Course Detail** - View course with modules/lessons (no auth required)
+3. **Get Lesson Detail** - View lesson with videos/materials (no auth required)
+
+#### Student APIs (4 endpoints)
+4. **Enroll in Course** - Enroll in a course (requires auth)
+5. **Get My Enrollments** - List user's enrolled courses
+6. **Get Enrollment Progress** - View detailed progress per module
+7. **Update Lesson Progress** - Track lesson completion and time spent
+
+#### Instructor APIs (5 endpoints)
+8. **Create Course** - Create new course (draft status)
+9. **Update Course** - Update own course details
+10. **Create Module** - Add module to own course
+11. **Create Lesson** - Add lesson to own course
+12. **Publish Course** - Publish draft course
+
+#### Admin APIs (2 endpoints)
+13. **Delete Course** - Soft delete any course (admin only)
+14. **Update Any Course** - Update any course regardless of ownership
+
 ## 🔧 Environment Variables
 
 ### Base Configuration
@@ -85,6 +119,22 @@ instructor_5678@test.com
 - `test_instructor_password` - Instructor password
 - `instructor_access_token` - Instructor JWT token
 - `instructor_refresh_token` - Instructor refresh token
+- `instructor_token` - Instructor token for Course Service
+- `admin_token` - Admin token for privileged operations
+
+### Service URLs
+- `user_service_url` - User Service URL (default: http://localhost:8082)
+- `course_service_url` - Course Service URL (default: http://localhost:8083)
+
+### Course Service Test Data
+- `test_course_id` - Sample course ID (auto-saved from Get All Courses)
+- `test_module_id` - Sample module ID (auto-saved from Get Course Detail)
+- `test_lesson_id` - Sample lesson ID (auto-saved from Get Course Detail)
+- `test_enrollment_id` - User's enrollment ID (auto-saved from Enroll)
+- `instructor_course_id` - Course created by instructor (auto-saved)
+- `instructor_module_id` - Module created by instructor (auto-saved)
+- `instructor_lesson_id` - Lesson created by instructor (auto-saved)
+- `course_to_delete` - Course ID for deletion testing
 
 ## 🧪 Testing Workflows
 
@@ -184,20 +234,70 @@ Each endpoint has custom tests for:
 - Business logic validation
 - Environment variable management
 
+## 🎯 Testing Scenarios
+
+### Course Creation Workflow (Instructor)
+```
+1. Login as Instructor
+   → Saves instructor_token
+2. Create Course (POST /admin/courses)
+   → Auto-saves instructor_course_id
+   → Course status: draft
+3. Create Module (POST /admin/modules)
+   → Auto-saves instructor_module_id
+4. Create Lesson (POST /admin/lessons)
+   → Auto-saves instructor_lesson_id
+5. Publish Course (POST /admin/courses/:id/publish)
+   → Course status: published
+```
+
+### Student Enrollment Workflow
+```
+1. Login as Student
+   → Saves access_token
+2. Browse Courses (GET /courses)
+   → Auto-saves test_course_id
+3. View Course Detail (GET /courses/:id)
+   → Auto-saves test_module_id, test_lesson_id
+4. Enroll in Course (POST /enrollments)
+   → Auto-saves test_enrollment_id
+5. View My Enrollments (GET /enrollments/my)
+   → See all enrolled courses
+6. Update Lesson Progress (PUT /progress/lessons/:id)
+   → Track completion and time
+7. Check Progress (GET /enrollments/:id/progress)
+   → View per-module completion
+```
+
+### Permission Testing
+```
+1. Instructor creates course A
+2. Different instructor tries to update course A
+   → Should fail with 403 Forbidden
+3. Admin updates course A
+   → Should succeed (admin has full permissions)
+4. Instructor tries to delete course A
+   → Should fail with 403 Forbidden
+5. Admin deletes course A
+   → Should succeed (soft delete)
+```
+
 ## 🎯 Next Steps
 
 ### Add More Services
 As new microservices are implemented, add folders:
-- User Service
-- Course Service
-- Exercise Service
-- AI Service
-- Notification Service
+- ✅ Auth Service (Completed)
+- ✅ User Service (Completed)
+- ✅ Course Service (Completed)
+- Exercise Service (Coming soon)
+- AI Service (Coming soon)
+- Notification Service (Coming soon)
 
 ### Environment Setup
 Create additional environments:
 - `IELTS Platform - Dev` (port 8081)
 - `IELTS Platform - Staging` (staging URL)
+- `IELTS Platform - Production` (production URL)
 - `IELTS Platform - Production` (prod URL)
 
 ### CI/CD Integration
