@@ -489,7 +489,7 @@
 			"description": "Google OAuth 2.0 authentication flow. This provides an alternative login method using Google accounts. The flow involves: 1) Initiate OAuth by redirecting to Google, 2) User authorizes on Google, 3) Callback receives authorization code and exchanges for JWT tokens.",
 			"item": [
 				{
-					"name": "Initiate Google OAuth",
+					"name": "Get Google OAuth URL",
 					"event": [
 						{
 							"listen": "test",
@@ -499,17 +499,31 @@
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
+									"pm.test('Response has JSON content type', function() {",
+									"    pm.response.to.have.header('Content-Type');",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+									"});",
+									"",
 									"pm.test('Returns Google OAuth URL', function() {",
 									"    const jsonData = pm.response.json();",
 									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.data).to.have.property('auth_url');",
-									"    pm.expect(jsonData.data.auth_url).to.include('accounts.google.com');",
-									"    pm.expect(jsonData.data.auth_url).to.include('client_id');",
-									"    pm.expect(jsonData.data.auth_url).to.include('redirect_uri');",
-									"    pm.expect(jsonData.data.auth_url).to.include('state');",
+									"    pm.expect(jsonData.data).to.have.property('url');",
+									"    pm.expect(jsonData.data).to.have.property('state');",
+									"    pm.expect(jsonData.data.url).to.include('accounts.google.com');",
+									"    pm.expect(jsonData.data.url).to.include('client_id');",
+									"    pm.expect(jsonData.data.url).to.include('redirect_uri');",
+									"    pm.expect(jsonData.data.url).to.include('state');",
 									"    ",
-									"    console.log('Google OAuth URL:', jsonData.data.auth_url);",
+									"    // Save state for callback",
+									"    pm.environment.set('google_oauth_state', jsonData.data.state);",
+									"    ",
+									"    console.log('Google OAuth URL:', jsonData.data.url);",
+									"    console.log('State:', jsonData.data.state);",
 									"    console.log('⚠️  Open this URL in a browser to complete OAuth flow');",
+									"});",
+									"",
+									"pm.test('Response time is less than 2000ms', function() {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
 									"});"
 								]
 							}
@@ -522,11 +536,11 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/auth/google",
+							"raw": "{{base_url}}/api/v1/auth/google/url",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "auth", "google"]
+							"path": ["api", "v1", "auth", "google", "url"]
 						},
-						"description": "Initiates the Google OAuth 2.0 flow by generating an authorization URL with a CSRF state token. The response includes the URL that the user should visit to authorize with Google. After authorization, Google will redirect to the callback endpoint with an authorization code."
+						"description": "Returns the Google OAuth 2.0 authorization URL as JSON. This endpoint generates a URL with a CSRF state token that the client should use to redirect the user to Google for authentication. After authorization, Google will redirect to the callback endpoint.\n\n**Response:**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"url\": \"https://accounts.google.com/o/oauth2/auth?...\",\n    \"state\": \"uuid-v4-token\"\n  }\n}\n```"
 					}
 				},
 				{
@@ -592,6 +606,57 @@
 							]
 						},
 						"description": "Handles the OAuth callback from Google. This endpoint:\n1. Validates the state parameter for CSRF protection\n2. Exchanges the authorization code for an access token\n3. Fetches user info from Google\n4. Creates or links the user account\n5. Generates JWT tokens for the application\n\n⚠️ Manual Testing Required:\n1. Call 'Initiate Google OAuth' endpoint\n2. Copy the auth_url from the response\n3. Open the URL in a browser\n4. Authorize with Google\n5. After redirect, copy the 'code' and 'state' parameters from the URL\n6. Paste them into this request and execute\n\n🔄 Account Linking:\nIf an account with the same email already exists, it will be linked to the Google account automatically."
+					}
+				},
+				{
+					"name": "Google Exchange Token (Mobile)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has tokens', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('user');",
+									"    pm.expect(jsonData.data).to.have.property('tokens');",
+									"    pm.expect(jsonData.data.tokens).to.have.property('access_token');",
+									"    pm.expect(jsonData.data.tokens).to.have.property('refresh_token');",
+									"    ",
+									"    // Save tokens",
+									"    pm.environment.set('access_token', jsonData.data.tokens.access_token);",
+									"    pm.environment.set('refresh_token', jsonData.data.tokens.refresh_token);",
+									"    pm.environment.set('user_id', jsonData.data.user.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"PASTE_AUTH_CODE_HERE\",\n    \"state\": \"PASTE_STATE_HERE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/google/token",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "google", "token"]
+						},
+						"description": "📱 Mobile/API OAuth Flow - Exchange authorization code for tokens.\n\nThis endpoint is designed for Mobile Apps, Desktop Apps, and SPAs that cannot use browser redirects.\n\n🔄 Flow:\n1. Call GET /api/v1/auth/google/url to get OAuth URL\n2. Open URL in WebView/Browser (user logs in with Google)\n3. Capture the redirect URL with 'code' parameter\n4. Send code to this endpoint\n5. Receive JWT tokens\n\n⚠️ Important:\n- OAuth codes expire in 5-10 minutes\n- Each code can only be used once\n- State parameter is optional but recommended for CSRF protection\n\n✅ Use Cases:\n- iOS/Android mobile apps\n- Desktop applications\n- Single Page Applications (SPA)\n- API-only clients\n\n💡 Example Mobile Implementation:\n```swift\n// iOS\nlet code = extractCodeFromURL(url)\nAPIClient.exchangeGoogleToken(code: code) { result in\n    // Save tokens to Keychain\n}\n```\n\n```kotlin\n// Android\nval code = uri.getQueryParameter(\"code\")\napiClient.exchangeGoogleToken(code) { tokens ->\n    // Save to SharedPreferences (encrypted)\n}\n```"
 					}
 				}
 			]

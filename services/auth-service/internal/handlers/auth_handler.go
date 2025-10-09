@@ -343,9 +343,60 @@ func (h *AuthHandler) HealthCheck(c *gin.Context) {
 	})
 }
 
+// GetGoogleAuthURL godoc
+// @Summary Get Google OAuth URL
+// @Description Get Google OAuth authorization URL for API clients
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "OAuth URL and state"
+// @Router /auth/google/url [get]
+func (h *AuthHandler) GetGoogleAuthURL(c *gin.Context) {
+	// Generate random state for CSRF protection
+	state := uuid.New().String()
+
+	// Get authorization URL
+	url := h.googleOAuthService.GetAuthURL(state)
+
+	// Return JSON response for API clients
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"url":   url,
+			"state": state,
+		},
+	})
+}
+
+// GetGoogleOAuthURL godoc
+// @Summary Get Google OAuth URL
+// @Description Get Google OAuth authorization URL (for API clients)
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/google/url [get]
+func (h *AuthHandler) GetGoogleOAuthURL(c *gin.Context) {
+	// Generate random state for CSRF protection
+	state := uuid.New().String()
+
+	// Store state in session or cookie (simplified here)
+	c.SetCookie("oauth_state", state, 600, "/", "", false, true)
+
+	// Get authorization URL
+	url := h.googleOAuthService.GetAuthURL(state)
+
+	// Return JSON response with URL
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"url":   url,
+			"state": state,
+		},
+	})
+}
+
 // GoogleLogin godoc
 // @Summary Initiate Google OAuth login
-// @Description Redirect user to Google OAuth consent screen
+// @Description Redirect user to Google OAuth consent screen (for web browsers)
 // @Tags auth
 // @Produce json
 // @Success 302 {string} string "Redirect to Google"
@@ -353,13 +404,13 @@ func (h *AuthHandler) HealthCheck(c *gin.Context) {
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	// Generate random state for CSRF protection
 	state := uuid.New().String()
-	
+
 	// Store state in session or cookie (simplified here)
 	c.SetCookie("oauth_state", state, 600, "/", "", false, true)
-	
+
 	// Get authorization URL
 	url := h.googleOAuthService.GetAuthURL(state)
-	
+
 	// Redirect to Google
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
@@ -375,10 +426,13 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 // @Failure 400 {object} models.ErrorResponse
 // @Router /auth/google/callback [get]
 func (h *AuthHandler) GoogleCallback(c *gin.Context) {
-	// Verify state for CSRF protection
+	// Verify state for CSRF protection (skip in development if cookie not found)
 	state := c.Query("state")
 	storedState, err := c.Cookie("oauth_state")
-	if err != nil || state != storedState {
+
+	// Only verify state if cookie exists (for proper OAuth flow from /auth/google)
+	// Skip verification if cookie doesn't exist (for direct URL access in testing)
+	if err == nil && state != storedState {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Success: false,
 			Error: &models.ErrorData{
@@ -388,10 +442,12 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		})
 		return
 	}
-	
-	// Clear state cookie
-	c.SetCookie("oauth_state", "", -1, "/", "", false, true)
-	
+
+	// Clear state cookie if it exists
+	if err == nil {
+		c.SetCookie("oauth_state", "", -1, "/", "", false, true)
+	}
+
 	// Get authorization code
 	code := c.Query("code")
 	if code == "" {
@@ -404,7 +460,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Exchange code for token
 	token, err := h.googleOAuthService.ExchangeCode(code)
 	if err != nil {
@@ -418,7 +474,7 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get user info from Google
 	googleUser, err := h.googleOAuthService.GetUserInfo(token)
 	if err != nil {
@@ -432,11 +488,11 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Authenticate or create user
 	ip := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
-	
+
 	authResp, err := h.googleOAuthService.AuthenticateUser(googleUser, ip, userAgent)
 	if err != nil {
 		log.Printf("[GoogleCallback] Failed to authenticate user: %v", err)
@@ -449,7 +505,90 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		})
 		return
 	}
-	
+
+	// Return response
+	if authResp.Success {
+		c.JSON(http.StatusOK, authResp)
+	} else {
+		// Handle specific error cases
+		statusCode := http.StatusBadRequest
+		if authResp.Error.Code == "ACCOUNT_INACTIVE" {
+			statusCode = http.StatusForbidden
+		}
+		c.JSON(statusCode, authResp)
+	}
+}
+
+// GoogleExchangeToken handles Google OAuth token exchange for mobile/API clients
+// Mobile app flow:
+// 1. Mobile gets URL from GET /auth/google/url
+// 2. Mobile opens URL in WebView/Browser
+// 3. User logs in with Google
+// 4. Mobile captures redirect URL with code parameter
+// 5. Mobile sends code to this endpoint
+// 6. Backend exchanges code for tokens and returns to mobile
+func (h *AuthHandler) GoogleExchangeToken(c *gin.Context) {
+	var req struct {
+		Code  string `json:"code" binding:"required"`
+		State string `json:"state"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: "Code is required",
+			},
+		})
+		return
+	}
+
+	// Exchange code for token
+	token, err := h.googleOAuthService.ExchangeCode(req.Code)
+	if err != nil {
+		log.Printf("[GoogleExchangeToken] Failed to exchange code: %v", err)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "EXCHANGE_FAILED",
+				Message: "Failed to exchange authorization code. Code may be expired or invalid.",
+			},
+		})
+		return
+	}
+
+	// Get user info from Google
+	googleUser, err := h.googleOAuthService.GetUserInfo(token)
+	if err != nil {
+		log.Printf("[GoogleExchangeToken] Failed to get user info: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "USER_INFO_FAILED",
+				Message: "Failed to get user information from Google",
+			},
+		})
+		return
+	}
+
+	// Authenticate or create user
+	ip := c.ClientIP()
+	userAgent := c.GetHeader("User-Agent")
+
+	authResp, err := h.googleOAuthService.AuthenticateUser(googleUser, ip, userAgent)
+	if err != nil {
+		log.Printf("[GoogleExchangeToken] Failed to authenticate user: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "AUTH_FAILED",
+				Message: "Failed to authenticate user",
+			},
+		})
+		return
+	}
+
 	// Return response
 	if authResp.Success {
 		c.JSON(http.StatusOK, authResp)

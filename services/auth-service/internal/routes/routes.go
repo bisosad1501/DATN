@@ -21,10 +21,12 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, authServ
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
-			
+
 			// Google OAuth endpoints
-			auth.GET("/google", authHandler.GoogleLogin)
-			auth.GET("/google/callback", authHandler.GoogleCallback)
+			auth.GET("/google/url", authHandler.GetGoogleOAuthURL)       // Step 1: Get OAuth URL (Mobile/Web)
+			auth.GET("/google", authHandler.GoogleLogin)                 // Web flow: Redirect to Google
+			auth.GET("/google/callback", authHandler.GoogleCallback)     // Web flow: Handle callback
+			auth.POST("/google/token", authHandler.GoogleExchangeToken)  // Mobile flow: Exchange code for tokens
 
 			// Protected endpoints (require authentication)
 			protected := auth.Group("")
