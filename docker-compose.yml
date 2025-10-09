@@ -154,33 +154,39 @@ services:
   # ============================================
   # User Service
   # ============================================
-  # TODO: Uncomment when user-service is implemented
-  # user-service:
-  #   build:
-  #     context: ./services/user-service
-  #     dockerfile: Dockerfile
-  #   container_name: ielts_user_service
-  #   environment:
-  #     - PORT=8082
-  #     - DB_HOST=postgres
-  #     - DB_PORT=5432
-  #     - DB_USER=ielts_admin
-  #     - DB_PASSWORD=ielts_password_2025
-  #     - DB_NAME=user_db
-  #     - REDIS_URL=redis://:ielts_redis_password@redis:6379
-  #     - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
-  #   ports:
-  #     - "8082:8082"
-  #   networks:
-  #     - ielts_network
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   restart: unless-stopped
+  
+  user-service:
+    build:
+      context: .
+      dockerfile: ./services/user-service/Dockerfile
+    container_name: ielts_user_service
+    environment:
+      - SERVER_PORT=8082
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=user_db
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./database/schemas:/schemas:ro
+      - ./scripts:/scripts:ro
+    ports:
+      - "8082:8082"
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
   # ============================================
   # Course Service - TODO: Uncomment when implemented

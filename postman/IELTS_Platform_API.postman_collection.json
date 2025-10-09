@@ -1025,6 +1025,391 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "User Service",
+			"description": "User profile management, learning progress tracking, and study statistics",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Service is healthy', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.equal('healthy');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["health"]
+						}
+					}
+				},
+				{
+					"name": "Get My Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Profile retrieved successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('user_id');",
+									"    pm.expect(jsonData.data).to.have.property('timezone');",
+									"    pm.expect(jsonData.data).to.have.property('language_preference');",
+									"    ",
+									"    console.log('Profile:', jsonData.data);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/profile",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "profile"]
+						},
+						"description": "Get current user's profile. Profile is automatically created if it doesn't exist."
+					}
+				},
+				{
+					"name": "Update Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Profile updated successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('updated successfully');",
+									"    pm.expect(jsonData.data).to.have.property('user_id');",
+									"    pm.expect(jsonData.data).to.have.property('full_name');",
+									"    ",
+									"    console.log('Updated profile:', jsonData.data);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"current_level\": \"intermediate\",\n    \"target_band_score\": 7.5,\n    \"bio\": \"I am preparing for IELTS exam\",\n    \"city\": \"Ho Chi Minh City\",\n    \"country\": \"Vietnam\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/profile",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "profile"]
+						},
+						"description": "Update user profile information. All fields are optional."
+					}
+				},
+				{
+					"name": "Update Avatar",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Avatar updated successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('Avatar updated');",
+									"    pm.expect(jsonData.data).to.have.property('avatar_url');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"avatar_url\": \"https://example.com/avatars/user-avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/profile/avatar",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "profile", "avatar"]
+						},
+						"description": "Update user's avatar URL"
+					}
+				},
+				{
+					"name": "Get Progress Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Progress stats retrieved', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('profile');",
+									"    pm.expect(jsonData.data).to.have.property('progress');",
+									"    pm.expect(jsonData.data).to.have.property('recent_sessions');",
+									"    pm.expect(jsonData.data).to.have.property('achievements');",
+									"    pm.expect(jsonData.data).to.have.property('total_points');",
+									"    ",
+									"    console.log('Total study hours:', jsonData.data.progress.total_study_hours);",
+									"    console.log('Current streak:', jsonData.data.progress.current_streak_days, 'days');",
+									"    console.log('Total points:', jsonData.data.total_points);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/progress",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "progress"]
+						},
+						"description": "Get comprehensive learning progress statistics including profile, progress, recent sessions, and achievements"
+					}
+				},
+				{
+					"name": "Start Study Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function() {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Session started successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('user_id');",
+									"    pm.expect(jsonData.data).to.have.property('started_at');",
+									"    pm.expect(jsonData.data.is_completed).to.be.false;",
+									"    ",
+									"    // Save session ID for ending session later",
+									"    pm.environment.set('active_session_id', jsonData.data.id);",
+									"    console.log('Session started:', jsonData.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"session_type\": \"lesson\",\n    \"skill_type\": \"listening\",\n    \"device_type\": \"web\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/sessions",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "sessions"]
+						},
+						"description": "Start a new study session. Session types: lesson, exercise, practice_test. Skill types: listening, reading, writing, speaking"
+					}
+				},
+				{
+					"name": "End Study Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Session ended successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('ended successfully');",
+									"    ",
+									"    // Clear session ID",
+									"    pm.environment.unset('active_session_id');",
+									"    console.log('Session ended successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"completion_percentage\": 100,\n    \"score\": 8.5\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/sessions/{{active_session_id}}/end",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "sessions", "{{active_session_id}}", "end"]
+						},
+						"description": "End an active study session. Automatically calculates duration and updates progress."
+					}
+				},
+				{
+					"name": "Get Study History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('History retrieved', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('sessions');",
+									"    pm.expect(jsonData.data).to.have.property('count');",
+									"    pm.expect(jsonData.data.sessions).to.be.an('array');",
+									"    ",
+									"    console.log('Total sessions:', jsonData.data.count);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/user/progress/history?limit=20",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["api", "v1", "user", "progress", "history"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Number of sessions to retrieve (default: 20, max: 100)"
+								}
+							]
+						},
+						"description": "Get study session history"
+					}
+				}
+			]
 		}
 	]
 }
