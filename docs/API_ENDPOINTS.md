@@ -88,7 +88,7 @@ Headers: `Authorization: Bearer {token}`
 ---
 
 #### POST `/auth/forgot-password`
-**Quên mật khẩu**
+**Quên mật khẩu - Gửi mã xác thực 6 số qua email**
 
 Request:
 ```json
@@ -97,18 +97,139 @@ Request:
 }
 ```
 
+Response (200):
+```json
+{
+  "success": true,
+  "message": "If this email exists, a password reset code has been sent"
+}
+```
+
+**Notes:**
+- Gửi mã 6 số qua email (ví dụ: 123456)
+- Mã có hiệu lực 15 phút
+- Trả về thông báo chung để tránh email enumeration
+
 ---
 
-#### POST `/auth/reset-password`
-**Reset mật khẩu**
+#### POST `/auth/reset-password-by-code`
+**Reset mật khẩu bằng mã 6 số (Khuyên dùng)**
 
 Request:
 ```json
 {
-  "token": "reset_token",
+  "code": "123456",
   "new_password": "NewSecurePassword123!"
 }
 ```
+
+Response (200):
+```json
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
+```
+
+**Notes:**
+- Sử dụng mã 6 số nhận từ email
+- Mã hết hiệu lực sau 15 phút
+- Thu hồi tất cả refresh tokens để bảo mật
+
+---
+
+#### POST `/auth/reset-password`
+**Reset mật khẩu bằng token (Legacy - Tương thích ngược)**
+
+Request:
+```json
+{
+  "token": "long_reset_token_from_email_link",
+  "new_password": "NewSecurePassword123!"
+}
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
+```
+
+**Notes:**
+- Endpoint cũ để tương thích với email link
+- Khuyên dùng `/auth/reset-password-by-code` thay thế
+
+---
+
+#### POST `/auth/verify-email-by-code`
+**Xác thực email bằng mã 6 số (Khuyên dùng)**
+
+Request:
+```json
+{
+  "code": "123456"
+}
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "message": "Email verified successfully"
+}
+```
+
+**Notes:**
+- Sử dụng mã 6 số nhận từ email
+- Mã có hiệu lực 24 giờ
+- Đánh dấu email đã được xác thực
+
+---
+
+#### GET `/auth/verify-email?token={token}`
+**Xác thực email bằng token (Legacy - Tương thích ngược)**
+
+Query Parameters:
+- `token` (required): Token nhận từ email link
+
+Response (200):
+```json
+{
+  "success": true,
+  "message": "Email verified successfully"
+}
+```
+
+**Notes:**
+- Endpoint cũ để tương thích với email link
+- Khuyên dùng `/auth/verify-email-by-code` thay thế
+
+---
+
+#### POST `/auth/resend-verification`
+**Gửi lại mã xác thực email**
+
+Request:
+```json
+{
+  "email": "student@example.com"
+}
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "message": "If this email exists and is unverified, a verification code has been sent"
+}
+```
+
+**Notes:**
+- Gửi mã 6 số mới qua email
+- Mã có hiệu lực 24 giờ
+- Trả về thông báo chung để tránh email enumeration
 
 ---
 

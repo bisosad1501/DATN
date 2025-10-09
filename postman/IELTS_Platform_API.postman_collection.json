@@ -481,6 +481,312 @@
 							"path": ["api", "v1", "auth", "logout"]
 						}
 					}
+				},
+				{
+					"name": "Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Reset code sent', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('sent');",
+									"    ",
+									"    console.log('⚠️  Check email for 6-digit reset code (expires in 15 minutes)');",
+									"    console.log('⚠️  Use the code in \"Reset Password By Code\" request');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{test_student_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "forgot-password"]
+						},
+						"description": "Sends a 6-digit verification code to the user's email for password reset. The code expires in 15 minutes."
+					}
+				},
+				{
+					"name": "Reset Password By Code",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Set a test code - replace with actual code from email",
+									"pm.environment.set('reset_code', '123456');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Password reset successful', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('successfully');",
+									"    ",
+									"    // Update password in environment",
+									"    pm.environment.set('test_student_password', 'NewReset@1234');",
+									"    ",
+									"    console.log('Password reset successful');",
+									"    console.log('⚠️  All refresh tokens have been revoked for security');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"{{reset_code}}\",\n    \"new_password\": \"NewReset@1234\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password-by-code",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "reset-password-by-code"]
+						},
+						"description": "Resets password using the 6-digit code received via email. All refresh tokens will be revoked for security."
+					}
+				},
+				{
+					"name": "Reset Password (Legacy - By Token)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Set a test token - replace with actual token from email link",
+									"pm.environment.set('reset_token', 'paste-token-here');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Password reset successful', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{reset_token}}\",\n    \"new_password\": \"NewReset@1234\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "reset-password"]
+						},
+						"description": "Legacy endpoint: Resets password using long token from email link. Use \"Reset Password By Code\" for new implementation."
+					}
+				},
+				{
+					"name": "Verify Email By Code",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Set a test code - replace with actual code from email",
+									"pm.environment.set('verification_code', '123456');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Email verified successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('verified');",
+									"    ",
+									"    console.log('Email verified successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"{{verification_code}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify-email-by-code",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "verify-email-by-code"]
+						},
+						"description": "Verifies email using the 6-digit code received via email. The code expires in 24 hours."
+					}
+				},
+				{
+					"name": "Verify Email (Legacy - By Token)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Set a test token - replace with actual token from email link",
+									"pm.environment.set('verification_token', 'paste-token-here');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Email verified successfully', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('verified');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify-email?token={{verification_token}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "verify-email"],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{verification_token}}",
+									"description": "Verification token from email link"
+								}
+							]
+						},
+						"description": "Legacy endpoint: Verifies email using long token from email link. Use \"Verify Email By Code\" for new implementation."
+					}
+				},
+				{
+					"name": "Resend Verification Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Verification code resent', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('sent');",
+									"    ",
+									"    console.log('⚠️  Check email for new 6-digit verification code (expires in 24 hours)');",
+									"    console.log('⚠️  Use the code in \"Verify Email By Code\" request');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{test_student_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/resend-verification",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "resend-verification"]
+						},
+						"description": "Resends a new 6-digit verification code to the user's email. The code expires in 24 hours."
+					}
 				}
 			]
 		},

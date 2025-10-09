@@ -57,7 +57,7 @@ instructor_5678@test.com
 
 ## 📋 Collection Structure
 
-### Auth Service (8 endpoints)
+### Auth Service (15 endpoints)
 1. **Health Check** - Verify service status
 2. **Register Student** - Create student account
 3. **Register Instructor** - Create instructor account
@@ -66,6 +66,12 @@ instructor_5678@test.com
 6. **Refresh Token** - Get new access token
 7. **Change Password** - Update password
 8. **Logout** - Invalidate refresh token
+9. **Forgot Password** - Send 6-digit reset code via email (expires 15 min)
+10. **Reset Password By Code** - Reset password using 6-digit code
+11. **Reset Password (Legacy)** - Reset password using long token from email link
+12. **Verify Email By Code** - Verify email using 6-digit code (expires 24 hours)
+13. **Verify Email (Legacy)** - Verify email using long token from email link
+14. **Resend Verification Code** - Send new 6-digit verification code via email
 
 ### User Service (8 endpoints)
 1. **Health Check** - Verify service status
@@ -168,6 +174,42 @@ instructor_5678@test.com
    → Saves to: instructor_access_token
 3. Test student endpoints with access_token
 4. Test instructor endpoints with instructor_access_token
+```
+
+### Password Reset Flow (New - Code-Based)
+```
+1. Forgot Password (200 OK)
+   → Sends 6-digit code to email (expires 15 min)
+   → Check email for code
+2. Reset Password By Code (200 OK)
+   → Input: code + new_password
+   → Revokes all refresh tokens for security
+3. Login with New Password (200 OK)
+   → Verify password changed successfully
+```
+
+### Email Verification Flow (New - Code-Based)
+```
+1. Register Student (201 Created)
+   → Account created but email unverified
+   → Auto-sends 6-digit verification code (expires 24 hours)
+   → Check email for code
+2. Verify Email By Code (200 OK)
+   → Input: code
+   → Marks email as verified
+3. Resend Verification Code (200 OK, if needed)
+   → Sends new 6-digit code to email
+```
+
+### Legacy Token-Based Flows (Backward Compatibility)
+```
+# Password Reset (Legacy)
+1. Forgot Password → Sends long token to email
+2. Reset Password → Input: token + new_password
+
+# Email Verification (Legacy)
+1. Register → Sends long token to email
+2. Verify Email (GET) → Query param: ?token=xxx
 ```
 
 ## 📊 Test Assertions
