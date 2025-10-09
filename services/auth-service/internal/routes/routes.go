@@ -28,6 +28,16 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, authServ
 			auth.GET("/google/callback", authHandler.GoogleCallback)    // Web flow: Handle callback
 			auth.POST("/google/token", authHandler.GoogleExchangeToken) // Mobile flow: Exchange code for tokens
 
+			// Password reset endpoints
+			auth.POST("/forgot-password", authHandler.ForgotPassword)             // Request password reset (sends 6-digit code)
+			auth.POST("/reset-password", authHandler.ResetPassword)               // Reset password with token (legacy)
+			auth.POST("/reset-password-by-code", authHandler.ResetPasswordByCode) // Reset password with 6-digit code
+
+			// Email verification endpoints
+			auth.GET("/verify-email", authHandler.VerifyEmail)                // Verify email with token (legacy)
+			auth.POST("/verify-email-by-code", authHandler.VerifyEmailByCode) // Verify email with 6-digit code
+			auth.POST("/resend-verification", authHandler.ResendVerification) // Resend verification email (sends 6-digit code)
+
 			// Protected endpoints (require authentication)
 			protected := auth.Group("")
 			protected.Use(middleware.AuthMiddleware(authService))

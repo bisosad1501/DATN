@@ -36,11 +36,22 @@ type ResetPasswordRequest struct {
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
+// ResetPasswordByCodeRequest represents a reset password request with code
+type ResetPasswordByCodeRequest struct {
+	Code        string `json:"code" binding:"required,len=6"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// VerifyEmailByCodeRequest represents an email verification request with code
+type VerifyEmailByCodeRequest struct {
+	Code string `json:"code" binding:"required,len=6"`
+}
+
 // AuthResponse represents an authentication response
 type AuthResponse struct {
-	Success bool        `json:"success"`
-	Data    *AuthData   `json:"data,omitempty"`
-	Error   *ErrorData  `json:"error,omitempty"`
+	Success bool       `json:"success"`
+	Data    *AuthData  `json:"data,omitempty"`
+	Error   *ErrorData `json:"error,omitempty"`
 }
 
 // AuthData represents authentication data in response

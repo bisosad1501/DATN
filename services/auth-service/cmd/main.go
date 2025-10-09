@@ -39,9 +39,21 @@ func main() {
 	roleRepo := repository.NewRoleRepository(db)
 	tokenRepo := repository.NewTokenRepository(db)
 	auditRepo := repository.NewAuditLogRepository(db)
+	passwordResetRepo := repository.NewPasswordResetRepository(db)
+	emailVerificationRepo := repository.NewEmailVerificationRepository(db)
+
+	// Initialize email service
+	emailService := service.NewEmailService(
+		cfg.SMTPHost,
+		cfg.SMTPPort,
+		cfg.SMTPUsername,
+		cfg.SMTPPassword,
+		cfg.SMTPFromEmail,
+		cfg.SMTPFromName,
+	)
 
 	// Initialize services
-	authService := service.NewAuthService(userRepo, roleRepo, tokenRepo, auditRepo, redisClient, cfg)
+	authService := service.NewAuthService(userRepo, roleRepo, tokenRepo, auditRepo, passwordResetRepo, emailVerificationRepo, emailService, redisClient, cfg)
 	googleOAuthService := service.NewGoogleOAuthService(cfg, userRepo, roleRepo, tokenRepo, auditRepo, authService)
 
 	// Initialize handlers

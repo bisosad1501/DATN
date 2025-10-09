@@ -601,3 +601,261 @@ func (h *AuthHandler) GoogleExchangeToken(c *gin.Context) {
 		c.JSON(statusCode, authResp)
 	}
 }
+
+// ForgotPassword godoc
+// @Summary Request password reset
+// @Description Send password reset email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.ForgotPasswordRequest true "Email to reset password"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Router /auth/forgot-password [post]
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req models.ForgotPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: "Valid email is required",
+			},
+		})
+		return
+	}
+
+	ip := c.ClientIP()
+
+	if err := h.authService.ForgotPassword(&req, ip); err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "INTERNAL_ERROR",
+				Message: "Failed to process password reset request",
+			},
+		})
+		return
+	}
+
+	// Always return success for security (don't reveal if email exists)
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Success: true,
+		Message: "If the email exists, a password reset link has been sent",
+	})
+}
+
+// ResetPassword godoc
+// @Summary Reset password with token
+// @Description Reset password using reset token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.ResetPasswordRequest true "Reset token and new password"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Router /auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req models.ResetPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	ip := c.ClientIP()
+
+	if err := h.authService.ResetPassword(&req, ip); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "RESET_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Success: true,
+		Message: "Password has been reset successfully",
+	})
+}
+
+// VerifyEmail godoc
+// @Summary Verify email address
+// @Description Verify email with verification token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param token query string true "Verification token"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Router /auth/verify-email [get]
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: "Verification token is required",
+			},
+		})
+		return
+	}
+
+	if err := h.authService.VerifyEmail(token); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VERIFICATION_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Success: true,
+		Message: "Email verified successfully",
+	})
+}
+
+// ResendVerification godoc
+// @Summary Resend verification email
+// @Description Resend email verification link
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.ForgotPasswordRequest true "Email to resend verification"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Router /auth/resend-verification [post]
+func (h *AuthHandler) ResendVerification(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: "Valid email is required",
+			},
+		})
+		return
+	}
+
+	if err := h.authService.ResendVerification(req.Email); err != nil {
+		// Don't reveal if email exists or already verified
+		if err.Error() == "email already verified" {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Success: false,
+				Error: &models.ErrorData{
+					Code:    "ALREADY_VERIFIED",
+					Message: "Email is already verified",
+				},
+			})
+			return
+		}
+	}
+
+	// Always return success for security
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Success: true,
+		Message: "If the email exists and is not verified, a verification link has been sent",
+	})
+}
+
+// ResetPasswordByCode godoc
+// @Summary Reset password with 6-digit code
+// @Description Reset password using 6-digit verification code sent to email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.ResetPasswordByCodeRequest true "6-digit code and new password"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Router /auth/reset-password-by-code [post]
+func (h *AuthHandler) ResetPasswordByCode(c *gin.Context) {
+	var req models.ResetPasswordByCodeRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	ip := c.ClientIP()
+
+	if err := h.authService.ResetPasswordByCode(req.Code, req.NewPassword, ip); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "RESET_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Success: true,
+		Message: "Password has been reset successfully",
+	})
+}
+
+// VerifyEmailByCode godoc
+// @Summary Verify email with 6-digit code
+// @Description Verify email address using 6-digit verification code
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.VerifyEmailByCodeRequest true "6-digit verification code"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Router /auth/verify-email-by-code [post]
+func (h *AuthHandler) VerifyEmailByCode(c *gin.Context) {
+	var req models.VerifyEmailByCodeRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VALIDATION_ERROR",
+				Message: "6-digit code is required",
+			},
+		})
+		return
+	}
+
+	if err := h.authService.VerifyEmailByCode(req.Code); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Success: false,
+			Error: &models.ErrorData{
+				Code:    "VERIFICATION_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Success: true,
+		Message: "Email verified successfully",
+	})
+}

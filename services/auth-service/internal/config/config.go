@@ -21,10 +21,10 @@ type Config struct {
 	RedisURL string
 
 	// JWT
-	JWTSecret           string
-	JWTExpiry           string
-	RefreshTokenExpiry  string
-	BcryptRounds        int
+	JWTSecret          string
+	JWTExpiry          string
+	RefreshTokenExpiry string
+	BcryptRounds       int
 
 	// Security
 	MaxLoginAttempts    int
@@ -34,6 +34,14 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
+
+	// SMTP Email
+	SMTPHost      string
+	SMTPPort      string
+	SMTPUsername  string
+	SMTPPassword  string
+	SMTPFromEmail string
+	SMTPFromName  string
 }
 
 func Load() *Config {
@@ -64,6 +72,13 @@ func Load() *Config {
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8081/api/v1/auth/google/callback"),
+
+		SMTPHost:      getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:      getEnv("SMTP_PORT", "587"),
+		SMTPUsername:  getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
+		SMTPFromEmail: getEnv("SMTP_FROM_EMAIL", "noreply@ieltsplatform.com"),
+		SMTPFromName:  getEnv("SMTP_FROM_NAME", "IELTS Learning Platform"),
 	}
 }
 

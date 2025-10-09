@@ -24,15 +24,30 @@ type AuthService interface {
 	Logout(userID uuid.UUID, refreshToken string) error
 	ChangePassword(userID uuid.UUID, req *models.ChangePasswordRequest) error
 	ValidateToken(tokenString string) (*TokenClaims, error)
+
+	// Password reset
+	ForgotPassword(req *models.ForgotPasswordRequest, ip string) error
+	ResetPassword(req *models.ResetPasswordRequest, ip string) error
+
+	// Email verification
+	VerifyEmail(token string) error
+	VerifyEmailByCode(code string) error
+	ResendVerification(email string) error
+
+	// Reset password with code
+	ResetPasswordByCode(code, newPassword, ip string) error
 }
 
 type authService struct {
-	userRepo    repository.UserRepository
-	roleRepo    repository.RoleRepository
-	tokenRepo   repository.TokenRepository
-	auditRepo   repository.AuditLogRepository
-	redisClient *redis.Client
-	config      *config.Config
+	userRepo              repository.UserRepository
+	roleRepo              repository.RoleRepository
+	tokenRepo             repository.TokenRepository
+	auditRepo             repository.AuditLogRepository
+	passwordResetRepo     repository.PasswordResetRepository
+	emailVerificationRepo repository.EmailVerificationRepository
+	emailService          EmailService
+	redisClient           *redis.Client
+	config                *config.Config
 }
 
 type TokenClaims struct {
@@ -47,16 +62,22 @@ func NewAuthService(
 	roleRepo repository.RoleRepository,
 	tokenRepo repository.TokenRepository,
 	auditRepo repository.AuditLogRepository,
+	passwordResetRepo repository.PasswordResetRepository,
+	emailVerificationRepo repository.EmailVerificationRepository,
+	emailService EmailService,
 	redisClient *redis.Client,
 	config *config.Config,
 ) AuthService {
 	return &authService{
-		userRepo:    userRepo,
-		roleRepo:    roleRepo,
-		tokenRepo:   tokenRepo,
-		auditRepo:   auditRepo,
-		redisClient: redisClient,
-		config:      config,
+		userRepo:              userRepo,
+		roleRepo:              roleRepo,
+		tokenRepo:             tokenRepo,
+		auditRepo:             auditRepo,
+		passwordResetRepo:     passwordResetRepo,
+		emailVerificationRepo: emailVerificationRepo,
+		emailService:          emailService,
+		redisClient:           redisClient,
+		config:                config,
 	}
 }
 
@@ -79,7 +100,7 @@ func (s *authService) Register(req *models.RegisterRequest, ip, userAgent string
 		s.logAudit(nil, "register", "failed", ip, userAgent, fmt.Sprintf("database error: %v", err))
 		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
-	
+
 	if existingUser != nil {
 		s.logAudit(nil, "register", "failed", ip, userAgent, "email already exists")
 		return &models.AuthResponse{
@@ -491,4 +512,247 @@ func (s *authService) logAudit(userID *uuid.UUID, eventType, status, ip, userAge
 func isValidEmail(email string) bool {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
+}
+
+// ForgotPassword sends a password reset email
+func (s *authService) ForgotPassword(req *models.ForgotPasswordRequest, ip string) error {
+	// Find user by email
+	user, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil {
+		// Don't reveal if email exists or not for security
+		return nil
+	}
+
+	// Delete any existing password reset tokens for this user
+	s.passwordResetRepo.DeleteByUserID(user.ID)
+
+	// Generate 6-digit code
+	code := Generate6DigitCode()
+
+	// Generate reset token for backward compatibility
+	tokenStr := uuid.New().String()
+	tokenHash := s.hashToken(tokenStr)
+
+	// Create password reset token (expires in 15 minutes)
+	token := &models.PasswordResetToken{
+		UserID:    user.ID,
+		TokenHash: tokenHash,
+		Code:      &code,
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+	}
+
+	if err := s.passwordResetRepo.Create(token); err != nil {
+		return fmt.Errorf("failed to create reset token: %w", err)
+	}
+
+	// Send email with 6-digit code
+	if err := s.emailService.SendPasswordResetEmail(user.Email, code); err != nil {
+		fmt.Printf("Failed to send email to %s: %v\n", user.Email, err)
+		// Don't fail the request if email fails, but log it
+	} else {
+		fmt.Printf("Password reset code sent to %s: %s\n", user.Email, code)
+	}
+
+	s.logAudit(&user.ID, "forgot_password", "success", ip, "", "")
+
+	return nil
+}
+
+// ResetPassword resets user password with token
+func (s *authService) ResetPassword(req *models.ResetPasswordRequest, ip string) error {
+	// Hash the token
+	tokenHash := s.hashToken(req.Token)
+
+	// Find token
+	token, err := s.passwordResetRepo.FindByTokenHash(tokenHash)
+	if err != nil {
+		return fmt.Errorf("invalid or expired token")
+	}
+
+	// Validate password strength
+	if len(req.NewPassword) < 8 {
+		return fmt.Errorf("password must be at least 8 characters long")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), s.config.BcryptRounds)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update user password
+	user, err := s.userRepo.FindByID(token.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	user.Password = string(hashedPassword)
+	if err := s.userRepo.Update(user); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// Mark token as used
+	s.passwordResetRepo.MarkAsUsed(token.ID)
+
+	// Revoke all refresh tokens for security
+	s.tokenRepo.RevokeAllUserTokens(token.UserID)
+
+	s.logAudit(&token.UserID, "reset_password", "success", ip, "", "")
+
+	return nil
+}
+
+// VerifyEmail verifies user email with token
+func (s *authService) VerifyEmail(token string) error {
+	// Hash the token
+	tokenHash := s.hashToken(token)
+
+	// Find token
+	verificationToken, err := s.emailVerificationRepo.FindByTokenHash(tokenHash)
+	if err != nil {
+		return fmt.Errorf("invalid or expired verification token")
+	}
+
+	// Get user
+	user, err := s.userRepo.FindByID(verificationToken.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Mark user as verified
+	now := time.Now()
+	user.IsVerified = true
+	user.EmailVerifiedAt = &now
+
+	if err := s.userRepo.Update(user); err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	// Mark token as verified
+	s.emailVerificationRepo.MarkAsVerified(verificationToken.ID)
+
+	s.logAudit(&user.ID, "verify_email", "success", "", "", "")
+
+	return nil
+}
+
+// ResendVerification resends email verification
+func (s *authService) ResendVerification(email string) error {
+	// Find user
+	user, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		// Don't reveal if email exists or not
+		return nil
+	}
+
+	// Check if already verified
+	if user.IsVerified {
+		return fmt.Errorf("email already verified")
+	}
+
+	// Delete any existing verification tokens
+	s.emailVerificationRepo.DeleteByUserID(user.ID)
+
+	// Generate 6-digit code
+	code := Generate6DigitCode()
+
+	// Generate verification token for backward compatibility
+	tokenStr := uuid.New().String()
+	tokenHash := s.hashToken(tokenStr)
+
+	// Create verification token (expires in 24 hours)
+	token := &models.EmailVerificationToken{
+		UserID:    user.ID,
+		TokenHash: tokenHash,
+		Code:      &code,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+
+	if err := s.emailVerificationRepo.Create(token); err != nil {
+		return fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	// Send email with 6-digit code
+	if err := s.emailService.SendVerificationEmail(user.Email, code); err != nil {
+		fmt.Printf("Failed to send email to %s: %v\n", user.Email, err)
+		// Don't fail the request if email fails
+	} else {
+		fmt.Printf("Email verification code sent to %s: %s\n", user.Email, code)
+	}
+
+	s.logAudit(&user.ID, "resend_verification", "success", "", "", "")
+
+	return nil
+}
+
+// VerifyEmailByCode verifies user email with 6-digit code
+func (s *authService) VerifyEmailByCode(code string) error {
+	// Find token by code
+	verificationToken, err := s.emailVerificationRepo.FindByCode(code)
+	if err != nil {
+		return fmt.Errorf("invalid or expired verification code")
+	}
+
+	// Get user
+	user, err := s.userRepo.FindByID(verificationToken.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Mark user as verified
+	now := time.Now()
+	user.IsVerified = true
+	user.EmailVerifiedAt = &now
+
+	if err := s.userRepo.Update(user); err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	// Mark token as verified
+	s.emailVerificationRepo.MarkAsVerified(verificationToken.ID)
+
+	s.logAudit(&user.ID, "verify_email_by_code", "success", "", "", "")
+
+	return nil
+}
+
+// ResetPasswordByCode resets user password with 6-digit code
+func (s *authService) ResetPasswordByCode(code, newPassword, ip string) error {
+	// Find token by code
+	token, err := s.passwordResetRepo.FindByCode(code)
+	if err != nil {
+		return fmt.Errorf("invalid or expired code")
+	}
+
+	// Validate password strength
+	if len(newPassword) < 8 {
+		return fmt.Errorf("password must be at least 8 characters long")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), s.config.BcryptRounds)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update user password
+	user, err := s.userRepo.FindByID(token.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	user.Password = string(hashedPassword)
+	if err := s.userRepo.Update(user); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// Mark token as used
+	s.passwordResetRepo.MarkAsUsed(token.ID)
+
+	// Revoke all refresh tokens for security
+	s.tokenRepo.RevokeAllUserTokens(token.UserID)
+
+	s.logAudit(&token.UserID, "reset_password_by_code", "success", ip, "", "")
+
+	return nil
 }
