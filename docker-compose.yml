@@ -224,20 +224,39 @@ services:
     restart: unless-stopped
 
   # ============================================
-  # Exercise Service - TODO: Uncomment when implemented
+  # Exercise Service
   # ============================================
-  # exercise-service:
-  #   build:
-  #     context: ./services/exercise-service
-  #     dockerfile: Dockerfile
-  #   container_name: ielts_exercise_service
-  #   environment:
-  #     - PORT=8084
-  #     - DB_HOST=postgres
-  #     - DB_PORT=5432
-  #     - DB_USER=ielts_admin
-  #     - DB_PASSWORD=ielts_password_2025
-  #     - DB_NAME=exercise_db
+  exercise-service:
+    build:
+      context: .
+      dockerfile: ./services/exercise-service/Dockerfile
+    container_name: ielts_exercise_service
+    environment:
+      - SERVER_PORT=8084
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=exercise_db
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./database/schemas:/schemas:ro
+      - ./scripts:/scripts:ro
+    ports:
+      - "8084:8084"
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
   #     - REDIS_URL=redis://:ielts_redis_password@redis:6379
   #     - RABBITMQ_URL=amqp://ielts_admin:ielts_rabbitmq_password@rabbitmq:5672/
   #     - AUDIO_STORAGE_PATH=/uploads/audio

@@ -122,15 +122,18 @@ tmp/
 !samples/
 
 # ============================================
-# AI Models
+# AI Models (ML model files only, not Go code packages)
 # ============================================
-models/
 *.h5
 *.pkl
 *.pt
 *.pth
 *.onnx
 *.pb
+# Ignore AI model directories but keep Go models packages
+**/ai-models/
+**/ml-models/
+**/saved-models/
 
 # ============================================
 # Certificates & Keys

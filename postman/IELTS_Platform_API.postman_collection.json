@@ -2171,6 +2171,347 @@
 			}
 		],
 		"description": "Course Service APIs for managing courses, modules, lessons, and student enrollments"
+	},
+	{
+		"name": "Exercise Service",
+		"item": [
+			{
+				"name": "Health Check",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{exercise_service_url}}/health",
+						"host": ["{{exercise_service_url}}"],
+						"path": ["health"]
+					},
+					"description": "Check Exercise Service health status"
+				}
+			},
+			{
+				"name": "Public APIs",
+				"item": [
+					{
+						"name": "List Exercises",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+										"pm.test('Success true', function() { pm.expect(pm.response.json().success).to.be.true; });",
+										"pm.test('Has exercises array', function() { pm.expect(pm.response.json().data.exercises).to.be.an('array'); });",
+										"",
+										"const exercises = pm.response.json().data.exercises;",
+										"if (exercises.length > 0) {",
+										"    pm.environment.set('test_exercise_id', exercises[0].id);",
+										"    console.log('Saved exercise ID:', exercises[0].id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": { "type": "noauth" },
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/exercises?page=1&limit=10&skill_type=listening&difficulty=easy",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "exercises"],
+								"query": [
+									{ "key": "page", "value": "1" },
+									{ "key": "limit", "value": "10" },
+									{ "key": "skill_type", "value": "listening", "description": "listening or reading" },
+									{ "key": "difficulty", "value": "easy", "description": "easy, medium, hard" },
+									{ "key": "exercise_type", "value": "practice", "disabled": true, "description": "practice, mock_test, full_test" },
+									{ "key": "is_free", "value": "true", "disabled": true },
+									{ "key": "search", "value": "", "disabled": true }
+								]
+							},
+							"description": "Browse exercises with filters (no auth required)"
+						}
+					},
+					{
+						"name": "Get Exercise Detail",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+										"pm.test('Has sections', function() { pm.expect(pm.response.json().data.sections).to.be.an('array'); });"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": { "type": "noauth" },
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/exercises/{{test_exercise_id}}",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "exercises", "{{test_exercise_id}}"]
+							},
+							"description": "Get exercise with sections and questions"
+						}
+					}
+				]
+			},
+			{
+				"name": "Student APIs",
+				"item": [
+					{
+						"name": "Start Exercise",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"if (pm.response.code === 201) {",
+										"    const submission = pm.response.json().data;",
+										"    pm.environment.set('test_submission_id', submission.id);",
+										"    console.log('Saved submission ID:', submission.id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"exercise_id\": \"{{test_exercise_id}}\",\n  \"device_type\": \"web\"\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/submissions",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "submissions"]
+							},
+							"description": "Start a new exercise attempt. Creates user_exercise_attempts record with auto-incremented attempt_number."
+						}
+					},
+					{
+						"name": "Submit Answers",
+						"request": {
+							"method": "PUT",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"answers\": [\n    {\n      \"question_id\": \"question-uuid-1\",\n      \"selected_option_id\": \"option-uuid-a\",\n      \"time_spent_seconds\": 45\n    },\n    {\n      \"question_id\": \"question-uuid-2\",\n      \"text_answer\": \"answer text\",\n      \"time_spent_seconds\": 30\n    }\n  ]\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/submissions/{{test_submission_id}}/answers",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "submissions", "{{test_submission_id}}", "answers"]
+							},
+							"description": "Submit answers for an attempt. Auto-grades answers (multiple choice checks is_correct flag, fill-in-blank uses case-insensitive comparison with answer_variations). Calculates band_score (0-9 IELTS scale) and marks attempt as completed."
+						}
+					},
+					{
+						"name": "Get Submission Result",
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/submissions/{{test_submission_id}}/result",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "submissions", "{{test_submission_id}}", "result"]
+							},
+							"description": "Get detailed results for an attempt including: submission data (attempt_number, band_score, status), exercise info, all answers with questions, correct answers, and performance stats (accuracy, band_score, time spent)."
+						}
+					},
+					{
+						"name": "My Submissions",
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/submissions/my?page=1&limit=10",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "submissions", "my"],
+								"query": [
+									{ "key": "page", "value": "1" },
+									{ "key": "limit", "value": "10" }
+								]
+							},
+							"description": "Get user's attempt history with pagination. Shows all attempts with attempt_number, band_score, status, and exercise details."
+						}
+					}
+				]
+			},
+			{
+				"name": "Admin APIs",
+				"item": [
+					{
+						"name": "Create Exercise",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"if (pm.response.code === 201) {",
+										"    const exercise = pm.response.json().data;",
+										"    pm.environment.set('test_exercise_id', exercise.id);",
+										"    console.log('Created exercise:', exercise.id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"title\": \"IELTS Listening Practice Test 1\",\n  \"slug\": \"ielts-listening-practice-test-1\",\n  \"description\": \"Complete IELTS Listening practice test with 40 questions\",\n  \"exercise_type\": \"practice\",\n  \"skill_type\": \"listening\",\n  \"difficulty\": \"medium\",\n  \"ielts_level\": \"6.0-7.0\",\n  \"time_limit_minutes\": 40,\n  \"audio_url\": \"https://example.com/audio/listening-test-1.mp3\",\n  \"audio_duration_seconds\": 2400,\n  \"passing_score\": 60,\n  \"is_free\": true\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises"]
+							},
+							"description": "Create new exercise (instructor/admin only)"
+						}
+					},
+					{
+						"name": "Update Exercise",
+						"request": {
+							"method": "PUT",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"title\": \"Updated Exercise Title\",\n  \"difficulty\": \"hard\",\n  \"is_published\": true\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}"]
+							},
+							"description": "Update exercise details"
+						}
+					},
+					{
+						"name": "Create Section",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"if (pm.response.code === 201) {",
+										"    const section = pm.response.json().data;",
+										"    pm.environment.set('test_section_id', section.id);",
+										"    console.log('Created section:', section.id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"title\": \"Section 1 - Social Conversation\",\n  \"description\": \"A conversation between two people in an everyday social context\",\n  \"section_number\": 1,\n  \"audio_url\": \"https://example.com/audio/section1.mp3\",\n  \"audio_start_time\": 0,\n  \"audio_end_time\": 600,\n  \"instructions\": \"Listen and answer questions 1-10\",\n  \"display_order\": 0\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}/sections",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}", "sections"]
+							},
+							"description": "Create section within an exercise"
+						}
+					},
+					{
+						"name": "Create Question",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"if (pm.response.code === 201) {",
+										"    const question = pm.response.json().data;",
+										"    pm.environment.set('test_question_id', question.id);",
+										"    console.log('Created question:', question.id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"exercise_id\": \"{{test_exercise_id}}\",\n  \"section_id\": \"{{test_section_id}}\",\n  \"question_number\": 1,\n  \"question_text\": \"What type of car does the woman want to rent?\",\n  \"question_type\": \"multiple_choice\",\n  \"points\": 1.0,\n  \"explanation\": \"The woman mentions she needs a small car for city driving.\",\n  \"display_order\": 0\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/questions",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "questions"]
+							},
+							"description": "Create question (multiple_choice, fill_in_blank, matching, etc.)"
+						}
+					},
+					{
+						"name": "Create Question Option",
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"option_label\": \"A\",\n  \"option_text\": \"A small city car\",\n  \"is_correct\": true,\n  \"display_order\": 0\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/questions/{{test_question_id}}/options",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "questions", "{{test_question_id}}", "options"]
+							},
+							"description": "Add option to multiple choice question. Set is_correct=true for correct answer."
+						}
+					},
+					{
+						"name": "Create Question Answer",
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"answer_text\": \"Monday\",\n  \"alternative_answers\": [\"monday\", \"Mon\"]\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/questions/{{test_question_id}}/answer",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "questions", "{{test_question_id}}", "answer"]
+							},
+							"description": "Create answer for fill-in-blank or short answer questions. Supports alternative_answers for variations (stored in answer_variations array)."
+						}
+					},
+					{
+						"name": "Delete Exercise",
+						"request": {
+							"method": "DELETE",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}"]
+							},
+							"description": "Soft delete exercise (sets is_published=false)"
+						}
+					}
+				]
+			}
+		],
+		"description": "Exercise Service APIs for exercises, questions, submissions, and auto-grading"
 	}
 	]
 }

@@ -1,0 +1,776 @@
+package repository
+package repository
+
+import (
+	"database/sql"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/bisosad1501/ielts-platform/exercise-service/internal/models"
+	"github.com/google/uuid"
+)
+
+type ExerciseRepository struct {
+	db *sql.DB
+}
+
+func NewExerciseRepository(db *sql.DB) *ExerciseRepository {
+	return &ExerciseRepository{db: db}
+}
+
+// GetExercises returns paginated list with filters
+func (r *ExerciseRepository) GetExercises(query *models.ExerciseListQuery) ([]models.Exercise, int, error) {
+	where := []string{"1=1"}
+	args := []interface{}{}
+	argCount := 0
+
+	if query.SkillType != "" {
+		argCount++
+		where = append(where, fmt.Sprintf("skill_type = $%d", argCount))
+		args = append(args, query.SkillType)
+	}
+
+	if query.Difficulty != "" {
+		argCount++
+		where = append(where, fmt.Sprintf("difficulty = $%d", argCount))
+		args = append(args, query.Difficulty)
+	}
+
+	if query.ExerciseType != "" {
+		argCount++
+		where = append(where, fmt.Sprintf("exercise_type = $%d", argCount))
+		args = append(args, query.ExerciseType)
+	}
+
+	if query.IsFree != nil {
+		argCount++
+		where = append(where, fmt.Sprintf("is_free = $%d", argCount))
+		args = append(args, *query.IsFree)
+	}
+
+	if query.CourseID != nil {
+		argCount++
+		where = append(where, fmt.Sprintf("course_id = $%d", argCount))
+		args = append(args, *query.CourseID)
+	}
+
+	if query.LessonID != nil {
+		argCount++
+		where = append(where, fmt.Sprintf("lesson_id = $%d", argCount))
+		args = append(args, *query.LessonID)
+	}
+
+	if query.Search != "" {
+		argCount++
+		where = append(where, fmt.Sprintf("(title ILIKE $%d OR description ILIKE $%d)", argCount, argCount))
+		args = append(args, "%"+query.Search+"%")
+	}
+
+	whereClause := strings.Join(where, " AND ")
+
+	// Get total count
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM exercises WHERE %s", whereClause)
+	var total int
+	err := r.db.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	offset := (query.Page - 1) * query.Limit
+	argCount++
+	limitArg := argCount
+	argCount++
+	offsetArg := argCount
+
+	selectQuery := fmt.Sprintf(`
+		SELECT id, title, slug, description, exercise_type, skill_type, difficulty,
+			ielts_level, time_limit, audio_url, audio_transcript, passage_count,
+			course_id, lesson_id, is_free, passing_score, total_points,
+			total_attempts, average_score, tags, created_by, is_active,
+			created_at, updated_at
+		FROM exercises 
+		WHERE %s 
+		ORDER BY created_at DESC 
+		LIMIT $%d OFFSET $%d
+	`, whereClause, limitArg, offsetArg)
+
+	args = append(args, query.Limit, offset)
+
+	rows, err := r.db.Query(selectQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	exercises := []models.Exercise{}
+	for rows.Next() {
+		var e models.Exercise
+		var tags []byte
+		err := rows.Scan(
+			&e.ID, &e.Title, &e.Slug, &e.Description, &e.ExerciseType, &e.SkillType,
+			&e.Difficulty, &e.IELTSLevel, &e.TimeLimit, &e.AudioURL, &e.AudioTranscript,
+			&e.PassageCount, &e.CourseID, &e.LessonID, &e.IsFree, &e.PassingScore,
+			&e.TotalPoints, &e.TotalAttempts, &e.AverageScore, &tags, &e.CreatedBy,
+			&e.IsActive, &e.CreatedAt, &e.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		if len(tags) > 0 {
+			json.Unmarshal(tags, &e.Tags)
+		}
+		exercises = append(exercises, e)
+	}
+
+	return exercises, total, nil
+}
+
+// GetExerciseByID returns exercise with sections and questions
+func (r *ExerciseRepository) GetExerciseByID(id uuid.UUID) (*models.ExerciseDetailResponse, error) {
+	// Get exercise
+	var exercise models.Exercise
+	var tags []byte
+	err := r.db.QueryRow(`
+		SELECT id, title, slug, description, exercise_type, skill_type, difficulty,
+			ielts_level, time_limit, audio_url, audio_transcript, passage_count,
+			course_id, lesson_id, is_free, passing_score, total_points,
+			total_attempts, average_score, tags, created_by, is_active,
+			created_at, updated_at
+		FROM exercises WHERE id = $1 AND is_active = true
+	`, id).Scan(
+		&exercise.ID, &exercise.Title, &exercise.Slug, &exercise.Description,
+		&exercise.ExerciseType, &exercise.SkillType, &exercise.Difficulty,
+		&exercise.IELTSLevel, &exercise.TimeLimit, &exercise.AudioURL,
+		&exercise.AudioTranscript, &exercise.PassageCount, &exercise.CourseID,
+		&exercise.LessonID, &exercise.IsFree, &exercise.PassingScore,
+		&exercise.TotalPoints, &exercise.TotalAttempts, &exercise.AverageScore,
+		&tags, &exercise.CreatedBy, &exercise.IsActive, &exercise.CreatedAt,
+		&exercise.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(tags) > 0 {
+		json.Unmarshal(tags, &exercise.Tags)
+	}
+
+	// Get sections with questions
+	sections, err := r.GetSectionsWithQuestions(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.ExerciseDetailResponse{
+		Exercise: exercise,
+		Sections: sections,
+	}, nil
+}
+
+// GetSectionsWithQuestions returns sections with their questions
+func (r *ExerciseRepository) GetSectionsWithQuestions(exerciseID uuid.UUID) ([]models.SectionWithQuestions, error) {
+	// Get sections
+	sectionRows, err := r.db.Query(`
+		SELECT id, exercise_id, section_number, section_title, audio_url,
+			audio_start_time, audio_end_time, passage_title, passage_content,
+			passage_word_count, instructions, time_limit, display_order,
+			created_at, updated_at
+		FROM exercise_sections 
+		WHERE exercise_id = $1 
+		ORDER BY display_order, section_number
+	`, exerciseID)
+	if err != nil {
+		return nil, err
+	}
+	defer sectionRows.Close()
+
+	sections := []models.SectionWithQuestions{}
+	for sectionRows.Next() {
+		var section models.ExerciseSection
+		err := sectionRows.Scan(
+			&section.ID, &section.ExerciseID, &section.SectionNumber,
+			&section.SectionTitle, &section.AudioURL, &section.AudioStartTime,
+			&section.AudioEndTime, &section.PassageTitle, &section.PassageContent,
+			&section.PassageWordCount, &section.Instructions, &section.TimeLimit,
+			&section.DisplayOrder, &section.CreatedAt, &section.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get questions for this section
+		questions, err := r.GetQuestionsWithOptions(section.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		sections = append(sections, models.SectionWithQuestions{
+			ExerciseSection: section,
+			Questions:       questions,
+		})
+	}
+
+	return sections, nil
+}
+
+// GetQuestionsWithOptions returns questions with their options
+func (r *ExerciseRepository) GetQuestionsWithOptions(sectionID uuid.UUID) ([]models.QuestionWithOptions, error) {
+	questionRows, err := r.db.Query(`
+		SELECT id, section_id, question_number, question_text, question_type,
+			audio_url, image_url, context_text, points, difficulty, explanation,
+			tips, display_order, created_at, updated_at
+		FROM questions 
+		WHERE section_id = $1 
+		ORDER BY display_order, question_number
+	`, sectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer questionRows.Close()
+
+	questions := []models.QuestionWithOptions{}
+	for questionRows.Next() {
+		var question models.Question
+		err := questionRows.Scan(
+			&question.ID, &question.SectionID, &question.QuestionNumber,
+			&question.QuestionText, &question.QuestionType, &question.AudioURL,
+			&question.ImageURL, &question.ContextText, &question.Points,
+			&question.Difficulty, &question.Explanation, &question.Tips,
+			&question.DisplayOrder, &question.CreatedAt, &question.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get options or answers based on question type
+		var options []models.QuestionOption
+		var answer *models.QuestionAnswer
+
+		if question.QuestionType == "multiple_choice" || question.QuestionType == "matching" {
+			optionRows, err := r.db.Query(`
+				SELECT id, question_id, option_label, option_text, option_image_url,
+					is_correct, display_order
+				FROM question_options 
+				WHERE question_id = $1 
+				ORDER BY display_order
+			`, question.ID)
+			if err != nil {
+				return nil, err
+			}
+			defer optionRows.Close()
+
+			for optionRows.Next() {
+				var option models.QuestionOption
+				err := optionRows.Scan(
+					&option.ID, &option.QuestionID, &option.OptionLabel,
+					&option.OptionText, &option.OptionImageURL, &option.IsCorrect,
+					&option.DisplayOrder,
+				)
+				if err != nil {
+					return nil, err
+				}
+				options = append(options, option)
+			}
+		} else {
+			// For text-based questions, get answer
+			var ans models.QuestionAnswer
+			var alternatives []byte
+			err := r.db.QueryRow(`
+				SELECT id, question_id, answer_text, alternative_answers,
+					is_case_sensitive, matching_order
+				FROM question_answers 
+				WHERE question_id = $1
+			`, question.ID).Scan(
+				&ans.ID, &ans.QuestionID, &ans.AnswerText, &alternatives,
+				&ans.IsCaseSensitive, &ans.MatchingOrder,
+			)
+			if err == nil {
+				if len(alternatives) > 0 {
+					json.Unmarshal(alternatives, &ans.AlternativeAnswers)
+				}
+				answer = &ans
+			}
+		}
+
+		questions = append(questions, models.QuestionWithOptions{
+			Question: question,
+			Options:  options,
+			Answer:   answer,
+		})
+	}
+
+	return questions, nil
+}
+
+// CreateSubmission starts a new submission
+func (r *ExerciseRepository) CreateSubmission(userID, exerciseID uuid.UUID) (*models.Submission, error) {
+	submission := &models.Submission{
+		ID:         uuid.New(),
+		UserID:     userID,
+		ExerciseID: exerciseID,
+		StartedAt:  time.Now(),
+		Status:     "in_progress",
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+
+	_, err := r.db.Exec(`
+		INSERT INTO submissions (
+			id, user_id, exercise_id, started_at, status, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, submission.ID, submission.UserID, submission.ExerciseID,
+		submission.StartedAt, submission.Status, submission.CreatedAt,
+		submission.UpdatedAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return submission, nil
+}
+
+// SaveSubmissionAnswers saves all answers and grades submission
+func (r *ExerciseRepository) SaveSubmissionAnswers(submissionID uuid.UUID, answers []models.SubmitAnswerItem) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, answer := range answers {
+		// Get question details for grading
+		var questionType string
+		var points int
+		err := tx.QueryRow(`
+			SELECT question_type, points FROM questions WHERE id = $1
+		`, answer.QuestionID).Scan(&questionType, &points)
+		if err != nil {
+			return err
+		}
+
+		isCorrect := false
+		pointsEarned := 0
+
+		// Grade based on question type
+		if questionType == "multiple_choice" || questionType == "matching" {
+			if answer.SelectedOptionID != nil {
+				var optionIsCorrect bool
+				err = tx.QueryRow(`
+					SELECT is_correct FROM question_options 
+					WHERE id = $1
+				`, *answer.SelectedOptionID).Scan(&optionIsCorrect)
+				if err == nil && optionIsCorrect {
+					isCorrect = true
+					pointsEarned = points
+				}
+			}
+		} else {
+			// Text-based questions
+			if answer.TextAnswer != nil && *answer.TextAnswer != "" {
+				var answerText string
+				var alternatives []byte
+				var isCaseSensitive bool
+				err = tx.QueryRow(`
+					SELECT answer_text, alternative_answers, is_case_sensitive
+					FROM question_answers 
+					WHERE question_id = $1
+				`, answer.QuestionID).Scan(&answerText, &alternatives, &isCaseSensitive)
+				
+				if err == nil {
+					userAnswer := strings.TrimSpace(*answer.TextAnswer)
+					if !isCaseSensitive {
+						userAnswer = strings.ToLower(userAnswer)
+						answerText = strings.ToLower(answerText)
+					}
+
+					// Check main answer
+					if userAnswer == answerText {
+						isCorrect = true
+						pointsEarned = points
+					} else if len(alternatives) > 0 {
+						// Check alternative answers
+						var altAnswers []string
+						json.Unmarshal(alternatives, &altAnswers)
+						for _, alt := range altAnswers {
+							checkAlt := alt
+							if !isCaseSensitive {
+								checkAlt = strings.ToLower(alt)
+							}
+							if userAnswer == checkAlt {
+								isCorrect = true
+								pointsEarned = points
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Save submission answer
+		_, err = tx.Exec(`
+			INSERT INTO submission_answers (
+				id, submission_id, question_id, selected_option_id, text_answer,
+				is_correct, points_earned, time_spent, created_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`, uuid.New(), submissionID, answer.QuestionID, answer.SelectedOptionID,
+			answer.TextAnswer, isCorrect, pointsEarned, answer.TimeSpent, time.Now())
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// CompleteSubmission finalizes submission and calculates final score
+func (r *ExerciseRepository) CompleteSubmission(submissionID uuid.UUID) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Calculate statistics
+	var correctCount, incorrectCount, skippedCount int
+	var totalPointsEarned int
+	var totalTimeSpent int
+
+	err = tx.QueryRow(`
+		SELECT 
+			COUNT(CASE WHEN is_correct = true THEN 1 END) as correct,
+			COUNT(CASE WHEN is_correct = false THEN 1 END) as incorrect,
+			COALESCE(SUM(points_earned), 0) as points,
+			COALESCE(SUM(time_spent), 0) as time_spent
+		FROM submission_answers
+		WHERE submission_id = $1
+	`, submissionID).Scan(&correctCount, &incorrectCount, &totalPointsEarned, &totalTimeSpent)
+	if err != nil {
+		return err
+	}
+
+	// Get total points from exercise
+	var totalPoints int
+	var passingScore int
+	err = tx.QueryRow(`
+		SELECT e.total_points, e.passing_score
+		FROM exercises e
+		JOIN submissions s ON s.exercise_id = e.id
+		WHERE s.id = $1
+	`, submissionID).Scan(&totalPoints, &passingScore)
+	if err != nil {
+		return err
+	}
+
+	// Calculate score and percentage
+	score := totalPointsEarned
+	percentage := float64(0)
+	if totalPoints > 0 {
+		percentage = float64(score) / float64(totalPoints) * 100
+	}
+
+	isPassed := percentage >= float64(passingScore)
+
+	// Update submission
+	_, err = tx.Exec(`
+		UPDATE submissions SET
+			submitted_at = $1,
+			time_spent = $2,
+			correct_count = $3,
+			incorrect_count = $4,
+			skipped_count = $5,
+			score = $6,
+			percentage = $7,
+			is_passed = $8,
+			status = 'graded',
+			updated_at = $9
+		WHERE id = $10
+	`, time.Now(), totalTimeSpent, correctCount, incorrectCount, skippedCount,
+		score, percentage, isPassed, time.Now(), submissionID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// GetSubmissionResult returns detailed submission result
+func (r *ExerciseRepository) GetSubmissionResult(submissionID uuid.UUID) (*models.SubmissionResultResponse, error) {
+	// Get submission
+	var submission models.Submission
+	err := r.db.QueryRow(`
+		SELECT id, user_id, exercise_id, started_at, submitted_at, time_spent,
+			correct_count, incorrect_count, skipped_count, score, percentage,
+			is_passed, status, created_at, updated_at
+		FROM submissions WHERE id = $1
+	`, submissionID).Scan(
+		&submission.ID, &submission.UserID, &submission.ExerciseID,
+		&submission.StartedAt, &submission.SubmittedAt, &submission.TimeSpent,
+		&submission.CorrectCount, &submission.IncorrectCount, &submission.SkippedCount,
+		&submission.Score, &submission.Percentage, &submission.IsPassed,
+		&submission.Status, &submission.CreatedAt, &submission.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get exercise
+	var exercise models.Exercise
+	var tags []byte
+	err = r.db.QueryRow(`
+		SELECT id, title, slug, description, exercise_type, skill_type, difficulty,
+			ielts_level, time_limit, audio_url, audio_transcript, passage_count,
+			course_id, lesson_id, is_free, passing_score, total_points,
+			total_attempts, average_score, tags, created_by, is_active,
+			created_at, updated_at
+		FROM exercises WHERE id = $1
+	`, submission.ExerciseID).Scan(
+		&exercise.ID, &exercise.Title, &exercise.Slug, &exercise.Description,
+		&exercise.ExerciseType, &exercise.SkillType, &exercise.Difficulty,
+		&exercise.IELTSLevel, &exercise.TimeLimit, &exercise.AudioURL,
+		&exercise.AudioTranscript, &exercise.PassageCount, &exercise.CourseID,
+		&exercise.LessonID, &exercise.IsFree, &exercise.PassingScore,
+		&exercise.TotalPoints, &exercise.TotalAttempts, &exercise.AverageScore,
+		&tags, &exercise.CreatedBy, &exercise.IsActive, &exercise.CreatedAt,
+		&exercise.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(tags) > 0 {
+		json.Unmarshal(tags, &exercise.Tags)
+	}
+
+	// Get answers with questions
+	rows, err := r.db.Query(`
+		SELECT sa.id, sa.submission_id, sa.question_id, sa.selected_option_id,
+			sa.text_answer, sa.is_correct, sa.points_earned, sa.time_spent,
+			q.question_text, q.question_type, q.explanation
+		FROM submission_answers sa
+		JOIN questions q ON q.id = sa.question_id
+		WHERE sa.submission_id = $1
+		ORDER BY q.display_order, q.question_number
+	`, submissionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	answers := []models.SubmissionAnswerWithQuestion{}
+	for rows.Next() {
+		var answer models.SubmissionAnswerWithQuestion
+		err := rows.Scan(
+			&answer.ID, &answer.SubmissionID, &answer.QuestionID,
+			&answer.SelectedOptionID, &answer.TextAnswer, &answer.IsCorrect,
+			&answer.PointsEarned, &answer.TimeSpent, &answer.QuestionText,
+			&answer.QuestionType, &answer.Explanation,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get correct answer
+		if answer.QuestionType == "multiple_choice" {
+			var correctText string
+			r.db.QueryRow(`
+				SELECT option_text FROM question_options 
+				WHERE question_id = $1 AND is_correct = true
+			`, answer.QuestionID).Scan(&correctText)
+			answer.CorrectAnswer = &correctText
+		} else {
+			var correctText string
+			r.db.QueryRow(`
+				SELECT answer_text FROM question_answers 
+				WHERE question_id = $1
+			`, answer.QuestionID).Scan(&correctText)
+			answer.CorrectAnswer = &correctText
+		}
+
+		answers = append(answers, answer)
+	}
+
+	// Calculate performance stats
+	totalQuestions := submission.CorrectCount + submission.IncorrectCount + submission.SkippedCount
+	accuracy := float64(0)
+	if totalQuestions > 0 {
+		accuracy = float64(submission.CorrectCount) / float64(totalQuestions) * 100
+	}
+	avgTimePerQuestion := 0
+	if totalQuestions > 0 {
+		avgTimePerQuestion = submission.TimeSpent / totalQuestions
+	}
+
+	stats := models.PerformanceStats{
+		TotalQuestions:         totalQuestions,
+		CorrectAnswers:         submission.CorrectCount,
+		IncorrectAnswers:       submission.IncorrectCount,
+		SkippedQuestions:       submission.SkippedCount,
+		Accuracy:               accuracy,
+		Score:                  submission.Score,
+		Percentage:             submission.Percentage,
+		IsPassed:               submission.IsPassed,
+		TimeSpent:              submission.TimeSpent,
+		AverageTimePerQuestion: avgTimePerQuestion,
+	}
+
+	return &models.SubmissionResultResponse{
+		Submission:  submission,
+		Exercise:    exercise,
+		Answers:     answers,
+		Performance: stats,
+	}, nil
+}
+
+// GetUserSubmissions returns user's submission history
+func (r *ExerciseRepository) GetUserSubmissions(userID uuid.UUID, page, limit int) (*models.MySubmissionsResponse, error) {
+	offset := (page - 1) * limit
+
+	// Get total count
+	var total int
+	err := r.db.QueryRow(`
+		SELECT COUNT(*) FROM submissions WHERE user_id = $1
+	`, userID).Scan(&total)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get submissions with exercise info
+	rows, err := r.db.Query(`
+		SELECT s.id, s.user_id, s.exercise_id, s.started_at, s.submitted_at,
+			s.time_spent, s.correct_count, s.incorrect_count, s.skipped_count,
+			s.score, s.percentage, s.is_passed, s.status,
+			e.title, e.exercise_type, e.skill_type, e.difficulty
+		FROM submissions s
+		JOIN exercises e ON e.id = s.exercise_id
+		WHERE s.user_id = $1
+		ORDER BY s.created_at DESC
+		LIMIT $2 OFFSET $3
+	`, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	submissions := []models.SubmissionWithExercise{}
+	for rows.Next() {
+		var item models.SubmissionWithExercise
+		err := rows.Scan(
+			&item.ID, &item.UserID, &item.ExerciseID, &item.StartedAt,
+			&item.SubmittedAt, &item.TimeSpent, &item.CorrectCount,
+			&item.IncorrectCount, &item.SkippedCount, &item.Score,
+			&item.Percentage, &item.IsPassed, &item.Status,
+			&item.ExerciseTitle, &item.ExerciseType, &item.SkillType,
+			&item.Difficulty,
+		)
+		if err != nil {
+			return nil, err
+		}
+		submissions = append(submissions, item)
+	}
+
+	return &models.MySubmissionsResponse{
+		Submissions: submissions,
+		Total:       total,
+	}, nil
+}
+
+// CreateExercise creates a new exercise (admin only)
+func (r *ExerciseRepository) CreateExercise(req *models.CreateExerciseRequest, createdBy uuid.UUID) (*models.Exercise, error) {
+	exercise := &models.Exercise{
+		ID:             uuid.New(),
+		Title:          req.Title,
+		Slug:           req.Slug,
+		Description:    req.Description,
+		ExerciseType:   req.ExerciseType,
+		SkillType:      req.SkillType,
+		Difficulty:     req.Difficulty,
+		IELTSLevel:     req.IELTSLevel,
+		TimeLimit:      req.TimeLimit,
+		AudioURL:       req.AudioURL,
+		AudioTranscript: req.AudioTranscript,
+		PassageCount:   req.PassageCount,
+		CourseID:       req.CourseID,
+		LessonID:       req.LessonID,
+		IsFree:         req.IsFree,
+		PassingScore:   req.PassingScore,
+		Tags:           req.Tags,
+		CreatedBy:      createdBy,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	tags, _ := json.Marshal(exercise.Tags)
+
+	_, err := r.db.Exec(`
+		INSERT INTO exercises (
+			id, title, slug, description, exercise_type, skill_type, difficulty,
+			ielts_level, time_limit, audio_url, audio_transcript, passage_count,
+			course_id, lesson_id, is_free, passing_score, tags, created_by,
+			is_active, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+	`, exercise.ID, exercise.Title, exercise.Slug, exercise.Description,
+		exercise.ExerciseType, exercise.SkillType, exercise.Difficulty,
+		exercise.IELTSLevel, exercise.TimeLimit, exercise.AudioURL,
+		exercise.AudioTranscript, exercise.PassageCount, exercise.CourseID,
+		exercise.LessonID, exercise.IsFree, exercise.PassingScore, tags,
+		exercise.CreatedBy, exercise.IsActive, exercise.CreatedAt, exercise.UpdatedAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return exercise, nil
+}
+
+// UpdateExercise updates exercise details (admin only)
+func (r *ExerciseRepository) UpdateExercise(id uuid.UUID, req *models.UpdateExerciseRequest) error {
+	updates := []string{"updated_at = $1"}
+	args := []interface{}{time.Now()}
+	argCount := 1
+
+	if req.Title != nil {
+		argCount++
+		updates = append(updates, fmt.Sprintf("title = $%d", argCount))
+		args = append(args, *req.Title)
+	}
+	if req.Description != nil {
+		argCount++
+		updates = append(updates, fmt.Sprintf("description = $%d", argCount))
+		args = append(args, *req.Description)
+	}
+	if req.Difficulty != nil {
+		argCount++
+		updates = append(updates, fmt.Sprintf("difficulty = $%d", argCount))
+		args = append(args, *req.Difficulty)
+	}
+	if req.TimeLimit != nil {
+		argCount++
+		updates = append(updates, fmt.Sprintf("time_limit = $%d", argCount))
+		args = append(args, *req.TimeLimit)
+	}
+	if req.PassingScore != nil {
+		argCount++
+		updates = append(updates, fmt.Sprintf("passing_score = $%d", argCount))
+		args = append(args, *req.PassingScore)
+	}
+	if req.IsActive != nil {
+		argCount++
+		updates = append(updates, fmt.Sprintf("is_active = $%d", argCount))
+		args = append(args, *req.IsActive)
+	}
+
+	argCount++
+	args = append(args, id)
+
+	query := fmt.Sprintf("UPDATE exercises SET %s WHERE id = $%d", strings.Join(updates, ", "), argCount)
+	_, err := r.db.Exec(query, args...)
+	return err
+}
+
+// DeleteExercise soft deletes an exercise
+func (r *ExerciseRepository) DeleteExercise(id uuid.UUID) error {
+	_, err := r.db.Exec("UPDATE exercises SET is_active = false, updated_at = $1 WHERE id = $2", time.Now(), id)
+	return err
+}
