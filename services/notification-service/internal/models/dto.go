@@ -144,3 +144,44 @@ type SuccessResponse struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
+
+// ============================================
+// Scheduled Notifications DTOs
+// ============================================
+
+// CreateScheduledNotificationRequest represents request to create scheduled notification
+type CreateScheduledNotificationRequest struct {
+	Title         string `json:"title" binding:"required,max=200"`
+	Message       string `json:"message" binding:"required,max=1000"`
+	ScheduleType  string `json:"schedule_type" binding:"required,oneof=daily weekly monthly custom"`
+	ScheduledTime string `json:"scheduled_time" binding:"required"` // "09:00:00"
+	DaysOfWeek    []int  `json:"days_of_week,omitempty"`            // [1,2,3,4,5] for Mon-Fri
+	Timezone      string `json:"timezone"`                          // default: "Asia/Ho_Chi_Minh"
+}
+
+// UpdateScheduledNotificationRequest represents request to update scheduled notification
+type UpdateScheduledNotificationRequest struct {
+	Title         *string `json:"title,omitempty"`
+	Message       *string `json:"message,omitempty"`
+	ScheduleType  *string `json:"schedule_type,omitempty"`
+	ScheduledTime *string `json:"scheduled_time,omitempty"`
+	DaysOfWeek    *[]int  `json:"days_of_week,omitempty"`
+	Timezone      *string `json:"timezone,omitempty"`
+	IsActive      *bool   `json:"is_active,omitempty"`
+}
+
+// ScheduledNotificationResponse represents scheduled notification response
+type ScheduledNotificationResponse struct {
+	ID            uuid.UUID `json:"id"`
+	Title         string    `json:"title"`
+	Message       string    `json:"message"`
+	ScheduleType  string    `json:"schedule_type"`
+	ScheduledTime string    `json:"scheduled_time"`
+	DaysOfWeek    []int     `json:"days_of_week,omitempty"`
+	Timezone      string    `json:"timezone"`
+	IsActive      bool      `json:"is_active"`
+	LastSentAt    *string   `json:"last_sent_at,omitempty"` // ISO8601
+	NextSendAt    *string   `json:"next_send_at,omitempty"` // ISO8601
+	CreatedAt     string    `json:"created_at"`             // ISO8601
+	UpdatedAt     string    `json:"updated_at"`             // ISO8601
+}

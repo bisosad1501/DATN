@@ -7,6 +7,7 @@ import (
 
 	"github.com/bisosad1501/ielts-platform/notification-service/internal/models"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type NotificationRepository struct {
@@ -531,4 +532,243 @@ func (r *NotificationRepository) CreateNotificationLog(log *models.NotificationL
 	}
 
 	return nil
+}
+
+// ============================================
+// Scheduled Notifications Repository Methods
+// ============================================
+
+// CreateScheduledNotification creates a new scheduled notification
+func (r *NotificationRepository) CreateScheduledNotification(schedule *models.ScheduledNotification) error {
+	query := `
+		INSERT INTO scheduled_notifications (
+			id, user_id, title, message, schedule_type, scheduled_time,
+			days_of_week, timezone, is_active, next_send_at, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`
+
+	_, err := r.db.Exec(query,
+		schedule.ID,
+		schedule.UserID,
+		schedule.Title,
+		schedule.Message,
+		schedule.ScheduleType,
+		schedule.ScheduledTime,
+		pq.Array(schedule.DaysOfWeek),
+		schedule.Timezone,
+		schedule.IsActive,
+		schedule.NextSendAt,
+		schedule.CreatedAt,
+		schedule.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create scheduled notification: %w", err)
+	}
+
+	return nil
+}
+
+// GetScheduledNotifications retrieves all scheduled notifications for a user
+func (r *NotificationRepository) GetScheduledNotifications(userID uuid.UUID) ([]models.ScheduledNotification, error) {
+	query := `
+		SELECT id, user_id, title, message, schedule_type, scheduled_time,
+			days_of_week, timezone, is_active, last_sent_at, next_send_at,
+			created_at, updated_at
+		FROM scheduled_notifications
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get scheduled notifications: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []models.ScheduledNotification
+	for rows.Next() {
+		var schedule models.ScheduledNotification
+		var daysOfWeek []int32 // PostgreSQL INT is 32-bit
+		
+		err := rows.Scan(
+			&schedule.ID,
+			&schedule.UserID,
+			&schedule.Title,
+			&schedule.Message,
+			&schedule.ScheduleType,
+			&schedule.ScheduledTime,
+			pq.Array(&daysOfWeek), // Scan PostgreSQL INT[] into []int32
+			&schedule.Timezone,
+			&schedule.IsActive,
+			&schedule.LastSentAt,
+			&schedule.NextSendAt,
+			&schedule.CreatedAt,
+			&schedule.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan scheduled notification: %w", err)
+		}
+		
+		// Convert []int32 to []int for model
+		schedule.DaysOfWeek = make([]int, len(daysOfWeek))
+		for i, day := range daysOfWeek {
+			schedule.DaysOfWeek[i] = int(day)
+		}
+		
+		schedules = append(schedules, schedule)
+	}
+
+	return schedules, nil
+}
+
+// GetScheduledNotificationByID retrieves a scheduled notification by ID
+func (r *NotificationRepository) GetScheduledNotificationByID(id uuid.UUID) (*models.ScheduledNotification, error) {
+	query := `
+		SELECT id, user_id, title, message, schedule_type, scheduled_time,
+			days_of_week, timezone, is_active, last_sent_at, next_send_at,
+			created_at, updated_at
+		FROM scheduled_notifications
+		WHERE id = $1
+	`
+
+	var schedule models.ScheduledNotification
+	var daysOfWeek []int32 // PostgreSQL INT is 32-bit
+	
+	err := r.db.QueryRow(query, id).Scan(
+		&schedule.ID,
+		&schedule.UserID,
+		&schedule.Title,
+		&schedule.Message,
+		&schedule.ScheduleType,
+		&schedule.ScheduledTime,
+		pq.Array(&daysOfWeek), // Scan PostgreSQL INT[] into []int32
+		&schedule.Timezone,
+		&schedule.IsActive,
+		&schedule.LastSentAt,
+		&schedule.NextSendAt,
+		&schedule.CreatedAt,
+		&schedule.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("scheduled notification not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get scheduled notification: %w", err)
+	}
+
+	// Convert []int32 to []int for model
+	schedule.DaysOfWeek = make([]int, len(daysOfWeek))
+	for i, day := range daysOfWeek {
+		schedule.DaysOfWeek[i] = int(day)
+	}
+	
+	return &schedule, nil
+}
+
+// UpdateScheduledNotification updates a scheduled notification
+func (r *NotificationRepository) UpdateScheduledNotification(schedule *models.ScheduledNotification) error {
+	query := `
+		UPDATE scheduled_notifications
+		SET title = $1, message = $2, schedule_type = $3, scheduled_time = $4,
+			days_of_week = $5, timezone = $6, is_active = $7, next_send_at = $8, updated_at = $9
+		WHERE id = $10
+	`
+
+	_, err := r.db.Exec(query,
+		schedule.Title,
+		schedule.Message,
+		schedule.ScheduleType,
+		schedule.ScheduledTime,
+		pq.Array(schedule.DaysOfWeek),
+		schedule.Timezone,
+		schedule.IsActive,
+		schedule.NextSendAt,
+		time.Now(),
+		schedule.ID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update scheduled notification: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteScheduledNotification deletes a scheduled notification
+func (r *NotificationRepository) DeleteScheduledNotification(id uuid.UUID) error {
+	query := `DELETE FROM scheduled_notifications WHERE id = $1`
+
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete scheduled notification: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("scheduled notification not found")
+	}
+
+	return nil
+}
+
+// GetDueScheduledNotifications retrieves scheduled notifications that are due to be sent
+// This is used by cron job or background worker
+func (r *NotificationRepository) GetDueScheduledNotifications() ([]models.ScheduledNotification, error) {
+	query := `
+		SELECT id, user_id, title, message, schedule_type, scheduled_time,
+			days_of_week, timezone, is_active, last_sent_at, next_send_at,
+			created_at, updated_at
+		FROM scheduled_notifications
+		WHERE is_active = true
+		AND (next_send_at IS NULL OR next_send_at <= NOW())
+		ORDER BY next_send_at ASC
+		LIMIT 100
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get due scheduled notifications: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []models.ScheduledNotification
+	for rows.Next() {
+		var schedule models.ScheduledNotification
+		var daysOfWeek []int32 // PostgreSQL INT is 32-bit
+		
+		err := rows.Scan(
+			&schedule.ID,
+			&schedule.UserID,
+			&schedule.Title,
+			&schedule.Message,
+			&schedule.ScheduleType,
+			&schedule.ScheduledTime,
+			pq.Array(&daysOfWeek), // Scan PostgreSQL INT[] into []int32
+			&schedule.Timezone,
+			&schedule.IsActive,
+			&schedule.LastSentAt,
+			&schedule.NextSendAt,
+			&schedule.CreatedAt,
+			&schedule.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan scheduled notification: %w", err)
+		}
+		
+		// Convert []int32 to []int for model
+		schedule.DaysOfWeek = make([]int, len(daysOfWeek))
+		for i, day := range daysOfWeek {
+			schedule.DaysOfWeek[i] = int(day)
+		}
+		
+		schedules = append(schedules, schedule)
+	}
+
+	return schedules, nil
 }

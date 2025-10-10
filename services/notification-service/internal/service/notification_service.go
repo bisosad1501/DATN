@@ -403,3 +403,201 @@ func (s *NotificationService) logNotificationEvent(notificationID *uuid.UUID, us
 	// Ignore errors in logging to not disrupt main flow
 	_ = s.repo.CreateNotificationLog(log)
 }
+
+// ============================================
+// Scheduled Notifications Service Methods
+// ============================================
+
+// CreateScheduledNotification creates a new scheduled notification
+func (s *NotificationService) CreateScheduledNotification(userID uuid.UUID, req *models.CreateScheduledNotificationRequest) (*models.ScheduledNotification, error) {
+	// Default timezone if not provided
+	timezone := req.Timezone
+	if timezone == "" {
+		timezone = "Asia/Ho_Chi_Minh"
+	}
+
+	schedule := &models.ScheduledNotification{
+		ID:            uuid.New(),
+		UserID:        userID,
+		Title:         req.Title,
+		Message:       req.Message,
+		ScheduleType:  req.ScheduleType,
+		ScheduledTime: req.ScheduledTime,
+		DaysOfWeek:    req.DaysOfWeek, // Already []int
+		Timezone:      timezone,
+		IsActive:      true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+
+	// Calculate next_send_at based on schedule type
+	// This is a simplified version - in production, use proper timezone handling
+	nextSend := calculateNextSendTime(schedule.ScheduleType, schedule.ScheduledTime, schedule.DaysOfWeek)
+	schedule.NextSendAt = nextSend
+
+	err := s.repo.CreateScheduledNotification(schedule)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scheduled notification: %w", err)
+	}
+
+	return schedule, nil
+}
+
+// GetScheduledNotifications retrieves all scheduled notifications for a user
+func (s *NotificationService) GetScheduledNotifications(userID uuid.UUID) ([]models.ScheduledNotification, error) {
+	schedules, err := s.repo.GetScheduledNotifications(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get scheduled notifications: %w", err)
+	}
+	return schedules, nil
+}
+
+// GetScheduledNotificationByID retrieves a scheduled notification by ID
+func (s *NotificationService) GetScheduledNotificationByID(id uuid.UUID, userID uuid.UUID) (*models.ScheduledNotification, error) {
+	schedule, err := s.repo.GetScheduledNotificationByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check ownership
+	if schedule.UserID != userID {
+		return nil, fmt.Errorf("unauthorized: scheduled notification does not belong to user")
+	}
+
+	return schedule, nil
+}
+
+// UpdateScheduledNotification updates a scheduled notification
+func (s *NotificationService) UpdateScheduledNotification(id uuid.UUID, userID uuid.UUID, req *models.UpdateScheduledNotificationRequest) (*models.ScheduledNotification, error) {
+	// Get existing schedule
+	schedule, err := s.repo.GetScheduledNotificationByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check ownership
+	if schedule.UserID != userID {
+		return nil, fmt.Errorf("unauthorized: scheduled notification does not belong to user")
+	}
+
+	// Update fields if provided
+	if req.Title != nil {
+		schedule.Title = *req.Title
+	}
+	if req.Message != nil {
+		schedule.Message = *req.Message
+	}
+	if req.ScheduleType != nil {
+		schedule.ScheduleType = *req.ScheduleType
+	}
+	if req.ScheduledTime != nil {
+		schedule.ScheduledTime = *req.ScheduledTime
+	}
+	if req.DaysOfWeek != nil {
+		schedule.DaysOfWeek = *req.DaysOfWeek
+	}
+	if req.Timezone != nil {
+		schedule.Timezone = *req.Timezone
+	}
+	if req.IsActive != nil {
+		schedule.IsActive = *req.IsActive
+	}
+
+	// Recalculate next_send_at
+	nextSend := calculateNextSendTime(schedule.ScheduleType, schedule.ScheduledTime, schedule.DaysOfWeek)
+	schedule.NextSendAt = nextSend
+	schedule.UpdatedAt = time.Now()
+
+	err = s.repo.UpdateScheduledNotification(schedule)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update scheduled notification: %w", err)
+	}
+
+	return schedule, nil
+}
+
+// DeleteScheduledNotification deletes a scheduled notification
+func (s *NotificationService) DeleteScheduledNotification(id uuid.UUID, userID uuid.UUID) error {
+	// Check ownership first
+	schedule, err := s.repo.GetScheduledNotificationByID(id)
+	if err != nil {
+		return err
+	}
+
+	if schedule.UserID != userID {
+		return fmt.Errorf("unauthorized: scheduled notification does not belong to user")
+	}
+
+	err = s.repo.DeleteScheduledNotification(id)
+	if err != nil {
+		return fmt.Errorf("failed to delete scheduled notification: %w", err)
+	}
+
+	return nil
+}
+
+// calculateNextSendTime calculates the next send time for a scheduled notification
+// This is a simplified version - in production, use proper timezone handling
+func calculateNextSendTime(scheduleType, scheduledTime string, daysOfWeek []int) *time.Time {
+	now := time.Now()
+
+	// Parse scheduled time (HH:MM:SS)
+	timeParts := strings.Split(scheduledTime, ":")
+	if len(timeParts) != 3 {
+		return nil
+	}
+
+	hour, _ := time.Parse("15", timeParts[0])
+	minute, _ := time.Parse("04", timeParts[1])
+
+	switch scheduleType {
+	case "daily":
+		// Next occurrence at specified time
+		nextSend := time.Date(now.Year(), now.Month(), now.Day(),
+			hour.Hour(), minute.Minute(), 0, 0, now.Location())
+
+		// If time has passed today, schedule for tomorrow
+		if nextSend.Before(now) {
+			nextSend = nextSend.Add(24 * time.Hour)
+		}
+		return &nextSend
+
+	case "weekly":
+		// For weekly, use days_of_week
+		// Find next matching day
+		currentDay := int(now.Weekday())
+		if currentDay == 0 { // Sunday is 0, but we use 7
+			currentDay = 7
+		}
+
+		// Find next day in daysOfWeek
+		var daysUntilNext int
+		found := false
+		for i := 0; i < 7; i++ {
+			testDay := (currentDay+i-1)%7 + 1
+			for _, day := range daysOfWeek {
+				if testDay == day {
+					daysUntilNext = i
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+
+		nextSend := time.Date(now.Year(), now.Month(), now.Day()+daysUntilNext,
+			hour.Hour(), minute.Minute(), 0, 0, now.Location())
+
+		// If same day but time passed, go to next week occurrence
+		if daysUntilNext == 0 && nextSend.Before(now) {
+			nextSend = nextSend.Add(7 * 24 * time.Hour)
+		}
+		return &nextSend
+
+	default:
+		// For monthly and custom, return nil (need more complex logic)
+		return nil
+	}
+}

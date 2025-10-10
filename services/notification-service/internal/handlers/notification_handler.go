@@ -517,3 +517,255 @@ func (h *NotificationHandler) convertToNotificationResponse(n *models.Notificati
 
 	return resp
 }
+
+// ============================================
+// Scheduled Notifications Handlers
+// ============================================
+
+// CreateScheduledNotification handles POST /api/v1/notifications/scheduled
+func (h *NotificationHandler) CreateScheduledNotification(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User ID not found in context",
+		})
+		return
+	}
+
+	uid := userID.(uuid.UUID)
+
+	var req models.CreateScheduledNotificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	schedule, err := h.service.CreateScheduledNotification(uid, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "create_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	resp := convertToScheduledNotificationResponse(schedule)
+	c.JSON(http.StatusCreated, models.SuccessResponse{
+		Message: "Scheduled notification created successfully",
+		Data:    resp,
+	})
+}
+
+// GetScheduledNotifications handles GET /api/v1/notifications/scheduled
+func (h *NotificationHandler) GetScheduledNotifications(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User ID not found in context",
+		})
+		return
+	}
+
+	uid := userID.(uuid.UUID)
+
+	schedules, err := h.service.GetScheduledNotifications(uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Convert to response format
+	responses := make([]models.ScheduledNotificationResponse, len(schedules))
+	for i, schedule := range schedules {
+		responses[i] = convertToScheduledNotificationResponse(&schedule)
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Message: "Scheduled notifications retrieved successfully",
+		Data:    responses,
+	})
+}
+
+// GetScheduledNotificationByID handles GET /api/v1/notifications/scheduled/:id
+func (h *NotificationHandler) GetScheduledNotificationByID(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User ID not found in context",
+		})
+		return
+	}
+
+	uid := userID.(uuid.UUID)
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid scheduled notification ID",
+		})
+		return
+	}
+
+	schedule, err := h.service.GetScheduledNotificationByID(id, uid)
+	if err != nil {
+		if err.Error() == "unauthorized: scheduled notification does not belong to user" {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "forbidden",
+				Message: "You don't have permission to access this scheduled notification",
+			})
+			return
+		}
+		c.JSON(http.StatusNotFound, models.ErrorResponse{
+			Error:   "not_found",
+			Message: "Scheduled notification not found",
+		})
+		return
+	}
+
+	resp := convertToScheduledNotificationResponse(schedule)
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Message: "Scheduled notification retrieved successfully",
+		Data:    resp,
+	})
+}
+
+// UpdateScheduledNotification handles PUT /api/v1/notifications/scheduled/:id
+func (h *NotificationHandler) UpdateScheduledNotification(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User ID not found in context",
+		})
+		return
+	}
+
+	uid := userID.(uuid.UUID)
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid scheduled notification ID",
+		})
+		return
+	}
+
+	var req models.UpdateScheduledNotificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	schedule, err := h.service.UpdateScheduledNotification(id, uid, &req)
+	if err != nil {
+		if err.Error() == "unauthorized: scheduled notification does not belong to user" {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "forbidden",
+				Message: "You don't have permission to update this scheduled notification",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "update_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	resp := convertToScheduledNotificationResponse(schedule)
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Message: "Scheduled notification updated successfully",
+		Data:    resp,
+	})
+}
+
+// DeleteScheduledNotification handles DELETE /api/v1/notifications/scheduled/:id
+func (h *NotificationHandler) DeleteScheduledNotification(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User ID not found in context",
+		})
+		return
+	}
+
+	uid := userID.(uuid.UUID)
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid scheduled notification ID",
+		})
+		return
+	}
+
+	err = h.service.DeleteScheduledNotification(id, uid)
+	if err != nil {
+		if err.Error() == "unauthorized: scheduled notification does not belong to user" {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "forbidden",
+				Message: "You don't have permission to delete this scheduled notification",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "delete_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Message: "Scheduled notification deleted successfully",
+	})
+}
+
+// Helper function to convert ScheduledNotification to ScheduledNotificationResponse
+func convertToScheduledNotificationResponse(s *models.ScheduledNotification) models.ScheduledNotificationResponse {
+	// Convert []int64 to []int
+	daysOfWeek := make([]int, len(s.DaysOfWeek))
+	for i, day := range s.DaysOfWeek {
+		daysOfWeek[i] = int(day)
+	}
+
+	resp := models.ScheduledNotificationResponse{
+		ID:            s.ID,
+		Title:         s.Title,
+		Message:       s.Message,
+		ScheduleType:  s.ScheduleType,
+		ScheduledTime: s.ScheduledTime,
+		DaysOfWeek:    daysOfWeek,
+		Timezone:      s.Timezone,
+		IsActive:      s.IsActive,
+		CreatedAt:     s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:     s.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+
+	if s.LastSentAt != nil {
+		lastSent := s.LastSentAt.Format("2006-01-02T15:04:05Z07:00")
+		resp.LastSentAt = &lastSent
+	}
+
+	if s.NextSendAt != nil {
+		nextSend := s.NextSendAt.Format("2006-01-02T15:04:05Z07:00")
+		resp.NextSendAt = &nextSend
+	}
+
+	return resp
+}

@@ -125,21 +125,24 @@ type NotificationTemplate struct {
 	UpdatedAt         time.Time      `json:"updated_at"`
 }
 
+// IntArray is a custom type for PostgreSQL INT[] arrays
+type IntArray []int
+
 // ScheduledNotification represents a recurring notification
 type ScheduledNotification struct {
-	ID            uuid.UUID     `json:"id"`
-	UserID        uuid.UUID     `json:"user_id"`
-	Title         string        `json:"title"`
-	Message       string        `json:"message"`
-	ScheduleType  string        `json:"schedule_type"`  // daily, weekly, monthly, custom
-	ScheduledTime string        `json:"scheduled_time"` // TIME string "09:00:00"
-	DaysOfWeek    pq.Int64Array `json:"days_of_week"`   // [1,2,3,4,5] for Mon-Fri
-	Timezone      string        `json:"timezone"`
-	IsActive      bool          `json:"is_active"`
-	LastSentAt    *time.Time    `json:"last_sent_at,omitempty"`
-	NextSendAt    *time.Time    `json:"next_send_at,omitempty"`
-	CreatedAt     time.Time     `json:"created_at"`
-	UpdatedAt     time.Time     `json:"updated_at"`
+	ID            uuid.UUID  `json:"id"`
+	UserID        uuid.UUID  `json:"user_id"`
+	Title         string     `json:"title"`
+	Message       string     `json:"message"`
+	ScheduleType  string     `json:"schedule_type"`  // daily, weekly, monthly, custom
+	ScheduledTime string     `json:"scheduled_time"` // TIME string "09:00:00"
+	DaysOfWeek    IntArray   `json:"days_of_week"`   // [1,2,3,4,5] for Mon-Fri
+	Timezone      string     `json:"timezone"`
+	IsActive      bool       `json:"is_active"`
+	LastSentAt    *time.Time `json:"last_sent_at,omitempty"`
+	NextSendAt    *time.Time `json:"next_send_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // NotificationLog represents a log entry for notification events

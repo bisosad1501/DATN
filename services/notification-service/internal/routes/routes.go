@@ -36,6 +36,13 @@ func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, authMiddl
 		// Preferences
 		student.GET("/preferences", handler.GetPreferences)    // Get preferences
 		student.PUT("/preferences", handler.UpdatePreferences) // Update preferences
+
+		// Scheduled notifications
+		student.POST("/scheduled", handler.CreateScheduledNotification)       // Create scheduled notification
+		student.GET("/scheduled", handler.GetScheduledNotifications)          // List scheduled notifications
+		student.GET("/scheduled/:id", handler.GetScheduledNotificationByID)   // Get scheduled notification by ID
+		student.PUT("/scheduled/:id", handler.UpdateScheduledNotification)    // Update scheduled notification
+		student.DELETE("/scheduled/:id", handler.DeleteScheduledNotification) // Delete scheduled notification
 	}
 
 	// Admin routes

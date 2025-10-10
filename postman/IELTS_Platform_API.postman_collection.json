@@ -4288,6 +4288,134 @@
 				"response": []
 			},
 			{
+				"name": "Student - Create Scheduled Notification",
+				"event": [
+					{
+						"listen": "test",
+						"script": {
+							"type": "text/javascript",
+							"exec": [
+								"if (pm.response.code === 201) {",
+								"    const schedule = pm.response.json().data;",
+								"    pm.environment.set('test_scheduled_notification_id', schedule.id);",
+								"    console.log('Created scheduled notification:', schedule.id);",
+								"}"
+							]
+						}
+					}
+				],
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"title\": \"Daily Study Reminder\",\n  \"message\": \"Time to practice IELTS! Spend 30 minutes today\",\n  \"schedule_type\": \"daily\",\n  \"scheduled_time\": \"09:00:00\",\n  \"timezone\": \"Asia/Ho_Chi_Minh\"\n}"
+					},
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/scheduled",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "scheduled"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Get Scheduled Notifications",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/scheduled",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "scheduled"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Get Scheduled Notification By ID",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/scheduled/{{test_scheduled_notification_id}}",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "scheduled", "{{test_scheduled_notification_id}}"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Update Scheduled Notification",
+				"request": {
+					"method": "PUT",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"title\": \"Daily Study Reminder (Updated)\",\n  \"scheduled_time\": \"10:00:00\",\n  \"is_active\": true\n}"
+					},
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/scheduled/{{test_scheduled_notification_id}}",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "scheduled", "{{test_scheduled_notification_id}}"]
+					}
+				},
+				"response": []
+			},
+			{
+				"name": "Student - Delete Scheduled Notification",
+				"request": {
+					"method": "DELETE",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "Bearer {{access_token}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{notification_service_url}}/api/v1/notifications/scheduled/{{test_scheduled_notification_id}}",
+						"host": ["{{notification_service_url}}"],
+						"path": ["api", "v1", "notifications", "scheduled", "{{test_scheduled_notification_id}}"]
+					}
+				},
+				"response": []
+			},
+			{
 				"name": "Admin - Create Notification",
 				"request": {
 					"method": "POST",
