@@ -1350,8 +1350,8 @@ func (r *ExerciseRepository) UpdateBankQuestion(id uuid.UUID, req *models.Update
 			difficulty = $5, topic = $6, context_text = $7, audio_url = $8, 
 			image_url = $9, answer_data = $10, tags = $11, updated_at = $12
 		WHERE id = $13
-	`, req.Title, req.SkillType, req.QuestionText, req.QuestionType, 
-		req.Difficulty, req.Topic, req.ContextText, req.AudioURL, 
+	`, req.Title, req.SkillType, req.QuestionText, req.QuestionType,
+		req.Difficulty, req.Topic, req.ContextText, req.AudioURL,
 		req.ImageURL, answerDataJSON, pq.Array(req.Tags), time.Now(), id)
 
 	return err
