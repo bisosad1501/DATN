@@ -91,6 +91,9 @@ func SetupRoutes(
 			// Module and lesson management (instructor and admin)
 			admin.POST("/modules", authMiddleware.RequireRole("instructor", "admin"), handler.CreateModule)
 			admin.POST("/lessons", authMiddleware.RequireRole("instructor", "admin"), handler.CreateLesson)
+
+			// Video management (instructor and admin)
+			admin.POST("/lessons/:lesson_id/videos", authMiddleware.RequireRole("instructor", "admin"), handler.AddVideoToLesson)
 		}
 	}
 }

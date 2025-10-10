@@ -245,11 +245,39 @@ func (r *CourseRepository) GetLessonByID(lessonID uuid.UUID) (*models.Lesson, er
 	return &lesson, nil
 }
 
+// GetModuleByID retrieves a module by ID
+func (r *CourseRepository) GetModuleByID(moduleID uuid.UUID) (*models.Module, error) {
+	query := `
+		SELECT id, course_id, title, description, duration_hours,
+			   display_order, is_published, total_lessons,
+			   created_at, updated_at
+		FROM modules
+		WHERE id = $1
+	`
+
+	var module models.Module
+	err := r.db.QueryRow(query, moduleID).Scan(
+		&module.ID, &module.CourseID, &module.Title, &module.Description,
+		&module.DurationHours, &module.DisplayOrder, &module.IsPublished,
+		&module.TotalLessons,
+		&module.CreatedAt, &module.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &module, nil
+}
+
 // GetVideosByLessonID retrieves videos for a lesson
 func (r *CourseRepository) GetVideosByLessonID(lessonID uuid.UUID) ([]models.LessonVideo, error) {
 	query := `
 		SELECT id, lesson_id, title, video_url, video_provider, video_id,
-			   duration_seconds, quality, thumbnail_url, display_order,
+			   duration_seconds, thumbnail_url, display_order,
 			   created_at, updated_at
 		FROM lesson_videos
 		WHERE lesson_id = $1
@@ -268,7 +296,7 @@ func (r *CourseRepository) GetVideosByLessonID(lessonID uuid.UUID) ([]models.Les
 		err := rows.Scan(
 			&video.ID, &video.LessonID, &video.Title, &video.VideoURL,
 			&video.VideoProvider, &video.VideoID, &video.DurationSeconds,
-			&video.Quality, &video.ThumbnailURL, &video.DisplayOrder,
+			&video.ThumbnailURL, &video.DisplayOrder,
 			&video.CreatedAt, &video.UpdatedAt,
 		)
 		if err != nil {
@@ -852,4 +880,41 @@ func (r *CourseRepository) IncrementMaterialDownload(materialID uuid.UUID) error
 
 	_, err := r.db.Exec(query, materialID)
 	return err
+}
+
+// ============================================
+// VIDEO MANAGEMENT
+// ============================================
+
+// CreateLessonVideo creates a new video for a lesson
+func (r *CourseRepository) CreateLessonVideo(video *models.LessonVideo) error {
+	query := `
+		INSERT INTO lesson_videos 
+		(lesson_id, title, video_provider, video_id, video_url, 
+		 duration_seconds, thumbnail_url, display_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, created_at, updated_at
+	`
+
+	err := r.db.QueryRow(
+		query,
+		video.LessonID,
+		video.Title,
+		video.VideoProvider,
+		video.VideoID,
+		video.VideoURL,
+		video.DurationSeconds,
+		video.ThumbnailURL,
+		video.DisplayOrder,
+	).Scan(&video.ID, &video.CreatedAt, &video.UpdatedAt)
+
+	return err
+}
+
+// GetLessonVideoCount counts videos in a lesson
+func (r *CourseRepository) GetLessonVideoCount(lessonID uuid.UUID) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM lesson_videos WHERE lesson_id = $1`
+	err := r.db.QueryRow(query, lessonID).Scan(&count)
+	return count, err
 }

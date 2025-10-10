@@ -669,3 +669,73 @@ func (s *CourseService) IncrementMaterialDownload(materialID uuid.UUID) error {
 func (s *CourseService) GetVideoSubtitles(videoID uuid.UUID) ([]models.VideoSubtitle, error) {
 	return s.repo.GetVideoSubtitles(videoID)
 }
+
+// ============================================
+// VIDEO MANAGEMENT
+// ============================================
+
+// AddVideoToLesson adds a video to a lesson
+func (s *CourseService) AddVideoToLesson(userID uuid.UUID, userRole string, lessonID uuid.UUID, req *models.AddVideoToLessonRequest) (*models.LessonVideo, error) {
+	// Verify user has permission (admin or instructor who owns the course)
+	lesson, err := s.repo.GetLessonByID(lessonID)
+	if err != nil {
+		return nil, fmt.Errorf("lesson not found: %v", err)
+	}
+	if lesson == nil {
+		return nil, fmt.Errorf("lesson not found")
+	}
+
+	module, err := s.repo.GetModuleByID(lesson.ModuleID)
+	if err != nil {
+		return nil, fmt.Errorf("module not found: %v", err)
+	}
+	if module == nil {
+		return nil, fmt.Errorf("module not found")
+	}
+
+	course, err := s.repo.GetCourseByID(module.CourseID)
+	if err != nil {
+		return nil, fmt.Errorf("course not found: %v", err)
+	}
+	if course == nil {
+		return nil, fmt.Errorf("course not found")
+	}
+
+	// Check ownership
+	if userRole != "admin" && course.InstructorID != userID {
+		return nil, fmt.Errorf("unauthorized: you don't own this course")
+	}
+
+	// Get next display order
+	displayOrder := 1
+	if req.DisplayOrder != nil {
+		displayOrder = *req.DisplayOrder
+	} else {
+		count, err := s.repo.GetLessonVideoCount(lessonID)
+		if err == nil {
+			displayOrder = count + 1
+		}
+	}
+
+	video := &models.LessonVideo{
+		LessonID:        lessonID,
+		Title:           req.Title,
+		VideoProvider:   req.VideoProvider,
+		VideoID:         &req.VideoID,
+		VideoURL:        req.VideoURL,
+		DurationSeconds: 0,
+		ThumbnailURL:    req.ThumbnailURL,
+		DisplayOrder:    displayOrder,
+	}
+
+	if req.DurationSeconds != nil {
+		video.DurationSeconds = *req.DurationSeconds
+	}
+
+	err = s.repo.CreateLessonVideo(video)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create video: %v", err)
+	}
+
+	return video, nil
+}

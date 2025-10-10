@@ -3069,6 +3069,63 @@
 						}
 					},
 					{
+						"name": "Add YouTube Video to Lesson",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 201', function() {",
+										"    pm.response.to.have.status(201);",
+										"});",
+										"",
+										"pm.test('Video added successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.have.property('id');",
+										"    pm.expect(jsonData.data).to.have.property('video_provider');",
+										"    pm.expect(jsonData.data.video_provider).to.eql('youtube');",
+										"    pm.expect(jsonData.data).to.have.property('video_id');",
+										"    pm.expect(jsonData.data).to.have.property('video_url');",
+										"    ",
+										"    // Save video ID for future tests",
+										"    pm.environment.set('youtube_video_id', jsonData.data.id);",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"title\": \"IELTS Listening Practice Test - Full Test with Answers\",\n  \"video_provider\": \"youtube\",\n  \"video_id\": \"jss3kHbOXvE\",\n  \"video_url\": \"https://www.youtube.com/watch?v=jss3kHbOXvE\",\n  \"duration_seconds\": 2100,\n  \"thumbnail_url\": \"https://img.youtube.com/vi/jss3kHbOXvE/maxresdefault.jpg\"\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/admin/lessons/{{test_lesson_id}}/videos",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "admin", "lessons", "{{test_lesson_id}}", "videos"]
+							},
+							"description": "Add a YouTube video to a lesson (Admin or Instructor only). Supports YouTube, Bunny.net, Vimeo, and self-hosted videos.\n\n**YouTube URL Formats**:\n- Watch: https://www.youtube.com/watch?v=VIDEO_ID\n- Short: https://youtu.be/VIDEO_ID\n- Embed: https://www.youtube.com/embed/VIDEO_ID\n\n**Thumbnail URL**:\n- Default: https://img.youtube.com/vi/{VIDEO_ID}/default.jpg\n- HQ: https://img.youtube.com/vi/{VIDEO_ID}/hqdefault.jpg\n- Max: https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg\n\n**Authorization**: Admin can add to any lesson. Instructor can only add to their own courses."
+						}
+					},
+					{
 						"name": "Update Any Course",
 						"event": [
 							{

@@ -152,3 +152,16 @@ type TrackVideoProgressRequest struct {
 	SessionID      *uuid.UUID `json:"session_id"`
 	DeviceType     *string    `json:"device_type"` // web, android, ios
 }
+
+// AddVideoToLessonRequest represents adding video to a lesson
+type AddVideoToLessonRequest struct {
+	Title           string  `json:"title" binding:"required"`
+	VideoProvider   string  `json:"video_provider" binding:"required"` // youtube, bunny, vimeo, self-hosted
+	VideoID         string  `json:"video_id" binding:"required"`       // YouTube video ID or Bunny video library ID
+	VideoURL        string  `json:"video_url" binding:"required"`      // Full video URL
+	DurationSeconds *int    `json:"duration_seconds"`                  // Video duration in seconds
+	ThumbnailURL    *string `json:"thumbnail_url"`                     // Video thumbnail URL
+	Quality         *string `json:"quality"`                           // 720p, 1080p, 4k, etc.
+	FileSize        *int64  `json:"file_size"`                         // File size in bytes
+	DisplayOrder    *int    `json:"display_order"`                     // Order in lesson
+}

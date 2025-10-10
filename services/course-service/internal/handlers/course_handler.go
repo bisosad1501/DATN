@@ -1112,3 +1112,89 @@ func (h *CourseHandler) GetVideoSubtitles(c *gin.Context) {
 		Data:    subtitles,
 	})
 }
+
+// ============================================
+// VIDEO MANAGEMENT
+// ============================================
+
+// AddVideoToLesson adds a video to a lesson (Admin/Instructor only)
+func (h *CourseHandler) AddVideoToLesson(c *gin.Context) {
+	// Get user info from JWT
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "UNAUTHORIZED",
+				Message: "User not authenticated",
+			},
+		})
+		return
+	}
+
+	userIDStr := userIDVal.(string)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID",
+			},
+		})
+		return
+	}
+
+	userRole := ""
+	if roleVal, exists := c.Get("role"); exists {
+		userRole = roleVal.(string)
+	}
+
+	// Get lesson ID from URL
+	lessonIDStr := c.Param("lesson_id")
+	lessonID, err := uuid.Parse(lessonIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_LESSON_ID",
+				Message: "Invalid lesson ID format",
+			},
+		})
+		return
+	}
+
+	// Parse request body
+	var req models.AddVideoToLessonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "VALIDATION_ERROR",
+				Message: "Invalid request data",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	// Add video to lesson
+	video, err := h.service.AddVideoToLesson(userID, userRole, lessonID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "ADD_VIDEO_FAILED",
+				Message: "Failed to add video to lesson",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, Response{
+		Success: true,
+		Message: "Video added to lesson successfully",
+		Data:    video,
+	})
+}
