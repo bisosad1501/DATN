@@ -139,3 +139,95 @@ type SubmissionAnswer struct {
 	TimeSpentSeconds *int       `json:"time_spent_seconds,omitempty"`
 	AnsweredAt       time.Time  `json:"answered_at"`
 }
+
+// ExerciseTag represents a tag for exercises
+type ExerciseTag struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// QuestionBank represents reusable question in question bank
+type QuestionBank struct {
+	ID           uuid.UUID `json:"id"`
+	Title        *string   `json:"title,omitempty"`
+	SkillType    string    `json:"skill_type"` // listening, reading
+	QuestionType string    `json:"question_type"`
+	Difficulty   *string   `json:"difficulty,omitempty"`
+	Topic        *string   `json:"topic,omitempty"`
+	QuestionText string    `json:"question_text"`
+	ContextText  *string   `json:"context_text,omitempty"`
+	AudioURL     *string   `json:"audio_url,omitempty"`
+	ImageURL     *string   `json:"image_url,omitempty"`
+	AnswerData   string    `json:"answer_data"` // JSONB stored as string
+	Tags         []string  `json:"tags,omitempty"`
+	TimesUsed    int       `json:"times_used"`
+	CreatedBy    uuid.UUID `json:"created_by"`
+	IsVerified   bool      `json:"is_verified"`
+	IsPublished  bool      `json:"is_published"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// ExerciseAnalytics represents analytics for an exercise
+type ExerciseAnalytics struct {
+	ExerciseID            uuid.UUID `json:"exercise_id"`
+	TotalAttempts         int       `json:"total_attempts"`
+	CompletedAttempts     int       `json:"completed_attempts"`
+	AbandonedAttempts     int       `json:"abandoned_attempts"`
+	AverageScore          *float64  `json:"average_score,omitempty"`
+	MedianScore           *float64  `json:"median_score,omitempty"`
+	HighestScore          *float64  `json:"highest_score,omitempty"`
+	LowestScore           *float64  `json:"lowest_score,omitempty"`
+	AverageCompletionTime *int      `json:"average_completion_time,omitempty"` // seconds
+	MedianCompletionTime  *int      `json:"median_completion_time,omitempty"`
+	ActualDifficulty      *string   `json:"actual_difficulty,omitempty"`
+	QuestionStatistics    *string   `json:"question_statistics,omitempty"` // JSONB
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+// ============================================
+// Request/Response Models
+// ============================================
+
+// CreateBankQuestionRequest represents request to create a question bank question
+type CreateBankQuestionRequest struct {
+	Title        *string                `json:"title,omitempty"`
+	SkillType    string                 `json:"skill_type" binding:"required"`
+	QuestionType string                 `json:"question_type" binding:"required"`
+	Difficulty   *string                `json:"difficulty,omitempty"`
+	Topic        *string                `json:"topic,omitempty"`
+	QuestionText string                 `json:"question_text" binding:"required"`
+	ContextText  *string                `json:"context_text,omitempty"`
+	AudioURL     *string                `json:"audio_url,omitempty"`
+	ImageURL     *string                `json:"image_url,omitempty"`
+	AnswerData   map[string]interface{} `json:"answer_data" binding:"required"`
+	Tags         []string               `json:"tags,omitempty"`
+}
+
+// UpdateBankQuestionRequest represents request to update a question bank question
+type UpdateBankQuestionRequest struct {
+	Title        *string                `json:"title,omitempty"`
+	SkillType    string                 `json:"skill_type" binding:"required"`
+	QuestionText string                 `json:"question_text" binding:"required"`
+	QuestionType string                 `json:"question_type" binding:"required"`
+	Difficulty   *string                `json:"difficulty,omitempty"`
+	Topic        *string                `json:"topic,omitempty"`
+	ContextText  *string                `json:"context_text,omitempty"`
+	AudioURL     *string                `json:"audio_url,omitempty"`
+	ImageURL     *string                `json:"image_url,omitempty"`
+	AnswerData   map[string]interface{} `json:"answer_data" binding:"required"`
+	Tags         []string               `json:"tags,omitempty"`
+}
+
+// CreateTagRequest represents request to create a tag
+type CreateTagRequest struct {
+	Name string `json:"name" binding:"required"`
+	Slug string `json:"slug" binding:"required"`
+}
+
+// AddTagRequest represents request to add tag to exercise
+type AddTagRequest struct {
+	TagID int `json:"tag_id" binding:"required"`
+}

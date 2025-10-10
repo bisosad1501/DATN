@@ -3869,11 +3869,226 @@
 							},
 							"description": "Soft delete exercise (sets is_published=false)"
 						}
+					},
+					{
+						"name": "Publish Exercise",
+						"request": {
+							"method": "POST",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}/publish",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}", "publish"]
+							},
+							"description": "Publish a draft exercise (sets is_published=true, published_at=now)"
+						}
+					},
+					{
+						"name": "Unpublish Exercise",
+						"request": {
+							"method": "POST",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}/unpublish",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}", "unpublish"]
+							},
+							"description": "Unpublish an exercise (sets is_published=false)"
+						}
+					},
+					{
+						"name": "Get Exercise Analytics",
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}/analytics",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}", "analytics"]
+							},
+							"description": "Get performance analytics: attempts, scores (avg/median/highest/lowest), completion time, difficulty, question statistics"
+						}
+					},
+					{
+						"name": "Create Tag",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"if (pm.response.code === 201) {",
+										"    const tag = pm.response.json().data;",
+										"    pm.environment.set('test_tag_id', tag.id);",
+										"    console.log('Created tag:', tag.id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"name\": \"Cambridge IELTS 16\",\n  \"slug\": \"cambridge-ielts-16\"\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/tags",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "tags"]
+							},
+							"description": "Create a new tag for categorizing exercises"
+						}
+					},
+					{
+						"name": "Add Tag to Exercise",
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"tag_id\": {{test_tag_id}}\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}/tags",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}", "tags"]
+							},
+							"description": "Attach a tag to an exercise"
+						}
+					},
+					{
+						"name": "Remove Tag from Exercise",
+						"request": {
+							"method": "DELETE",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/exercises/{{test_exercise_id}}/tags/{{test_tag_id}}",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "exercises", "{{test_exercise_id}}", "tags", "{{test_tag_id}}"]
+							},
+							"description": "Remove a tag from an exercise"
+						}
+					},
+					{
+						"name": "Get Bank Questions",
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/question-bank?page=1&limit=20&skill_type=reading&question_type=multiple_choice",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "question-bank"],
+								"query": [
+									{ "key": "page", "value": "1" },
+									{ "key": "limit", "value": "20" },
+									{ "key": "skill_type", "value": "reading", "description": "listening or reading" },
+									{ "key": "question_type", "value": "multiple_choice", "description": "multiple_choice, fill_in_blank, etc." }
+								]
+							},
+							"description": "Browse reusable questions in question bank"
+						}
+					},
+					{
+						"name": "Create Bank Question",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"type": "text/javascript",
+									"exec": [
+										"if (pm.response.code === 201) {",
+										"    const question = pm.response.json().data;",
+										"    pm.environment.set('test_bank_question_id', question.id);",
+										"    console.log('Created bank question:', question.id);",
+										"}"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "POST",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"title\": \"Academic Discussion - Technology\",\n  \"skill_type\": \"reading\",\n  \"question_type\": \"multiple_choice\",\n  \"difficulty\": \"medium\",\n  \"topic\": \"Technology\",\n  \"question_text\": \"What is the main idea of paragraph 3?\",\n  \"answer_data\": {\n    \"options\": [\n      {\"label\": \"A\", \"text\": \"Technology improves education\", \"is_correct\": true},\n      {\"label\": \"B\", \"text\": \"Technology is expensive\", \"is_correct\": false},\n      {\"label\": \"C\", \"text\": \"Technology is harmful\", \"is_correct\": false},\n      {\"label\": \"D\", \"text\": \"Technology is optional\", \"is_correct\": false}\n    ]\n  },\n  \"tags\": [\"academic\", \"technology\", \"reading\"]\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/question-bank",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "question-bank"]
+							},
+							"description": "Create a reusable question in the question bank. answer_data is flexible JSONB field."
+						}
+					},
+					{
+						"name": "Update Bank Question",
+						"request": {
+							"method": "PUT",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n  \"title\": \"Academic Discussion - Technology (Updated)\",\n  \"skill_type\": \"reading\",\n  \"question_text\": \"What is the main idea of paragraph 3? (Updated)\",\n  \"question_type\": \"multiple_choice\",\n  \"answer_data\": {\n    \"options\": [\n      {\"label\": \"A\", \"text\": \"Technology significantly improves education\", \"is_correct\": true},\n      {\"label\": \"B\", \"text\": \"Technology is expensive\", \"is_correct\": false},\n      {\"label\": \"C\", \"text\": \"Technology is harmful\", \"is_correct\": false},\n      {\"label\": \"D\", \"text\": \"Technology is optional\", \"is_correct\": false}\n    ]\n  },\n  \"tags\": [\"academic\", \"technology\", \"reading\", \"updated\"]\n}"
+							},
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/question-bank/{{test_bank_question_id}}",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "question-bank", "{{test_bank_question_id}}"]
+							},
+							"description": "Update a question in the question bank"
+						}
+					},
+					{
+						"name": "Delete Bank Question",
+						"request": {
+							"method": "DELETE",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/admin/question-bank/{{test_bank_question_id}}",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "admin", "question-bank", "{{test_bank_question_id}}"]
+							},
+							"description": "Delete a question from the question bank"
+						}
+					}
+				]
+			},
+			{
+				"name": "Tags (Public)",
+				"item": [
+					{
+						"name": "Get All Tags",
+						"request": {
+							"auth": { "type": "noauth" },
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/tags",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "tags"]
+							},
+							"description": "Get all available tags (public access)"
+						}
+					},
+					{
+						"name": "Get Exercise Tags",
+						"request": {
+							"auth": { "type": "noauth" },
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{exercise_service_url}}/api/v1/exercises/{{test_exercise_id}}/tags",
+								"host": ["{{exercise_service_url}}"],
+								"path": ["api", "v1", "exercises", "{{test_exercise_id}}", "tags"]
+							},
+							"description": "Get tags for a specific exercise (public access)"
+						}
 					}
 				]
 			}
 		],
-		"description": "Exercise Service APIs for exercises, questions, submissions, and auto-grading"
+		"description": "Exercise Service APIs for exercises, questions, submissions, auto-grading, tags, question bank, and analytics"
 	},
 	{
 		"name": "Notification Service",

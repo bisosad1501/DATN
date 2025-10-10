@@ -1112,3 +1112,292 @@ func (r *ExerciseRepository) CreateQuestionAnswer(questionID uuid.UUID, req *mod
 
 	return answer, err
 }
+
+// PublishExercise publishes an exercise (sets is_published to true)
+func (r *ExerciseRepository) PublishExercise(id uuid.UUID) error {
+	now := time.Now()
+	_, err := r.db.Exec(`
+		UPDATE exercises 
+		SET is_published = true, published_at = $1, updated_at = $1 
+		WHERE id = $2
+	`, now, id)
+	return err
+}
+
+// UnpublishExercise unpublishes an exercise (sets is_published to false)
+func (r *ExerciseRepository) UnpublishExercise(id uuid.UUID) error {
+	_, err := r.db.Exec(`
+		UPDATE exercises 
+		SET is_published = false, updated_at = $1 
+		WHERE id = $2
+	`, time.Now(), id)
+	return err
+}
+
+// GetAllTags returns all available exercise tags
+func (r *ExerciseRepository) GetAllTags() ([]models.ExerciseTag, error) {
+	rows, err := r.db.Query(`
+		SELECT id, name, slug, created_at 
+		FROM exercise_tags 
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []models.ExerciseTag
+	for rows.Next() {
+		var tag models.ExerciseTag
+		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Slug, &tag.CreatedAt); err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+// GetExerciseTags returns tags for a specific exercise
+func (r *ExerciseRepository) GetExerciseTags(exerciseID uuid.UUID) ([]models.ExerciseTag, error) {
+	rows, err := r.db.Query(`
+		SELECT t.id, t.name, t.slug, t.created_at
+		FROM exercise_tags t
+		JOIN exercise_tag_mapping m ON t.id = m.tag_id
+		WHERE m.exercise_id = $1
+		ORDER BY t.name
+	`, exerciseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []models.ExerciseTag
+	for rows.Next() {
+		var tag models.ExerciseTag
+		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Slug, &tag.CreatedAt); err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+// AddTagToExercise adds a tag to an exercise
+func (r *ExerciseRepository) AddTagToExercise(exerciseID uuid.UUID, tagID int) error {
+	_, err := r.db.Exec(`
+		INSERT INTO exercise_tag_mapping (exercise_id, tag_id)
+		VALUES ($1, $2)
+		ON CONFLICT (exercise_id, tag_id) DO NOTHING
+	`, exerciseID, tagID)
+	return err
+}
+
+// RemoveTagFromExercise removes a tag from an exercise
+func (r *ExerciseRepository) RemoveTagFromExercise(exerciseID uuid.UUID, tagID int) error {
+	_, err := r.db.Exec(`
+		DELETE FROM exercise_tag_mapping 
+		WHERE exercise_id = $1 AND tag_id = $2
+	`, exerciseID, tagID)
+	return err
+}
+
+// CreateTag creates a new tag
+func (r *ExerciseRepository) CreateTag(name, slug string) (*models.ExerciseTag, error) {
+	tag := &models.ExerciseTag{
+		Name:      name,
+		Slug:      slug,
+		CreatedAt: time.Now(),
+	}
+	err := r.db.QueryRow(`
+		INSERT INTO exercise_tags (name, slug, created_at)
+		VALUES ($1, $2, $3)
+		RETURNING id
+	`, tag.Name, tag.Slug, tag.CreatedAt).Scan(&tag.ID)
+	if err != nil {
+		return nil, err
+	}
+	return tag, nil
+}
+
+// GetBankQuestions returns all questions from question bank with filters
+func (r *ExerciseRepository) GetBankQuestions(skillType, questionType string, limit, offset int) ([]models.QuestionBank, int, error) {
+	where := []string{}
+	args := []interface{}{}
+	argCount := 0
+
+	if skillType != "" {
+		argCount++
+		where = append(where, fmt.Sprintf("skill_type = $%d", argCount))
+		args = append(args, skillType)
+	}
+
+	if questionType != "" {
+		argCount++
+		where = append(where, fmt.Sprintf("question_type = $%d", argCount))
+		args = append(args, questionType)
+	}
+
+	whereClause := ""
+	if len(where) > 0 {
+		whereClause = "WHERE " + strings.Join(where, " AND ")
+	}
+
+	// Get total count
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM question_bank %s", whereClause)
+	err := r.db.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get questions
+	selectQuery := fmt.Sprintf(`
+		SELECT id, title, skill_type, question_type, difficulty, topic,
+			question_text, context_text, audio_url, image_url, answer_data,
+			tags, times_used, created_by, is_verified, is_published,
+			created_at, updated_at
+		FROM question_bank %s
+		ORDER BY created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, whereClause, argCount+1, argCount+2)
+
+	args = append(args, limit, offset)
+	rows, err := r.db.Query(selectQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var questions []models.QuestionBank
+	for rows.Next() {
+		var q models.QuestionBank
+		var answerDataJSON []byte
+		var tagsArray pq.StringArray
+		err := rows.Scan(
+			&q.ID, &q.Title, &q.SkillType, &q.QuestionType, &q.Difficulty,
+			&q.Topic, &q.QuestionText, &q.ContextText, &q.AudioURL, &q.ImageURL,
+			&answerDataJSON, &tagsArray, &q.TimesUsed, &q.CreatedBy,
+			&q.IsVerified, &q.IsPublished, &q.CreatedAt, &q.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		q.AnswerData = string(answerDataJSON)
+		q.Tags = []string(tagsArray)
+		questions = append(questions, q)
+	}
+
+	return questions, total, nil
+}
+
+// CreateBankQuestion creates a new question in the question bank
+func (r *ExerciseRepository) CreateBankQuestion(req *models.CreateBankQuestionRequest, userID uuid.UUID) (*models.QuestionBank, error) {
+	answerDataJSON, err := json.Marshal(req.AnswerData)
+	if err != nil {
+		return nil, err
+	}
+
+	question := &models.QuestionBank{
+		ID:           uuid.New(),
+		Title:        req.Title,
+		QuestionText: req.QuestionText,
+		QuestionType: req.QuestionType,
+		SkillType:    req.SkillType,
+		Difficulty:   req.Difficulty,
+		Topic:        req.Topic,
+		ContextText:  req.ContextText,
+		AudioURL:     req.AudioURL,
+		ImageURL:     req.ImageURL,
+		AnswerData:   string(answerDataJSON),
+		Tags:         req.Tags,
+		TimesUsed:    0,
+		CreatedBy:    userID,
+		IsVerified:   false,
+		IsPublished:  true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	_, err = r.db.Exec(`
+		INSERT INTO question_bank (
+			id, title, skill_type, question_type, difficulty, topic,
+			question_text, context_text, audio_url, image_url, answer_data,
+			tags, times_used, created_by, is_verified, is_published,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+	`, question.ID, question.Title, question.SkillType, question.QuestionType,
+		question.Difficulty, question.Topic, question.QuestionText, question.ContextText,
+		question.AudioURL, question.ImageURL, answerDataJSON, pq.Array(question.Tags),
+		question.TimesUsed, question.CreatedBy, question.IsVerified, question.IsPublished,
+		question.CreatedAt, question.UpdatedAt)
+
+	if err != nil {
+		return nil, err
+	}
+	return question, nil
+}
+
+// UpdateBankQuestion updates a question in the question bank
+func (r *ExerciseRepository) UpdateBankQuestion(id uuid.UUID, req *models.UpdateBankQuestionRequest) error {
+	answerDataJSON, err := json.Marshal(req.AnswerData)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.Exec(`
+		UPDATE question_bank
+		SET title = $1, skill_type = $2, question_text = $3, question_type = $4, 
+			difficulty = $5, topic = $6, context_text = $7, audio_url = $8, 
+			image_url = $9, answer_data = $10, tags = $11, updated_at = $12
+		WHERE id = $13
+	`, req.Title, req.SkillType, req.QuestionText, req.QuestionType, 
+		req.Difficulty, req.Topic, req.ContextText, req.AudioURL, 
+		req.ImageURL, answerDataJSON, pq.Array(req.Tags), time.Now(), id)
+
+	return err
+}
+
+// DeleteBankQuestion deletes a question from the question bank
+func (r *ExerciseRepository) DeleteBankQuestion(id uuid.UUID) error {
+	_, err := r.db.Exec("DELETE FROM question_bank WHERE id = $1", id)
+	return err
+}
+
+// GetExerciseAnalytics returns analytics for a specific exercise
+func (r *ExerciseRepository) GetExerciseAnalytics(exerciseID uuid.UUID) (*models.ExerciseAnalytics, error) {
+	var analytics models.ExerciseAnalytics
+	var questionStatsJSON []byte
+
+	err := r.db.QueryRow(`
+		SELECT exercise_id, total_attempts, completed_attempts, abandoned_attempts,
+			average_score, median_score, highest_score, lowest_score,
+			average_completion_time, median_completion_time, actual_difficulty,
+			question_statistics, updated_at
+		FROM exercise_analytics
+		WHERE exercise_id = $1
+	`, exerciseID).Scan(
+		&analytics.ExerciseID, &analytics.TotalAttempts, &analytics.CompletedAttempts,
+		&analytics.AbandonedAttempts, &analytics.AverageScore, &analytics.MedianScore,
+		&analytics.HighestScore, &analytics.LowestScore, &analytics.AverageCompletionTime,
+		&analytics.MedianCompletionTime, &analytics.ActualDifficulty,
+		&questionStatsJSON, &analytics.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Return empty analytics if not exists
+			return &models.ExerciseAnalytics{
+				ExerciseID: exerciseID,
+			}, nil
+		}
+		return nil, err
+	}
+
+	if len(questionStatsJSON) > 0 {
+		var jsonStr string
+		jsonStr = string(questionStatsJSON)
+		analytics.QuestionStatistics = &jsonStr
+	}
+
+	return &analytics, nil
+}

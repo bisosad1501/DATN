@@ -607,6 +607,456 @@ func (h *ExerciseHandler) CreateQuestionAnswer(c *gin.Context) {
 	})
 }
 
+// PublishExercise handles POST /api/v1/admin/exercises/:id/publish
+func (h *ExerciseHandler) PublishExercise(c *gin.Context) {
+	exerciseID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid exercise ID",
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	if err := h.service.PublishExercise(exerciseID, userUUID); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "PUBLISH_FAILED",
+				Message: "Failed to publish exercise",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"message": "Exercise published successfully",
+		},
+	})
+}
+
+// UnpublishExercise handles POST /api/v1/admin/exercises/:id/unpublish
+func (h *ExerciseHandler) UnpublishExercise(c *gin.Context) {
+	exerciseID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid exercise ID",
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	if err := h.service.UnpublishExercise(exerciseID, userUUID); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "UNPUBLISH_FAILED",
+				Message: "Failed to unpublish exercise",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"message": "Exercise unpublished successfully",
+		},
+	})
+}
+
+// GetAllTags handles GET /api/v1/tags
+func (h *ExerciseHandler) GetAllTags(c *gin.Context) {
+	tags, err := h.service.GetAllTags()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "FETCH_FAILED",
+				Message: "Failed to fetch tags",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    tags,
+	})
+}
+
+// GetExerciseTags handles GET /api/v1/exercises/:id/tags
+func (h *ExerciseHandler) GetExerciseTags(c *gin.Context) {
+	exerciseID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid exercise ID",
+			},
+		})
+		return
+	}
+
+	tags, err := h.service.GetExerciseTags(exerciseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "FETCH_FAILED",
+				Message: "Failed to fetch exercise tags",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    tags,
+	})
+}
+
+// AddTagToExercise handles POST /api/v1/admin/exercises/:id/tags
+func (h *ExerciseHandler) AddTagToExercise(c *gin.Context) {
+	exerciseID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid exercise ID",
+			},
+		})
+		return
+	}
+
+	var req models.AddTagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid request body",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	if err := h.service.AddTagToExercise(exerciseID, req.TagID, userUUID); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "ADD_TAG_FAILED",
+				Message: "Failed to add tag to exercise",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"message": "Tag added successfully",
+		},
+	})
+}
+
+// RemoveTagFromExercise handles DELETE /api/v1/admin/exercises/:id/tags/:tag_id
+func (h *ExerciseHandler) RemoveTagFromExercise(c *gin.Context) {
+	exerciseID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid exercise ID",
+			},
+		})
+		return
+	}
+
+	tagID, err := strconv.Atoi(c.Param("tag_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_TAG_ID",
+				Message: "Invalid tag ID",
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	if err := h.service.RemoveTagFromExercise(exerciseID, tagID, userUUID); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "REMOVE_TAG_FAILED",
+				Message: "Failed to remove tag from exercise",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"message": "Tag removed successfully",
+		},
+	})
+}
+
+// CreateTag handles POST /api/v1/admin/tags
+func (h *ExerciseHandler) CreateTag(c *gin.Context) {
+	var req models.CreateTagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid request body",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	tag, err := h.service.CreateTag(req.Name, req.Slug)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "CREATE_TAG_FAILED",
+				Message: "Failed to create tag",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, Response{
+		Success: true,
+		Data:    tag,
+	})
+}
+
+// GetBankQuestions handles GET /api/v1/admin/question-bank
+func (h *ExerciseHandler) GetBankQuestions(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	skillType := c.Query("skill_type")
+	questionType := c.Query("question_type")
+
+	questions, total, err := h.service.GetBankQuestions(skillType, questionType, page, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "FETCH_FAILED",
+				Message: "Failed to fetch question bank",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"questions":  questions,
+			"total":      total,
+			"page":       page,
+			"limit":      limit,
+			"totalPages": (total + limit - 1) / limit,
+		},
+	})
+}
+
+// CreateBankQuestion handles POST /api/v1/admin/question-bank
+func (h *ExerciseHandler) CreateBankQuestion(c *gin.Context) {
+	var req models.CreateBankQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid request body",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	question, err := h.service.CreateBankQuestion(&req, userUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "CREATE_FAILED",
+				Message: "Failed to create question",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, Response{
+		Success: true,
+		Data:    question,
+	})
+}
+
+// UpdateBankQuestion handles PUT /api/v1/admin/question-bank/:id
+func (h *ExerciseHandler) UpdateBankQuestion(c *gin.Context) {
+	questionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid question ID",
+			},
+		})
+		return
+	}
+
+	var req models.UpdateBankQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid request body",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	if err := h.service.UpdateBankQuestion(questionID, &req, userUUID); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "UPDATE_FAILED",
+				Message: "Failed to update question",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"message": "Question updated successfully",
+		},
+	})
+}
+
+// DeleteBankQuestion handles DELETE /api/v1/admin/question-bank/:id
+func (h *ExerciseHandler) DeleteBankQuestion(c *gin.Context) {
+	questionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid question ID",
+			},
+		})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	userUUID, _ := uuid.Parse(userID.(string))
+
+	if err := h.service.DeleteBankQuestion(questionID, userUUID); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "DELETE_FAILED",
+				Message: "Failed to delete question",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"message": "Question deleted successfully",
+		},
+	})
+}
+
+// GetExerciseAnalytics handles GET /api/v1/admin/exercises/:id/analytics
+func (h *ExerciseHandler) GetExerciseAnalytics(c *gin.Context) {
+	exerciseID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_ID",
+				Message: "Invalid exercise ID",
+			},
+		})
+		return
+	}
+
+	analytics, err := h.service.GetExerciseAnalytics(exerciseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "FETCH_FAILED",
+				Message: "Failed to fetch analytics",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    analytics,
+	})
+}
+
 // HealthCheck handles GET /health
 func (h *ExerciseHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{

@@ -117,3 +117,86 @@ func (s *ExerciseService) CreateQuestionAnswer(questionID uuid.UUID, req *models
 	// TODO: Add method to get exercise ID from question ID
 	return s.repo.CreateQuestionAnswer(questionID, req)
 }
+
+// PublishExercise publishes an exercise
+func (s *ExerciseService) PublishExercise(exerciseID, userID uuid.UUID) error {
+	// Verify ownership
+	if err := s.repo.CheckExerciseOwnership(exerciseID, userID); err != nil {
+		return err
+	}
+	return s.repo.PublishExercise(exerciseID)
+}
+
+// UnpublishExercise unpublishes an exercise
+func (s *ExerciseService) UnpublishExercise(exerciseID, userID uuid.UUID) error {
+	// Verify ownership
+	if err := s.repo.CheckExerciseOwnership(exerciseID, userID); err != nil {
+		return err
+	}
+	return s.repo.UnpublishExercise(exerciseID)
+}
+
+// GetAllTags returns all available tags
+func (s *ExerciseService) GetAllTags() ([]models.ExerciseTag, error) {
+	return s.repo.GetAllTags()
+}
+
+// GetExerciseTags returns tags for a specific exercise
+func (s *ExerciseService) GetExerciseTags(exerciseID uuid.UUID) ([]models.ExerciseTag, error) {
+	return s.repo.GetExerciseTags(exerciseID)
+}
+
+// AddTagToExercise adds a tag to an exercise
+func (s *ExerciseService) AddTagToExercise(exerciseID uuid.UUID, tagID int, userID uuid.UUID) error {
+	// Verify ownership
+	if err := s.repo.CheckExerciseOwnership(exerciseID, userID); err != nil {
+		return err
+	}
+	return s.repo.AddTagToExercise(exerciseID, tagID)
+}
+
+// RemoveTagFromExercise removes a tag from an exercise
+func (s *ExerciseService) RemoveTagFromExercise(exerciseID uuid.UUID, tagID int, userID uuid.UUID) error {
+	// Verify ownership
+	if err := s.repo.CheckExerciseOwnership(exerciseID, userID); err != nil {
+		return err
+	}
+	return s.repo.RemoveTagFromExercise(exerciseID, tagID)
+}
+
+// CreateTag creates a new tag
+func (s *ExerciseService) CreateTag(name, slug string) (*models.ExerciseTag, error) {
+	return s.repo.CreateTag(name, slug)
+}
+
+// GetBankQuestions returns questions from question bank
+func (s *ExerciseService) GetBankQuestions(skillType, questionType string, page, limit int) ([]models.QuestionBank, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+	return s.repo.GetBankQuestions(skillType, questionType, limit, offset)
+}
+
+// CreateBankQuestion creates a question in question bank
+func (s *ExerciseService) CreateBankQuestion(req *models.CreateBankQuestionRequest, userID uuid.UUID) (*models.QuestionBank, error) {
+	return s.repo.CreateBankQuestion(req, userID)
+}
+
+// UpdateBankQuestion updates a question in question bank
+func (s *ExerciseService) UpdateBankQuestion(questionID uuid.UUID, req *models.UpdateBankQuestionRequest, userID uuid.UUID) error {
+	return s.repo.UpdateBankQuestion(questionID, req)
+}
+
+// DeleteBankQuestion deletes a question from question bank
+func (s *ExerciseService) DeleteBankQuestion(questionID, userID uuid.UUID) error {
+	return s.repo.DeleteBankQuestion(questionID)
+}
+
+// GetExerciseAnalytics returns analytics for an exercise
+func (s *ExerciseService) GetExerciseAnalytics(exerciseID uuid.UUID) (*models.ExerciseAnalytics, error) {
+	return s.repo.GetExerciseAnalytics(exerciseID)
+}
