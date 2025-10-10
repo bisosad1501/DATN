@@ -588,3 +588,268 @@ func (r *CourseRepository) GetModuleCourseID(moduleID uuid.UUID) (uuid.UUID, err
 	err := r.db.QueryRow(query, moduleID).Scan(&courseID)
 	return courseID, err
 }
+
+// ============================================
+// COURSE REVIEWS
+// ============================================
+
+// GetCourseReviews retrieves approved reviews for a course
+func (r *CourseRepository) GetCourseReviews(courseID uuid.UUID) ([]models.CourseReview, error) {
+	query := `
+		SELECT id, user_id, course_id, rating, title, comment, helpful_count, 
+			   is_approved, approved_by, approved_at, created_at, updated_at
+		FROM course_reviews
+		WHERE course_id = $1 AND is_approved = true
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query, courseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []models.CourseReview
+	for rows.Next() {
+		var review models.CourseReview
+		err := rows.Scan(
+			&review.ID, &review.UserID, &review.CourseID, &review.Rating,
+			&review.Title, &review.Comment, &review.HelpfulCount,
+			&review.IsApproved, &review.ApprovedBy, &review.ApprovedAt,
+			&review.CreatedAt, &review.UpdatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning review: %v", err)
+			continue
+		}
+		reviews = append(reviews, review)
+	}
+
+	return reviews, nil
+}
+
+// CreateReview creates a new course review
+func (r *CourseRepository) CreateReview(review *models.CourseReview) error {
+	query := `
+		INSERT INTO course_reviews (user_id, course_id, rating, title, comment, is_approved)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, created_at, updated_at
+	`
+
+	err := r.db.QueryRow(
+		query,
+		review.UserID,
+		review.CourseID,
+		review.Rating,
+		review.Title,
+		review.Comment,
+		review.IsApproved,
+	).Scan(&review.ID, &review.CreatedAt, &review.UpdatedAt)
+
+	return err
+}
+
+// GetUserReview checks if user already reviewed a course
+func (r *CourseRepository) GetUserReview(userID, courseID uuid.UUID) (*models.CourseReview, error) {
+	query := `
+		SELECT id, user_id, course_id, rating, title, comment, helpful_count,
+			   is_approved, approved_by, approved_at, created_at, updated_at
+		FROM course_reviews
+		WHERE user_id = $1 AND course_id = $2
+	`
+
+	var review models.CourseReview
+	err := r.db.QueryRow(query, userID, courseID).Scan(
+		&review.ID, &review.UserID, &review.CourseID, &review.Rating,
+		&review.Title, &review.Comment, &review.HelpfulCount,
+		&review.IsApproved, &review.ApprovedBy, &review.ApprovedAt,
+		&review.CreatedAt, &review.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	return &review, err
+}
+
+// ============================================
+// COURSE CATEGORIES
+// ============================================
+
+// GetAllCategories retrieves all course categories
+func (r *CourseRepository) GetAllCategories() ([]models.CourseCategory, error) {
+	query := `
+		SELECT id, name, slug, description, parent_id, display_order, created_at
+		FROM course_categories
+		ORDER BY display_order, name
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []models.CourseCategory
+	for rows.Next() {
+		var category models.CourseCategory
+		err := rows.Scan(
+			&category.ID, &category.Name, &category.Slug, &category.Description,
+			&category.ParentID, &category.DisplayOrder, &category.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning category: %v", err)
+			continue
+		}
+		categories = append(categories, category)
+	}
+
+	return categories, nil
+}
+
+// GetCourseCategories retrieves categories for a specific course
+func (r *CourseRepository) GetCourseCategories(courseID uuid.UUID) ([]models.CourseCategory, error) {
+	query := `
+		SELECT c.id, c.name, c.slug, c.description, c.parent_id, c.display_order, c.created_at
+		FROM course_categories c
+		JOIN course_category_mapping ccm ON c.id = ccm.category_id
+		WHERE ccm.course_id = $1
+		ORDER BY c.display_order, c.name
+	`
+
+	rows, err := r.db.Query(query, courseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []models.CourseCategory
+	for rows.Next() {
+		var category models.CourseCategory
+		err := rows.Scan(
+			&category.ID, &category.Name, &category.Slug, &category.Description,
+			&category.ParentID, &category.DisplayOrder, &category.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning category: %v", err)
+			continue
+		}
+		categories = append(categories, category)
+	}
+
+	return categories, nil
+}
+
+// ============================================
+// VIDEO WATCH HISTORY
+// ============================================
+
+// CreateVideoWatchHistory records video watch event
+func (r *CourseRepository) CreateVideoWatchHistory(history *models.VideoWatchHistory) error {
+	query := `
+		INSERT INTO video_watch_history 
+		(user_id, video_id, lesson_id, watched_seconds, total_seconds, 
+		 watch_percentage, session_id, device_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, watched_at
+	`
+
+	err := r.db.QueryRow(
+		query,
+		history.UserID,
+		history.VideoID,
+		history.LessonID,
+		history.WatchedSeconds,
+		history.TotalSeconds,
+		history.WatchPercentage,
+		history.SessionID,
+		history.DeviceType,
+	).Scan(&history.ID, &history.WatchedAt)
+
+	return err
+}
+
+// GetUserVideoWatchHistory retrieves watch history for a user
+func (r *CourseRepository) GetUserVideoWatchHistory(userID uuid.UUID, limit int) ([]models.VideoWatchHistory, error) {
+	query := `
+		SELECT id, user_id, video_id, lesson_id, watched_seconds, total_seconds,
+			   watch_percentage, session_id, device_type, watched_at
+		FROM video_watch_history
+		WHERE user_id = $1
+		ORDER BY watched_at DESC
+		LIMIT $2
+	`
+
+	rows, err := r.db.Query(query, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var history []models.VideoWatchHistory
+	for rows.Next() {
+		var record models.VideoWatchHistory
+		err := rows.Scan(
+			&record.ID, &record.UserID, &record.VideoID, &record.LessonID,
+			&record.WatchedSeconds, &record.TotalSeconds, &record.WatchPercentage,
+			&record.SessionID, &record.DeviceType, &record.WatchedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning watch history: %v", err)
+			continue
+		}
+		history = append(history, record)
+	}
+
+	return history, nil
+}
+
+// ============================================
+// VIDEO SUBTITLES
+// ============================================
+
+// GetVideoSubtitles retrieves subtitles for a video
+func (r *CourseRepository) GetVideoSubtitles(videoID uuid.UUID) ([]models.VideoSubtitle, error) {
+	query := `
+		SELECT id, video_id, language, subtitle_url, format, is_default, created_at
+		FROM video_subtitles
+		WHERE video_id = $1
+		ORDER BY is_default DESC, language
+	`
+
+	rows, err := r.db.Query(query, videoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var subtitles []models.VideoSubtitle
+	for rows.Next() {
+		var subtitle models.VideoSubtitle
+		err := rows.Scan(
+			&subtitle.ID, &subtitle.VideoID, &subtitle.Language,
+			&subtitle.SubtitleURL, &subtitle.Format, &subtitle.IsDefault,
+			&subtitle.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning subtitle: %v", err)
+			continue
+		}
+		subtitles = append(subtitles, subtitle)
+	}
+
+	return subtitles, nil
+}
+
+// IncrementMaterialDownload increments download count for a material
+func (r *CourseRepository) IncrementMaterialDownload(materialID uuid.UUID) error {
+	query := `
+		UPDATE lesson_materials
+		SET total_downloads = total_downloads + 1
+		WHERE id = $1
+	`
+
+	_, err := r.db.Exec(query, materialID)
+	return err
+}

@@ -3119,6 +3119,360 @@
 					}
 				],
 				"description": "Admin-only APIs with full permissions"
+			},
+			{
+				"name": "Reviews & Categories",
+				"item": [
+					{
+						"name": "Get All Categories",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has categories', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.be.an('array');",
+										"    ",
+										"    if (jsonData.data.length > 0) {",
+										"        pm.expect(jsonData.data[0]).to.have.property('id');",
+										"        pm.expect(jsonData.data[0]).to.have.property('name');",
+										"        pm.expect(jsonData.data[0]).to.have.property('slug');",
+										"        console.log('Categories found:', jsonData.data.length);",
+										"    }",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/categories",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "categories"]
+							},
+							"description": "Get all course categories (Listening, Reading, Writing, Speaking, Grammar, etc.)"
+						}
+					},
+					{
+						"name": "Get Course Categories",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has course categories', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/courses/{{test_course_id}}/categories",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "courses", "{{test_course_id}}", "categories"]
+							},
+							"description": "Get categories assigned to a specific course"
+						}
+					},
+					{
+						"name": "Get Course Reviews",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has reviews', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/courses/{{test_course_id}}/reviews",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "courses", "{{test_course_id}}", "reviews"]
+							},
+							"description": "Get approved reviews for a course (public - no auth required)"
+						}
+					},
+					{
+						"name": "Create Course Review",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 201', function() {",
+										"    pm.response.to.have.status(201);",
+										"});",
+										"",
+										"pm.test('Review created successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.message).to.include('approval');",
+										"    ",
+										"    if (jsonData.data) {",
+										"        pm.expect(jsonData.data).to.have.property('id');",
+										"        pm.expect(jsonData.data).to.have.property('rating');",
+										"        pm.expect(jsonData.data.is_approved).to.be.false;",
+										"    }",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"rating\": 5,\n    \"title\": \"Excellent course!\",\n    \"comment\": \"This course helped me improve my IELTS skills significantly. The content is well-structured and easy to follow.\"\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/courses/{{test_course_id}}/reviews",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "courses", "{{test_course_id}}", "reviews"]
+							},
+							"description": "Create a review for a course. Must be enrolled in the course. Review requires admin approval before appearing publicly."
+						}
+					}
+				],
+				"description": "Course reviews and category management"
+			},
+			{
+				"name": "Video Tracking",
+				"item": [
+					{
+						"name": "Track Video Progress",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Progress tracked successfully', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.message).to.include('tracked');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": {
+								"mode": "raw",
+								"raw": "{\n    \"video_id\": \"{{test_video_id}}\",\n    \"lesson_id\": \"{{test_lesson_id}}\",\n    \"watched_seconds\": 120,\n    \"total_seconds\": 300,\n    \"device_type\": \"web\"\n}"
+							},
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/videos/track",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "videos", "track"]
+							},
+							"description": "Track video watching progress for analytics and resume playback"
+						}
+					},
+					{
+						"name": "Get Video Watch History",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has watch history', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/videos/history?limit=20",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "videos", "history"],
+								"query": [
+									{
+										"key": "limit",
+										"value": "20",
+										"description": "Number of records to return (default: 20)"
+									}
+								]
+							},
+							"description": "Get user's video watch history"
+						}
+					},
+					{
+						"name": "Get Video Subtitles",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Response has subtitles', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.data).to.be.an('array');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "GET",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/videos/{{test_video_id}}/subtitles",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "videos", "{{test_video_id}}", "subtitles"]
+							},
+							"description": "Get available subtitles for a video (VTT/SRT format)"
+						}
+					}
+				],
+				"description": "Video watching progress and subtitle management"
+			},
+			{
+				"name": "Materials",
+				"item": [
+					{
+						"name": "Download Material",
+						"event": [
+							{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Status code is 200', function() {",
+										"    pm.response.to.have.status(200);",
+										"});",
+										"",
+										"pm.test('Download recorded', function() {",
+										"    const jsonData = pm.response.json();",
+										"    pm.expect(jsonData.success).to.be.true;",
+										"    pm.expect(jsonData.message).to.include('recorded');",
+										"});"
+									]
+								}
+							}
+						],
+						"request": {
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{access_token}}",
+										"type": "string"
+									}
+								]
+							},
+							"method": "POST",
+							"header": [],
+							"url": {
+								"raw": "{{course_service_url}}/api/v1/materials/{{test_material_id}}/download",
+								"host": ["{{course_service_url}}"],
+								"path": ["api", "v1", "materials", "{{test_material_id}}", "download"]
+							},
+							"description": "Record material download (increments download counter). Actual file download happens on frontend."
+						}
+					}
+				],
+				"description": "Lesson material download tracking"
 			}
 		],
 		"description": "Course Service APIs for managing courses, modules, lessons, and student enrollments"

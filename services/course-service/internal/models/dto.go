@@ -135,3 +135,20 @@ type LessonWithProgress struct {
 	Lesson   Lesson         `json:"lesson"`
 	Progress LessonProgress `json:"progress"`
 }
+
+// CreateReviewRequest represents course review creation request
+type CreateReviewRequest struct {
+	Rating  int     `json:"rating" binding:"required,min=1,max=5"`
+	Title   *string `json:"title"`
+	Comment *string `json:"comment"`
+}
+
+// TrackVideoProgressRequest represents video watch progress tracking
+type TrackVideoProgressRequest struct {
+	VideoID        uuid.UUID  `json:"video_id" binding:"required"`
+	LessonID       uuid.UUID  `json:"lesson_id" binding:"required"`
+	WatchedSeconds int        `json:"watched_seconds" binding:"required"`
+	TotalSeconds   int        `json:"total_seconds" binding:"required"`
+	SessionID      *uuid.UUID `json:"session_id"`
+	DeviceType     *string    `json:"device_type"` // web, android, ios
+}

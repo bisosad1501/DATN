@@ -21,8 +21,10 @@ func SetupRoutes(
 		courses := v1.Group("/courses")
 		courses.Use(authMiddleware.OptionalAuth())
 		{
-			courses.GET("", handler.GetCourses)          // List courses with filters
-			courses.GET("/:id", handler.GetCourseDetail) // Get course detail
+			courses.GET("", handler.GetCourses)                         // List courses with filters
+			courses.GET("/:id", handler.GetCourseDetail)                // Get course detail
+			courses.GET("/:id/reviews", handler.GetCourseReviews)       // Get course reviews
+			courses.GET("/:id/categories", handler.GetCourseCategories) // Get course categories
 		}
 
 		// Public lesson endpoints
@@ -30,6 +32,32 @@ func SetupRoutes(
 		lessons.Use(authMiddleware.OptionalAuth())
 		{
 			lessons.GET("/:id", handler.GetLessonDetail) // Get lesson detail
+		}
+
+		// Public categories endpoint
+		v1.GET("/categories", handler.GetCategories) // Get all categories
+
+		// Protected review endpoints
+		reviews := v1.Group("/courses/:id/reviews")
+		reviews.Use(authMiddleware.AuthRequired())
+		{
+			reviews.POST("", handler.CreateReview) // Create course review
+		}
+
+		// Protected video tracking endpoints
+		videos := v1.Group("/videos")
+		videos.Use(authMiddleware.AuthRequired())
+		{
+			videos.POST("/track", handler.TrackVideoProgress)       // Track video watch progress
+			videos.GET("/history", handler.GetVideoWatchHistory)    // Get watch history
+			videos.GET("/:id/subtitles", handler.GetVideoSubtitles) // Get video subtitles
+		}
+
+		// Protected material endpoints
+		materials := v1.Group("/materials")
+		materials.Use(authMiddleware.AuthRequired())
+		{
+			materials.POST("/:id/download", handler.DownloadMaterial) // Record material download
 		}
 
 		// Protected enrollment endpoints

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/bisosad1501/ielts-platform/course-service/internal/models"
 	"github.com/bisosad1501/ielts-platform/course-service/internal/service"
@@ -792,5 +793,322 @@ func (h *CourseHandler) PublishCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Course published successfully",
+	})
+}
+
+// ============================================
+// COURSE REVIEWS
+// ============================================
+
+// GetCourseReviews retrieves reviews for a course
+func (h *CourseHandler) GetCourseReviews(c *gin.Context) {
+	courseIDStr := c.Param("id")
+	courseID, err := uuid.Parse(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_COURSE_ID",
+				Message: "Invalid course ID format",
+			},
+		})
+		return
+	}
+
+	reviews, err := h.service.GetCourseReviews(courseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "GET_REVIEWS_FAILED",
+				Message: "Failed to get course reviews",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    reviews,
+	})
+}
+
+// CreateReview creates a new review for a course
+func (h *CourseHandler) CreateReview(c *gin.Context) {
+	courseIDStr := c.Param("id")
+	courseID, err := uuid.Parse(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_COURSE_ID",
+				Message: "Invalid course ID format",
+			},
+		})
+		return
+	}
+
+	userIDStr := c.GetString("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER",
+				Message: "Invalid user authentication",
+			},
+		})
+		return
+	}
+
+	var req models.CreateReviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid review data",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	review, err := h.service.CreateReview(userID, courseID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "CREATE_REVIEW_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, Response{
+		Success: true,
+		Message: "Review submitted successfully. It will be visible after admin approval.",
+		Data:    review,
+	})
+}
+
+// ============================================
+// CATEGORIES
+// ============================================
+
+// GetCategories retrieves all course categories
+func (h *CourseHandler) GetCategories(c *gin.Context) {
+	categories, err := h.service.GetAllCategories()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "GET_CATEGORIES_FAILED",
+				Message: "Failed to get categories",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    categories,
+	})
+}
+
+// GetCourseCategories retrieves categories for a specific course
+func (h *CourseHandler) GetCourseCategories(c *gin.Context) {
+	courseIDStr := c.Param("id")
+	courseID, err := uuid.Parse(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_COURSE_ID",
+				Message: "Invalid course ID format",
+			},
+		})
+		return
+	}
+
+	categories, err := h.service.GetCourseCategories(courseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "GET_CATEGORIES_FAILED",
+				Message: "Failed to get course categories",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    categories,
+	})
+}
+
+// ============================================
+// VIDEO TRACKING
+// ============================================
+
+// TrackVideoProgress records video watch progress
+func (h *CourseHandler) TrackVideoProgress(c *gin.Context) {
+	userIDStr := c.GetString("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER",
+				Message: "Invalid user authentication",
+			},
+		})
+		return
+	}
+
+	var req models.TrackVideoProgressRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid video progress data",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	err = h.service.TrackVideoProgress(userID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "TRACK_PROGRESS_FAILED",
+				Message: "Failed to track video progress",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Video progress tracked successfully",
+	})
+}
+
+// GetVideoWatchHistory retrieves user's video watch history
+func (h *CourseHandler) GetVideoWatchHistory(c *gin.Context) {
+	userIDStr := c.GetString("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER",
+				Message: "Invalid user authentication",
+			},
+		})
+		return
+	}
+
+	limit := 20 // Default limit
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	history, err := h.service.GetUserVideoWatchHistory(userID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "GET_HISTORY_FAILED",
+				Message: "Failed to get watch history",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    history,
+	})
+}
+
+// DownloadMaterial increments download count and returns success
+func (h *CourseHandler) DownloadMaterial(c *gin.Context) {
+	materialIDStr := c.Param("id")
+	materialID, err := uuid.Parse(materialIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_MATERIAL_ID",
+				Message: "Invalid material ID format",
+			},
+		})
+		return
+	}
+
+	err = h.service.IncrementMaterialDownload(materialID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "DOWNLOAD_FAILED",
+				Message: "Failed to record download",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Download recorded successfully",
+	})
+}
+
+// GetVideoSubtitles retrieves subtitles for a video
+func (h *CourseHandler) GetVideoSubtitles(c *gin.Context) {
+	videoIDStr := c.Param("id")
+	videoID, err := uuid.Parse(videoIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_VIDEO_ID",
+				Message: "Invalid video ID format",
+			},
+		})
+		return
+	}
+
+	subtitles, err := h.service.GetVideoSubtitles(videoID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "GET_SUBTITLES_FAILED",
+				Message: "Failed to get video subtitles",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    subtitles,
 	})
 }

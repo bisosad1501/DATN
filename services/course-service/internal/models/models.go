@@ -143,14 +143,58 @@ type LessonProgress struct {
 
 // CourseReview represents a course review
 type CourseReview struct {
-	ID           uuid.UUID `json:"id"`
-	UserID       uuid.UUID `json:"user_id"`
-	CourseID     uuid.UUID `json:"course_id"`
-	Rating       int       `json:"rating"` // 1-5
-	Title        *string   `json:"title,omitempty"`
-	Comment      *string   `json:"comment,omitempty"`
-	HelpfulCount int       `json:"helpful_count"`
-	IsApproved   bool      `json:"is_approved"`
+	ID           uuid.UUID  `json:"id"`
+	UserID       uuid.UUID  `json:"user_id"`
+	CourseID     uuid.UUID  `json:"course_id"`
+	Rating       int        `json:"rating"` // 1-5
+	Title        *string    `json:"title,omitempty"`
+	Comment      *string    `json:"comment,omitempty"`
+	HelpfulCount int        `json:"helpful_count"`
+	IsApproved   bool       `json:"is_approved"`
+	ApprovedBy   *uuid.UUID `json:"approved_by,omitempty"`
+	ApprovedAt   *time.Time `json:"approved_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+// VideoSubtitle represents subtitle files for videos
+type VideoSubtitle struct {
+	ID          uuid.UUID `json:"id"`
+	VideoID     uuid.UUID `json:"video_id"`
+	Language    string    `json:"language"` // vi, en
+	SubtitleURL string    `json:"subtitle_url"`
+	Format      string    `json:"format"` // vtt, srt
+	IsDefault   bool      `json:"is_default"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// VideoWatchHistory represents detailed video watching history
+type VideoWatchHistory struct {
+	ID              uuid.UUID  `json:"id"`
+	UserID          uuid.UUID  `json:"user_id"`
+	VideoID         uuid.UUID  `json:"video_id"`
+	LessonID        uuid.UUID  `json:"lesson_id"`
+	WatchedSeconds  int        `json:"watched_seconds"`
+	TotalSeconds    int        `json:"total_seconds"`
+	WatchPercentage float64    `json:"watch_percentage"`
+	SessionID       *uuid.UUID `json:"session_id,omitempty"`
+	DeviceType      *string    `json:"device_type,omitempty"` // web, android, ios
+	WatchedAt       time.Time  `json:"watched_at"`
+}
+
+// CourseCategory represents categories/tags for courses
+type CourseCategory struct {
+	ID           int       `json:"id"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	Description  *string   `json:"description,omitempty"`
+	ParentID     *int      `json:"parent_id,omitempty"`
+	DisplayOrder int       `json:"display_order"`
 	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// CourseCategoryMapping represents many-to-many relationship between courses and categories
+type CourseCategoryMapping struct {
+	CourseID   uuid.UUID `json:"course_id"`
+	CategoryID int       `json:"category_id"`
 }

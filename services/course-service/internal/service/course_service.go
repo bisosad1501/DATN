@@ -560,3 +560,112 @@ func (s *CourseService) PublishCourse(courseID uuid.UUID, userID uuid.UUID, user
 
 	return s.repo.PublishCourse(courseID)
 }
+
+// ============================================
+// COURSE REVIEWS
+// ============================================
+
+// GetCourseReviews retrieves reviews for a course
+func (s *CourseService) GetCourseReviews(courseID uuid.UUID) ([]models.CourseReview, error) {
+	return s.repo.GetCourseReviews(courseID)
+}
+
+// CreateReview creates a new review for a course
+func (s *CourseService) CreateReview(userID, courseID uuid.UUID, req *models.CreateReviewRequest) (*models.CourseReview, error) {
+	// Check if user is enrolled
+	enrollment, err := s.repo.GetEnrollment(userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check enrollment: %w", err)
+	}
+	if enrollment == nil {
+		return nil, fmt.Errorf("you must be enrolled in the course to leave a review")
+	}
+
+	// Check if user already reviewed
+	existingReview, err := s.repo.GetUserReview(userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing review: %w", err)
+	}
+	if existingReview != nil {
+		return nil, fmt.Errorf("you have already reviewed this course")
+	}
+
+	// Create review
+	review := &models.CourseReview{
+		UserID:     userID,
+		CourseID:   courseID,
+		Rating:     req.Rating,
+		Title:      req.Title,
+		Comment:    req.Comment,
+		IsApproved: false, // Require admin approval
+	}
+
+	err = s.repo.CreateReview(review)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create review: %w", err)
+	}
+
+	return review, nil
+}
+
+// ============================================
+// CATEGORIES
+// ============================================
+
+// GetAllCategories retrieves all course categories
+func (s *CourseService) GetAllCategories() ([]models.CourseCategory, error) {
+	return s.repo.GetAllCategories()
+}
+
+// GetCourseCategories retrieves categories for a specific course
+func (s *CourseService) GetCourseCategories(courseID uuid.UUID) ([]models.CourseCategory, error) {
+	return s.repo.GetCourseCategories(courseID)
+}
+
+// ============================================
+// VIDEO TRACKING
+// ============================================
+
+// TrackVideoProgress records video watch progress
+func (s *CourseService) TrackVideoProgress(userID uuid.UUID, req *models.TrackVideoProgressRequest) error {
+	watchPercentage := float64(req.WatchedSeconds) / float64(req.TotalSeconds) * 100
+
+	history := &models.VideoWatchHistory{
+		UserID:          userID,
+		VideoID:         req.VideoID,
+		LessonID:        req.LessonID,
+		WatchedSeconds:  req.WatchedSeconds,
+		TotalSeconds:    req.TotalSeconds,
+		WatchPercentage: watchPercentage,
+		SessionID:       req.SessionID,
+		DeviceType:      req.DeviceType,
+	}
+
+	return s.repo.CreateVideoWatchHistory(history)
+}
+
+// GetUserVideoWatchHistory retrieves user's video watch history
+func (s *CourseService) GetUserVideoWatchHistory(userID uuid.UUID, limit int) ([]models.VideoWatchHistory, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	return s.repo.GetUserVideoWatchHistory(userID, limit)
+}
+
+// ============================================
+// MATERIALS
+// ============================================
+
+// IncrementMaterialDownload increments download count
+func (s *CourseService) IncrementMaterialDownload(materialID uuid.UUID) error {
+	return s.repo.IncrementMaterialDownload(materialID)
+}
+
+// ============================================
+// SUBTITLES
+// ============================================
+
+// GetVideoSubtitles retrieves subtitles for a video
+func (s *CourseService) GetVideoSubtitles(videoID uuid.UUID) ([]models.VideoSubtitle, error) {
+	return s.repo.GetVideoSubtitles(videoID)
+}
