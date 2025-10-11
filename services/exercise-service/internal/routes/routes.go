@@ -19,6 +19,8 @@ func SetupRoutes(router *gin.Engine, handler *handlers.ExerciseHandler, authMidd
 		{
 			exercises.GET("", handler.GetExercises)        // List exercises with filters
 			exercises.GET("/:id", handler.GetExerciseByID) // Get exercise detail
+			// Start exercise by exercise ID (proxied by API Gateway at /api/v1/exercises/:id/start)
+			exercises.POST("/:id/start", handler.StartExercise)
 		}
 
 		// Student routes (auth required)

@@ -130,24 +130,35 @@ func (h *ExerciseHandler) StartExercise(c *gin.Context) {
 	}
 
 	var req struct {
-		ExerciseID uuid.UUID `json:"exercise_id" binding:"required"`
-		DeviceType *string   `json:"device_type"` // web, android, ios
+		ExerciseID *uuid.UUID `json:"exercise_id" binding:"-"`
+		DeviceType *string    `json:"device_type"` // web, android, ios
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Try to bind JSON body if present
+	_ = c.ShouldBindJSON(&req)
+
+	// If exercise_id not provided in body, try URL param
+	if req.ExerciseID == nil {
+		if idStr := c.Param("id"); idStr != "" {
+			if id, err := uuid.Parse(idStr); err == nil {
+				req.ExerciseID = &id
+			}
+		}
+	}
+
+	if req.ExerciseID == nil {
 		c.JSON(http.StatusBadRequest, Response{
 			Success: false,
 			Error: &ErrorInfo{
 				Code:    "INVALID_REQUEST",
-				Message: "Invalid request body",
-				Details: err.Error(),
+				Message: "exercise_id is required either in body or URL",
 			},
 		})
 		return
 	}
 
 	userUUID, _ := uuid.Parse(userID.(string))
-	submission, err := h.service.StartExercise(userUUID, req.ExerciseID, req.DeviceType)
+	submission, err := h.service.StartExercise(userUUID, *req.ExerciseID, req.DeviceType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
