@@ -38,7 +38,8 @@ func main() {
 	notificationRepo := repository.NewNotificationRepository(db.DB)
 	notificationService := service.NewNotificationService(notificationRepo)
 	notificationHandler := handlers.NewNotificationHandler(notificationService)
-	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret)
+	internalHandler := handlers.NewInternalHandler(notificationService)
+	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret, cfg.InternalAPIKey)
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -60,7 +61,7 @@ func main() {
 	})
 
 	// Setup routes
-	routes.SetupRoutes(r, notificationHandler, authMiddleware)
+	routes.SetupRoutes(r, notificationHandler, internalHandler, authMiddleware)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

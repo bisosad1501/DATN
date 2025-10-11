@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	ServerPort string
-	JWTSecret  string
-	Database   DatabaseConfig
+	ServerPort     string
+	JWTSecret      string
+	InternalAPIKey string
+	Database       DatabaseConfig
 }
 
 type DatabaseConfig struct {
@@ -22,8 +23,9 @@ type DatabaseConfig struct {
 
 func LoadConfig() (*Config, error) {
 	config := &Config{
-		ServerPort: getEnv("SERVER_PORT", "8085"),
-		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key"),
+		ServerPort:     getEnv("SERVER_PORT", "8085"),
+		JWTSecret:      getEnv("JWT_SECRET", "your-secret-key"),
+		InternalAPIKey: getEnv("INTERNAL_API_KEY", "internal_secret_key_ielts_2025_change_in_production"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),

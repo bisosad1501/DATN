@@ -590,7 +590,7 @@ func (r *NotificationRepository) GetScheduledNotifications(userID uuid.UUID) ([]
 	for rows.Next() {
 		var schedule models.ScheduledNotification
 		var daysOfWeek []int32 // PostgreSQL INT is 32-bit
-		
+
 		err := rows.Scan(
 			&schedule.ID,
 			&schedule.UserID,
@@ -609,13 +609,13 @@ func (r *NotificationRepository) GetScheduledNotifications(userID uuid.UUID) ([]
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan scheduled notification: %w", err)
 		}
-		
+
 		// Convert []int32 to []int for model
 		schedule.DaysOfWeek = make([]int, len(daysOfWeek))
 		for i, day := range daysOfWeek {
 			schedule.DaysOfWeek[i] = int(day)
 		}
-		
+
 		schedules = append(schedules, schedule)
 	}
 
@@ -634,7 +634,7 @@ func (r *NotificationRepository) GetScheduledNotificationByID(id uuid.UUID) (*mo
 
 	var schedule models.ScheduledNotification
 	var daysOfWeek []int32 // PostgreSQL INT is 32-bit
-	
+
 	err := r.db.QueryRow(query, id).Scan(
 		&schedule.ID,
 		&schedule.UserID,
@@ -663,7 +663,7 @@ func (r *NotificationRepository) GetScheduledNotificationByID(id uuid.UUID) (*mo
 	for i, day := range daysOfWeek {
 		schedule.DaysOfWeek[i] = int(day)
 	}
-	
+
 	return &schedule, nil
 }
 
@@ -741,7 +741,7 @@ func (r *NotificationRepository) GetDueScheduledNotifications() ([]models.Schedu
 	for rows.Next() {
 		var schedule models.ScheduledNotification
 		var daysOfWeek []int32 // PostgreSQL INT is 32-bit
-		
+
 		err := rows.Scan(
 			&schedule.ID,
 			&schedule.UserID,
@@ -760,13 +760,13 @@ func (r *NotificationRepository) GetDueScheduledNotifications() ([]models.Schedu
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan scheduled notification: %w", err)
 		}
-		
+
 		// Convert []int32 to []int for model
 		schedule.DaysOfWeek = make([]int, len(daysOfWeek))
 		for i, day := range daysOfWeek {
 			schedule.DaysOfWeek[i] = int(day)
 		}
-		
+
 		schedules = append(schedules, schedule)
 	}
 
