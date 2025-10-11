@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(handler *handlers.UserHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func SetupRoutes(handler *handlers.UserHandler, internalHandler *handlers.InternalHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	router := gin.Default()
 
 	// Health check
@@ -62,6 +62,24 @@ func SetupRoutes(handler *handlers.UserHandler, authMiddleware *middleware.AuthM
 			// Leaderboard
 			user.GET("/leaderboard", handler.GetLeaderboard)
 			user.GET("/leaderboard/rank", handler.GetUserRank)
+		}
+
+		// Internal routes (service-to-service communication only)
+		internal := v1.Group("/user/internal")
+		internal.Use(authMiddleware.InternalAuth())
+		{
+			// Profile management
+			internal.POST("/profile/create", internalHandler.CreateProfileInternal)
+
+			// Progress updates
+			internal.PUT("/progress/update", internalHandler.UpdateProgressInternal)
+
+			// Skill statistics updates
+			internal.PUT("/statistics/:skill/update", internalHandler.UpdateSkillStatisticsInternal)
+
+			// Study session tracking
+			internal.POST("/session/start", internalHandler.StartSessionInternal)
+			internal.PUT("/session/:session_id/end", internalHandler.EndSessionInternal)
 		}
 	}
 
