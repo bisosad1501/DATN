@@ -1,17 +1,20 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
 # Install dependencies
 RUN apk add --no-cache git
 
-# Copy go mod files
-COPY services/auth-service/go.mod services/auth-service/go.sum ./
-RUN go mod download
+# Copy entire project structure to maintain paths
+COPY shared/ ./shared/
+COPY services/auth-service/ ./services/auth-service/
 
-# Copy source code
-COPY services/auth-service/ ./
+# Set working directory to auth-service
+WORKDIR /build/services/auth-service
+
+# Download dependencies
+RUN go mod download
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
@@ -25,7 +28,7 @@ RUN apk --no-cache add ca-certificates postgresql-client bash
 WORKDIR /root/
 
 # Copy the binary from builder
-COPY --from=builder /app/main .
+COPY --from=builder /build/services/auth-service/main .
 
 # Copy scripts (will be mounted as volume in docker-compose)
 # Scripts are available at /scripts when container runs
