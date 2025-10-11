@@ -236,6 +236,51 @@ func (r *UserRepository) GetLearningProgress(userID uuid.UUID) (*models.Learning
 	return progress, nil
 }
 
+// CreateLearningProgress creates a new learning progress record
+func (r *UserRepository) CreateLearningProgress(userID uuid.UUID) error {
+	query := `
+		INSERT INTO learning_progress (user_id)
+		VALUES ($1)
+		ON CONFLICT (user_id) DO NOTHING
+	`
+	_, err := r.db.DB.Exec(query, userID)
+	if err != nil {
+		log.Printf("❌ Error creating learning progress for user %s: %v", userID, err)
+		return fmt.Errorf("failed to create learning progress: %w", err)
+	}
+	return nil
+}
+
+// UpdateLearningProgress updates learning progress fields
+func (r *UserRepository) UpdateLearningProgress(userID uuid.UUID, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// Build dynamic update query
+	query := "UPDATE learning_progress SET updated_at = CURRENT_TIMESTAMP"
+	args := []interface{}{}
+	paramCount := 0
+
+	for field, value := range updates {
+		paramCount++
+		query += fmt.Sprintf(", %s = $%d", field, paramCount)
+		args = append(args, value)
+	}
+
+	paramCount++
+	query += fmt.Sprintf(" WHERE user_id = $%d", paramCount)
+	args = append(args, userID)
+
+	_, err := r.db.DB.Exec(query, args...)
+	if err != nil {
+		log.Printf("❌ Error updating learning progress for user %s: %v", userID, err)
+		return fmt.Errorf("failed to update learning progress: %w", err)
+	}
+
+	return nil
+}
+
 // CreateStudySession creates a new study session
 func (r *UserRepository) CreateStudySession(session *models.StudySession) error {
 	query := `
@@ -502,6 +547,60 @@ func (r *UserRepository) GetSkillStatistics(userID uuid.UUID, skillType string) 
 		return nil, fmt.Errorf("failed to get skill statistics: %w", err)
 	}
 	return stats, nil
+}
+
+// CreateSkillStatistics creates a new skill statistics record
+func (r *UserRepository) CreateSkillStatistics(userID uuid.UUID, skillType string) error {
+	query := `
+		INSERT INTO skill_statistics (
+			user_id, skill_type, 
+			total_practices, completed_practices, 
+			average_score, best_score, 
+			total_time_minutes
+		)
+		VALUES ($1, $2, 0, 0, 0.0, 0.0, 0)
+		ON CONFLICT (user_id, skill_type) DO NOTHING
+	`
+	_, err := r.db.DB.Exec(query, userID, skillType)
+	if err != nil {
+		log.Printf("❌ Error creating skill statistics for user %s, skill %s: %v", userID, skillType, err)
+		return fmt.Errorf("failed to create skill statistics: %w", err)
+	}
+	return nil
+}
+
+// UpdateSkillStatistics updates skill statistics fields
+func (r *UserRepository) UpdateSkillStatistics(userID uuid.UUID, skillType string, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// Build dynamic update query
+	query := "UPDATE skill_statistics SET updated_at = CURRENT_TIMESTAMP"
+	args := []interface{}{}
+	paramCount := 0
+
+	for field, value := range updates {
+		paramCount++
+		query += fmt.Sprintf(", %s = $%d", field, paramCount)
+		args = append(args, value)
+	}
+
+	paramCount++
+	query += fmt.Sprintf(" WHERE user_id = $%d", paramCount)
+	args = append(args, userID)
+
+	paramCount++
+	query += fmt.Sprintf(" AND skill_type = $%d", paramCount)
+	args = append(args, skillType)
+
+	_, err := r.db.DB.Exec(query, args...)
+	if err != nil {
+		log.Printf("❌ Error updating skill statistics for user %s, skill %s: %v", userID, skillType, err)
+		return fmt.Errorf("failed to update skill statistics: %w", err)
+	}
+
+	return nil
 }
 
 // GetAllSkillStatistics retrieves all skill statistics for a user
