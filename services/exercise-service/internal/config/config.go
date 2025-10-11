@@ -13,6 +13,11 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	JWTSecret  string
+
+	// Service-to-Service Communication
+	UserServiceURL         string
+	NotificationServiceURL string
+	InternalAPIKey         string
 }
 
 func LoadConfig() *Config {
@@ -24,6 +29,11 @@ func LoadConfig() *Config {
 		DBPassword: getEnv("DB_PASSWORD", ""),
 		DBName:     getEnv("DB_NAME", "exercise_db"),
 		JWTSecret:  getEnv("JWT_SECRET", ""),
+
+		// Service URLs for internal communication
+		UserServiceURL:         getEnv("USER_SERVICE_URL", "http://user-service:8082"),
+		NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://notification-service:8085"),
+		InternalAPIKey:         getEnv("INTERNAL_API_KEY", "internal_secret_key_ielts_2025_change_in_production"),
 	}
 
 	if config.DBPassword == "" {

@@ -1,17 +1,26 @@
 package service
 
 import (
+	"log"
+
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/bisosad1501/ielts-platform/exercise-service/internal/models"
 	"github.com/bisosad1501/ielts-platform/exercise-service/internal/repository"
 	"github.com/google/uuid"
 )
 
 type ExerciseService struct {
-	repo *repository.ExerciseRepository
+	repo               *repository.ExerciseRepository
+	userServiceClient  *client.UserServiceClient
+	notificationClient *client.NotificationServiceClient
 }
 
-func NewExerciseService(repo *repository.ExerciseRepository) *ExerciseService {
-	return &ExerciseService{repo: repo}
+func NewExerciseService(repo *repository.ExerciseRepository, userServiceClient *client.UserServiceClient, notificationClient *client.NotificationServiceClient) *ExerciseService {
+	return &ExerciseService{
+		repo:               repo,
+		userServiceClient:  userServiceClient,
+		notificationClient: notificationClient,
+	}
 }
 
 // GetExercises returns filtered and paginated exercises
@@ -46,7 +55,15 @@ func (s *ExerciseService) SubmitAnswers(submissionID uuid.UUID, answers []models
 	}
 
 	// Complete submission and calculate final score
-	return s.repo.CompleteSubmission(submissionID)
+	err = s.repo.CompleteSubmission(submissionID)
+	if err != nil {
+		return err
+	}
+
+	// Service-to-service integration: Update user stats and send notification
+	go s.handleExerciseCompletion(submissionID)
+
+	return nil
 }
 
 // GetSubmissionResult returns detailed results
@@ -199,4 +216,83 @@ func (s *ExerciseService) DeleteBankQuestion(questionID, userID uuid.UUID) error
 // GetExerciseAnalytics returns analytics for an exercise
 func (s *ExerciseService) GetExerciseAnalytics(exerciseID uuid.UUID) (*models.ExerciseAnalytics, error) {
 	return s.repo.GetExerciseAnalytics(exerciseID)
+}
+
+// handleExerciseCompletion handles service-to-service integration when exercise is completed
+func (s *ExerciseService) handleExerciseCompletion(submissionID uuid.UUID) {
+	log.Printf("[Exercise-Service] Handling exercise completion for submission %s", submissionID)
+
+	// Get submission result (includes both submission and exercise)
+	result, err := s.repo.GetSubmissionResult(submissionID)
+	if err != nil {
+		log.Printf("[Exercise-Service] ERROR: Failed to get submission result: %v", err)
+		return
+	}
+
+	submission := result.Submission
+	exercise := result.Exercise
+	skillType := exercise.SkillType
+
+	// Extract score value (handle pointer)
+	score := 0.0
+	if submission.Score != nil {
+		score = *submission.Score
+	}
+
+	// Calculate time spent (in minutes)
+	timeMinutes := 0
+	if submission.CompletedAt != nil {
+		duration := submission.CompletedAt.Sub(submission.StartedAt)
+		timeMinutes = int(duration.Minutes())
+	}
+
+	// 1. Update skill statistics in User Service (only if score > 0)
+	if score > 0 {
+		log.Printf("[Exercise-Service] Updating skill statistics in User Service...")
+		err = s.userServiceClient.UpdateSkillStatistics(client.UpdateSkillStatsRequest{
+			UserID:         submission.UserID.String(),
+			SkillType:      skillType,
+			Score:          score,
+			TimeMinutes:    timeMinutes,
+			IsCompleted:    true,
+			TotalPractices: 1,
+		})
+		if err != nil {
+			log.Printf("[Exercise-Service] ERROR: Failed to update skill stats: %v", err)
+		} else {
+			log.Printf("[Exercise-Service] SUCCESS: Updated skill statistics")
+		}
+	} else {
+		log.Printf("[Exercise-Service] Skipping skill statistics update (score = 0)")
+	}
+
+	// 2. Update overall progress in User Service
+	log.Printf("[Exercise-Service] Updating user progress in User Service...")
+	err = s.userServiceClient.UpdateProgress(client.UpdateProgressRequest{
+		UserID:            submission.UserID.String(),
+		ExercisesComplete: 1,
+		StudyMinutes:      timeMinutes,
+		SkillType:         skillType,
+		SessionType:       "exercise",
+		ResourceID:        submission.ExerciseID.String(),
+		Score:             score,
+	})
+	if err != nil {
+		log.Printf("[Exercise-Service] ERROR: Failed to update user progress: %v", err)
+	} else {
+		log.Printf("[Exercise-Service] SUCCESS: Updated user progress")
+	}
+
+	// 3. Send exercise result notification
+	log.Printf("[Exercise-Service] Sending exercise result notification...")
+	err = s.notificationClient.SendExerciseResultNotification(
+		submission.UserID.String(),
+		exercise.Title,
+		score,
+	)
+	if err != nil {
+		log.Printf("[Exercise-Service] ERROR: Failed to send notification: %v", err)
+	} else {
+		log.Printf("[Exercise-Service] SUCCESS: Sent exercise result notification")
+	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/bisosad1501/ielts-platform/course-service/internal/config"
 	"github.com/bisosad1501/ielts-platform/course-service/internal/database"
 	"github.com/bisosad1501/ielts-platform/course-service/internal/handlers"
@@ -30,8 +31,13 @@ func main() {
 	repo := repository.NewCourseRepository(db.DB)
 	log.Println("✅ Repository initialized")
 
+	// Initialize service clients for service-to-service communication
+	userServiceClient := client.NewUserServiceClient(cfg.UserServiceURL, cfg.InternalAPIKey)
+	notificationClient := client.NewNotificationServiceClient(cfg.NotificationServiceURL, cfg.InternalAPIKey)
+	log.Println("✅ Service clients initialized")
+
 	// Initialize service
-	svc := service.NewCourseService(repo)
+	svc := service.NewCourseService(repo, userServiceClient, notificationClient)
 	log.Println("✅ Service initialized")
 
 	// Initialize middleware

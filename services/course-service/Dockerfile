@@ -1,17 +1,22 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# Copy go mod files
-COPY services/course-service/go.mod services/course-service/go.sum ./
+# Copy shared module first (required for replace directive)
+COPY shared/ ./shared/
+
+# Copy course-service
+COPY services/course-service/ ./services/course-service/
+
+# Set working directory to course-service for build
+WORKDIR /build/services/course-service
+
+# Download dependencies
 RUN go mod download
 
-# Copy source code
-COPY services/course-service/ ./
-
 # Build binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
 
 # Final stage
 FROM alpine:latest
@@ -20,8 +25,8 @@ RUN apk --no-cache add ca-certificates postgresql-client
 
 WORKDIR /root/
 
-# Copy binary from builder
-COPY --from=builder /app/main .
+# Copy binary from builder (updated path)
+COPY --from=builder /build/services/course-service/main .
 
 # Expose port
 EXPOSE 8083

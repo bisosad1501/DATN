@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/bisosad1501/ielts-platform/exercise-service/internal/config"
 	"github.com/bisosad1501/ielts-platform/exercise-service/internal/database"
 	"github.com/bisosad1501/ielts-platform/exercise-service/internal/handlers"
@@ -26,9 +27,14 @@ func main() {
 
 	log.Println("Connected to database successfully")
 
+	// Initialize service clients for service-to-service communication
+	userServiceClient := client.NewUserServiceClient(cfg.UserServiceURL, cfg.InternalAPIKey)
+	notificationClient := client.NewNotificationServiceClient(cfg.NotificationServiceURL, cfg.InternalAPIKey)
+	log.Println("✅ Service clients initialized")
+
 	// Initialize layers
 	exerciseRepo := repository.NewExerciseRepository(db)
-	exerciseService := service.NewExerciseService(exerciseRepo)
+	exerciseService := service.NewExerciseService(exerciseRepo, userServiceClient, notificationClient)
 	exerciseHandler := handlers.NewExerciseHandler(exerciseService)
 	authMiddleware := middleware.NewAuthMiddleware(cfg)
 

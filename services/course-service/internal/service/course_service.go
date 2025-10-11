@@ -5,17 +5,24 @@ import (
 	"log"
 	"time"
 
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/bisosad1501/ielts-platform/course-service/internal/models"
 	"github.com/bisosad1501/ielts-platform/course-service/internal/repository"
 	"github.com/google/uuid"
 )
 
 type CourseService struct {
-	repo *repository.CourseRepository
+	repo               *repository.CourseRepository
+	userServiceClient  *client.UserServiceClient
+	notificationClient *client.NotificationServiceClient
 }
 
-func NewCourseService(repo *repository.CourseRepository) *CourseService {
-	return &CourseService{repo: repo}
+func NewCourseService(repo *repository.CourseRepository, userServiceClient *client.UserServiceClient, notificationClient *client.NotificationServiceClient) *CourseService {
+	return &CourseService{
+		repo:               repo,
+		userServiceClient:  userServiceClient,
+		notificationClient: notificationClient,
+	}
 }
 
 // GetCourses retrieves courses with filters
@@ -266,12 +273,19 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 	}
 
 	// Check if completed
+	wasJustCompleted := false
 	if req.IsCompleted != nil && *req.IsCompleted {
+		if progress.Status != "completed" {
+			wasJustCompleted = true
+		}
 		progress.Status = "completed"
 		now := time.Now()
 		progress.CompletedAt = &now
 		progress.ProgressPercentage = 100
 	} else if progress.ProgressPercentage >= 100 {
+		if progress.Status != "completed" {
+			wasJustCompleted = true
+		}
 		progress.Status = "completed"
 		if progress.CompletedAt == nil {
 			now := time.Now()
@@ -283,6 +297,11 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 	err = s.repo.UpdateLessonProgress(progress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update progress: %w", err)
+	}
+
+	// Service-to-service integration: Update user progress and send notification
+	if wasJustCompleted {
+		go s.handleLessonCompletion(userID, lessonID, lesson, progress)
 	}
 
 	return progress, nil
@@ -738,4 +757,59 @@ func (s *CourseService) AddVideoToLesson(userID uuid.UUID, userRole string, less
 	}
 
 	return video, nil
+}
+
+// handleLessonCompletion handles service-to-service integration when a lesson is completed
+func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesson *models.Lesson, progress *models.LessonProgress) {
+	log.Printf("[Course-Service] Handling lesson completion for user %s, lesson %s", userID, lessonID)
+
+	// Get course to determine skill type
+	course, err := s.repo.GetCourseByID(lesson.CourseID)
+	if err != nil {
+		log.Printf("[Course-Service] ERROR: Failed to get course: %v", err)
+		return
+	}
+
+	// Calculate study minutes (default to lesson duration or time spent)
+	studyMinutes := progress.TimeSpentMinutes
+	if studyMinutes == 0 && lesson.DurationMinutes != nil {
+		studyMinutes = *lesson.DurationMinutes
+	}
+
+	// 1. Update user progress in User Service
+	log.Printf("[Course-Service] Updating user progress in User Service...")
+	err = s.userServiceClient.UpdateProgress(client.UpdateProgressRequest{
+		UserID:           userID.String(),
+		LessonsCompleted: 1,
+		StudyMinutes:     studyMinutes,
+		SkillType:        course.SkillType,
+		SessionType:      "lesson",
+		ResourceID:       lessonID.String(),
+	})
+	if err != nil {
+		log.Printf("[Course-Service] ERROR: Failed to update user progress: %v", err)
+	} else {
+		log.Printf("[Course-Service] SUCCESS: Updated user progress")
+	}
+
+	// 2. Send lesson completion notification
+	log.Printf("[Course-Service] Sending lesson completion notification...")
+
+	// Get enrollment to calculate overall progress
+	enrollment, err := s.repo.GetEnrollment(userID, lesson.CourseID)
+	overallProgress := 0
+	if err == nil && enrollment != nil {
+		overallProgress = int(enrollment.ProgressPercentage)
+	}
+
+	err = s.notificationClient.SendLessonCompletionNotification(
+		userID.String(),
+		lesson.Title,
+		overallProgress,
+	)
+	if err != nil {
+		log.Printf("[Course-Service] ERROR: Failed to send notification: %v", err)
+	} else {
+		log.Printf("[Course-Service] SUCCESS: Sent lesson completion notification")
+	}
 }
