@@ -1,8 +1,11 @@
 module github.com/bisosad1501/DATN/services/auth-service
 
-go 1.21
+go 1.23
+
+toolchain go1.23.0
 
 require (
+	github.com/bisosad1501/DATN/shared v0.0.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.0
@@ -13,6 +16,8 @@ require (
 	golang.org/x/crypto v0.23.0
 	golang.org/x/oauth2 v0.15.0
 )
+
+replace github.com/bisosad1501/DATN/shared => ../../shared
 
 require (
 	cloud.google.com/go/compute v1.20.1 // indirect

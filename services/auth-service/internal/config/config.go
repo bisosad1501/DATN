@@ -42,6 +42,11 @@ type Config struct {
 	SMTPPassword  string
 	SMTPFromEmail string
 	SMTPFromName  string
+
+	// Service URLs
+	UserServiceURL         string
+	NotificationServiceURL string
+	InternalAPIKey         string
 }
 
 func Load() *Config {
@@ -79,6 +84,10 @@ func Load() *Config {
 		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
 		SMTPFromEmail: getEnv("SMTP_FROM_EMAIL", "noreply@ieltsplatform.com"),
 		SMTPFromName:  getEnv("SMTP_FROM_NAME", "IELTS Learning Platform"),
+
+		UserServiceURL:         getEnv("USER_SERVICE_URL", "http://user-service:8082"),
+		NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://notification-service:8085"),
+		InternalAPIKey:         getEnv("INTERNAL_API_KEY", "internal_secret_key_ielts_2025_change_in_production"),
 	}
 }
 

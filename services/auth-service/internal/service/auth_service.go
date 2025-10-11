@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/bisosad1501/DATN/services/auth-service/internal/config"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/models"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/repository"
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -48,6 +50,8 @@ type authService struct {
 	emailService          EmailService
 	redisClient           *redis.Client
 	config                *config.Config
+	userServiceClient     *client.UserServiceClient
+	notificationClient    *client.NotificationServiceClient
 }
 
 type TokenClaims struct {
@@ -68,6 +72,10 @@ func NewAuthService(
 	redisClient *redis.Client,
 	config *config.Config,
 ) AuthService {
+	// Initialize service clients
+	userServiceClient := client.NewUserServiceClient(config.UserServiceURL, config.InternalAPIKey)
+	notificationClient := client.NewNotificationServiceClient(config.NotificationServiceURL, config.InternalAPIKey)
+
 	return &authService{
 		userRepo:              userRepo,
 		roleRepo:              roleRepo,
@@ -78,6 +86,8 @@ func NewAuthService(
 		emailService:          emailService,
 		redisClient:           redisClient,
 		config:                config,
+		userServiceClient:     userServiceClient,
+		notificationClient:    notificationClient,
 	}
 }
 
@@ -174,6 +184,32 @@ func (s *authService) Register(req *models.RegisterRequest, ip, userAgent string
 	}
 
 	s.logAudit(&user.ID, "register", "success", ip, userAgent, "")
+
+	log.Printf("[Auth-Service] Starting post-registration tasks for user %s (%s)", user.ID, user.Email)
+
+	// Call User Service to create profile (SYNCHRONOUS FOR DEBUGGING - CHANGE TO ASYNC LATER)
+	log.Printf("[Auth-Service] Creating profile for user %s", user.ID)
+	profileReq := client.CreateProfileRequest{
+		UserID:   user.ID.String(),
+		Email:    user.Email,
+		Role:     req.Role,
+		FullName: "", // Will be updated later
+	}
+	log.Printf("[Auth-Service] Calling User Service at %s", s.config.UserServiceURL)
+	if err := s.userServiceClient.CreateProfile(profileReq); err != nil {
+		log.Printf("[Auth-Service] ERROR: Failed to create user profile for %s: %v", user.Email, err)
+	} else {
+		log.Printf("[Auth-Service] SUCCESS: Created profile for user %s", user.ID)
+	}
+
+	// Send welcome notification (SYNCHRONOUS FOR DEBUGGING)
+	log.Printf("[Auth-Service] Sending welcome notification to %s", user.Email)
+	log.Printf("[Auth-Service] Calling Notification Service at %s", s.config.NotificationServiceURL)
+	if err := s.notificationClient.SendWelcomeNotification(user.ID.String(), user.Email); err != nil {
+		log.Printf("[Auth-Service] ERROR: Failed to send welcome notification to %s: %v", user.Email, err)
+	} else {
+		log.Printf("[Auth-Service] SUCCESS: Sent welcome notification to %s", user.Email)
+	}
 
 	return &models.AuthResponse{
 		Success: true,
