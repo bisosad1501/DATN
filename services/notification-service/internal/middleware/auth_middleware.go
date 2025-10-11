@@ -12,12 +12,14 @@ import (
 )
 
 type AuthMiddleware struct {
-	jwtSecret string
+	jwtSecret      string
+	internalAPIKey string
 }
 
-func NewAuthMiddleware(jwtSecret string) *AuthMiddleware {
+func NewAuthMiddleware(jwtSecret, internalAPIKey string) *AuthMiddleware {
 	return &AuthMiddleware{
-		jwtSecret: jwtSecret,
+		jwtSecret:      jwtSecret,
+		internalAPIKey: internalAPIKey,
 	}
 }
 
@@ -133,6 +135,36 @@ func (m *AuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// InternalAuth validates internal API key for service-to-service communication
+func (m *AuthMiddleware) InternalAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		apiKey := c.GetHeader("X-Internal-API-Key")
+		if apiKey == "" {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "forbidden",
+				Message: "Internal API key is required",
+				Code:    "AUTH_007",
+			})
+			c.Abort()
+			return
+		}
+
+		if apiKey != m.internalAPIKey {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "forbidden",
+				Message: "Invalid internal API key",
+				Code:    "AUTH_008",
+			})
+			c.Abort()
+			return
+		}
+
+		// Set flag for internal request
+		c.Set("is_internal", true)
 		c.Next()
 	}
 }

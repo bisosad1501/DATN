@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, authMiddleware *middleware.AuthMiddleware) {
+func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, internalHandler *handlers.InternalHandler, authMiddleware *middleware.AuthMiddleware) {
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -52,5 +52,13 @@ func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, authMiddl
 	{
 		admin.POST("", handler.CreateNotification)         // Create notification for a user
 		admin.POST("/bulk", handler.SendBulkNotifications) // Send bulk notifications
+	}
+
+	// Internal routes (service-to-service)
+	internal := v1.Group("/notifications/internal")
+	internal.Use(authMiddleware.InternalAuth())
+	{
+		internal.POST("/send", internalHandler.SendNotificationInternal)     // Send notification from another service
+		internal.POST("/bulk", internalHandler.SendBulkNotificationInternal) // Send bulk notifications from another service
 	}
 }
