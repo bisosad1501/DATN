@@ -19,6 +19,12 @@ type Config struct {
 	// Auth Service Integration
 	AuthServiceURL string
 	JWTSecret      string
+
+	// Internal API Authentication
+	InternalAPIKey string
+
+	// Service URLs
+	NotificationServiceURL string
 }
 
 func LoadConfig() *Config {
@@ -35,6 +41,12 @@ func LoadConfig() *Config {
 		// Auth Service
 		AuthServiceURL: getEnv("AUTH_SERVICE_URL", "http://auth-service:8081"),
 		JWTSecret:      getEnv("JWT_SECRET", "your_jwt_secret_key_minimum_32_characters_long"),
+
+		// Internal API Authentication
+		InternalAPIKey: getEnv("INTERNAL_API_KEY", "internal_secret_key_ielts_2025_change_in_production"),
+
+		// Service URLs
+		NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://notification-service:8085"),
 	}
 
 	log.Printf("✅ Configuration loaded successfully")

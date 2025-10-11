@@ -574,3 +574,153 @@ func (s *UserService) GetLeaderboard(limit int) ([]models.LeaderboardEntry, erro
 func (s *UserService) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, error) {
 	return s.repo.GetUserRank(userID)
 }
+
+// ============= Internal Service Methods =============
+
+// CreateProfile creates a user profile (called internally by other services)
+func (s *UserService) CreateProfile(profile *models.UserProfile) error {
+	// Ensure learning progress exists
+	return s.repo.CreateProfile(profile.UserID)
+}
+
+// UpdateProgress updates user learning progress
+func (s *UserService) UpdateProgress(userID uuid.UUID, updates map[string]interface{}) error {
+	progress, err := s.repo.GetLearningProgress(userID)
+	if err != nil || progress == nil {
+		// Create progress if doesn't exist
+		if err := s.repo.CreateLearningProgress(userID); err != nil {
+			return fmt.Errorf("create learning progress: %w", err)
+		}
+		progress, err = s.repo.GetLearningProgress(userID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Apply updates
+	if lessonsCompleted, ok := updates["lessons_completed"].(int); ok && lessonsCompleted > 0 {
+		progress.TotalLessonsCompleted += lessonsCompleted
+	}
+	if exercisesCompleted, ok := updates["exercises_completed"].(int); ok && exercisesCompleted > 0 {
+		progress.TotalExercisesCompleted += exercisesCompleted
+	}
+	if studyMinutes, ok := updates["study_minutes"].(int); ok && studyMinutes > 0 {
+		progress.TotalStudyHours += float64(studyMinutes) / 60.0
+	}
+
+	// Update last study date and streak
+	now := time.Now()
+	if progress.LastStudyDate != nil {
+		lastDate := *progress.LastStudyDate
+		daysSince := int(now.Sub(lastDate).Hours() / 24)
+
+		if daysSince == 1 {
+			// Consecutive day, increment streak
+			progress.CurrentStreakDays++
+			if progress.CurrentStreakDays > progress.LongestStreakDays {
+				progress.LongestStreakDays = progress.CurrentStreakDays
+			}
+		} else if daysSince > 1 {
+			// Streak broken
+			progress.CurrentStreakDays = 1
+		}
+		// If daysSince == 0, same day, don't change streak
+	} else {
+		// First time studying
+		progress.CurrentStreakDays = 1
+		progress.LongestStreakDays = 1
+	}
+
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	progress.LastStudyDate = &today
+
+	// Convert progress struct to map for update
+	updateMap := make(map[string]interface{})
+	updateMap["total_study_hours"] = progress.TotalStudyHours
+	updateMap["total_lessons_completed"] = progress.TotalLessonsCompleted
+	updateMap["total_exercises_completed"] = progress.TotalExercisesCompleted
+	updateMap["current_streak_days"] = progress.CurrentStreakDays
+	updateMap["longest_streak_days"] = progress.LongestStreakDays
+	updateMap["last_study_date"] = progress.LastStudyDate
+
+	return s.repo.UpdateLearningProgress(userID, updateMap)
+}
+
+// UpdateSkillStatistics updates skill-specific statistics
+func (s *UserService) UpdateSkillStatistics(userID uuid.UUID, skillType string, updates map[string]interface{}) error {
+	stats, err := s.repo.GetSkillStatistics(userID, skillType)
+	if err != nil || stats == nil {
+		// Create stats if doesn't exist
+		if err := s.repo.CreateSkillStatistics(userID, skillType); err != nil {
+			return fmt.Errorf("create skill statistics: %w", err)
+		}
+		// Fetch the newly created stats
+		stats, err = s.repo.GetSkillStatistics(userID, skillType)
+		if err != nil {
+			return fmt.Errorf("get skill statistics after creation: %w", err)
+		}
+	}
+
+	// Apply updates
+	if score, ok := updates["score"].(float64); ok {
+		stats.TotalPractices++
+		if isCompleted, _ := updates["is_completed"].(bool); isCompleted {
+			stats.CompletedPractices++
+		}
+
+		// Update average score
+		if stats.AverageScore == 0 {
+			stats.AverageScore = score
+		} else {
+			newAvg := (stats.AverageScore*float64(stats.TotalPractices-1) + score) / float64(stats.TotalPractices)
+			stats.AverageScore = newAvg
+		}
+
+		// Update best score
+		if score > stats.BestScore {
+			stats.BestScore = score
+		}
+
+		stats.LastPracticeScore = &score
+	}
+
+	if timeMinutes, ok := updates["time_minutes"].(int); ok && timeMinutes > 0 {
+		stats.TotalTimeMinutes += timeMinutes
+	}
+
+	now := time.Now()
+	stats.LastPracticeDate = &now
+
+	// Convert stats struct to map for update
+	updateMap := make(map[string]interface{})
+	updateMap["total_practices"] = stats.TotalPractices
+	updateMap["completed_practices"] = stats.CompletedPractices
+	updateMap["average_score"] = stats.AverageScore
+	updateMap["best_score"] = stats.BestScore
+	updateMap["total_time_minutes"] = stats.TotalTimeMinutes
+	updateMap["last_practice_date"] = stats.LastPracticeDate
+	updateMap["last_practice_score"] = stats.LastPracticeScore
+
+	return s.repo.UpdateSkillStatistics(userID, skillType, updateMap)
+}
+
+// StartSession starts a study session (internal)
+func (s *UserService) StartSession(session *models.StudySession) (*uuid.UUID, error) {
+	session.ID = uuid.New()
+	session.StartedAt = time.Now()
+	session.IsCompleted = false
+
+	if err := s.repo.CreateStudySession(session); err != nil {
+		return nil, err
+	}
+
+	return &session.ID, nil
+}
+
+// EndSession ends a study session (internal)
+func (s *UserService) EndSession(sessionID uuid.UUID, isCompleted bool, score float64) error {
+	// For now, just log - full implementation needs repository methods
+	log.Printf("📝 Session ended: %s, completed=%v, score=%.2f", sessionID, isCompleted, score)
+	// TODO: Implement when repository methods are ready
+	return nil
+}
