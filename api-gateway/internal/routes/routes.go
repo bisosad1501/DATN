@@ -101,6 +101,28 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		}
 	}
 
+	// Lessons endpoints (from Course Service)
+	lessonGroup := v1.Group("/lessons")
+	{
+		lessonGroup.GET("/:id", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))
+	}
+
+	// Enrollments endpoints (from Course Service)
+	enrollmentGroup := v1.Group("/enrollments")
+	enrollmentGroup.Use(authMiddleware.ValidateToken())
+	{
+		enrollmentGroup.POST("", proxy.ReverseProxy(cfg.Services.CourseService))
+		enrollmentGroup.GET("/my", proxy.ReverseProxy(cfg.Services.CourseService))
+		enrollmentGroup.GET("/:id/progress", proxy.ReverseProxy(cfg.Services.CourseService))
+	}
+
+	// Progress endpoints (from Course Service)
+	progressGroup := v1.Group("/progress")
+	progressGroup.Use(authMiddleware.ValidateToken())
+	{
+		progressGroup.PUT("/lessons/:id", proxy.ReverseProxy(cfg.Services.CourseService))
+	}
+
 	// ============================================
 	// EXERCISE SERVICE - Mixed auth
 	// ============================================
@@ -114,7 +136,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		exerciseProtected := exerciseGroup.Group("")
 		exerciseProtected.Use(authMiddleware.ValidateToken())
 		{
-			exerciseProtected.POST("/start", proxy.ReverseProxy(cfg.Services.ExerciseService))
+			exerciseProtected.POST("/:id/start", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		}
 	}
 
@@ -125,6 +147,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		submissionGroup.PUT("/:id/answers", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		submissionGroup.GET("/:id/result", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		submissionGroup.GET("/my", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		submissionGroup.GET("", proxy.ReverseProxy(cfg.Services.ExerciseService)) // List my submissions
 	}
 
 	// ============================================
