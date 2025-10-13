@@ -31,7 +31,10 @@ func main() {
 	defer db.Close()
 
 	// Initialize Redis connection
-	redisClient := database.NewRedisClient(cfg)
+	redisClient, err := database.NewRedisClient(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
 	defer redisClient.Close()
 
 	// Initialize repositories

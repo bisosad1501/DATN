@@ -301,7 +301,14 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 
 	// Service-to-service integration: Update user progress and send notification
 	if wasJustCompleted {
-		go s.handleLessonCompletion(userID, lessonID, lesson, progress)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[Course-Service] PANIC in handleLessonCompletion: %v", r)
+				}
+			}()
+			s.handleLessonCompletion(userID, lessonID, lesson, progress)
+		}()
 	}
 
 	return progress, nil

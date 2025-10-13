@@ -39,10 +39,10 @@ func NewPostgresConnection(cfg *config.Config) (*sqlx.DB, error) {
 }
 
 // NewRedisClient creates a new Redis client
-func NewRedisClient(cfg *config.Config) *redis.Client {
+func NewRedisClient(cfg *config.Config) (*redis.Client, error) {
 	opt, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
-		panic(fmt.Sprintf("failed to parse Redis URL: %v", err))
+		return nil, fmt.Errorf("failed to parse Redis URL: %w", err)
 	}
 
 	client := redis.NewClient(opt)
@@ -50,8 +50,8 @@ func NewRedisClient(cfg *config.Config) *redis.Client {
 	// Test connection
 	ctx := context.Background()
 	if err := client.Ping(ctx).Err(); err != nil {
-		panic(fmt.Sprintf("failed to connect to Redis: %v", err))
+		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	return client
+	return client, nil
 }

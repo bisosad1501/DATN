@@ -61,7 +61,14 @@ func (s *ExerciseService) SubmitAnswers(submissionID uuid.UUID, answers []models
 	}
 
 	// Service-to-service integration: Update user stats and send notification
-	go s.handleExerciseCompletion(submissionID)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[Exercise-Service] PANIC in handleExerciseCompletion: %v", r)
+			}
+		}()
+		s.handleExerciseCompletion(submissionID)
+	}()
 
 	return nil
 }
