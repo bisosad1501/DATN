@@ -12,6 +12,7 @@ import (
 
 type UserRepository interface {
 	Create(user *models.User) error
+	Delete(userID uuid.UUID) error
 	FindByID(id uuid.UUID) (*models.User, error)
 	FindByEmail(email string) (*models.User, error)
 	FindByGoogleID(googleID string) (*models.User, error)
@@ -299,4 +300,29 @@ func (r *userRepository) IsAccountLocked(userID uuid.UUID) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// Delete soft-deletes a user (for rollback scenarios)
+func (r *userRepository) Delete(userID uuid.UUID) error {
+	query := `
+		UPDATE users
+		SET deleted_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+
+	result, err := r.db.Exec(query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found or already deleted")
+	}
+
+	return nil
 }

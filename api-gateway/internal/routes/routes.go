@@ -27,7 +27,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 			"endpoints": gin.H{
 				"health":        "/health",
 				"auth":          "/api/v1/auth/*",
-				"users":         "/api/v1/users/*",
+				"user":          "/api/v1/user/*",
 				"courses":       "/api/v1/courses/*",
 				"exercises":     "/api/v1/exercises/*",
 				"submissions":   "/api/v1/submissions/*",
@@ -67,16 +67,43 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 	// ============================================
 	// USER SERVICE - Most require auth
 	// ============================================
-	userGroup := v1.Group("/users")
+	userGroup := v1.Group("/user")
 	userGroup.Use(authMiddleware.ValidateToken())
 	{
-		userGroup.GET("/me", proxy.ReverseProxy(cfg.Services.UserService))
-		userGroup.PUT("/me", proxy.ReverseProxy(cfg.Services.UserService))
-		userGroup.GET("/me/profile", proxy.ReverseProxy(cfg.Services.UserService))
-		userGroup.PUT("/me/profile", proxy.ReverseProxy(cfg.Services.UserService))
-		userGroup.GET("/me/progress", proxy.ReverseProxy(cfg.Services.UserService))
-		userGroup.GET("/me/statistics", proxy.ReverseProxy(cfg.Services.UserService))
-		userGroup.GET("/me/achievements", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/profile", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.PUT("/profile", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.POST("/profile/avatar", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/progress", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/progress/history", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/statistics", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/statistics/:skill", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/achievements", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/achievements/earned", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/preferences", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.PUT("/preferences", proxy.ReverseProxy(cfg.Services.UserService))
+
+		// Study sessions
+		userGroup.POST("/sessions", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.POST("/sessions/:id/end", proxy.ReverseProxy(cfg.Services.UserService))
+
+		// Study goals
+		userGroup.POST("/goals", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/goals", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/goals/:id", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.PUT("/goals/:id", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.POST("/goals/:id/complete", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.DELETE("/goals/:id", proxy.ReverseProxy(cfg.Services.UserService))
+
+		// Study reminders
+		userGroup.POST("/reminders", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/reminders", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.PUT("/reminders/:id", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.DELETE("/reminders/:id", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.PUT("/reminders/:id/toggle", proxy.ReverseProxy(cfg.Services.UserService))
+
+		// Leaderboard
+		userGroup.GET("/leaderboard", proxy.ReverseProxy(cfg.Services.UserService))
+		userGroup.GET("/leaderboard/rank", proxy.ReverseProxy(cfg.Services.UserService))
 	}
 
 	// ============================================

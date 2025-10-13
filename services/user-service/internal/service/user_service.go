@@ -583,8 +583,9 @@ func (s *UserService) CreateProfile(profile *models.UserProfile) error {
 	return s.repo.CreateProfile(profile.UserID)
 }
 
-// UpdateProgress updates user learning progress
+// UpdateProgress updates user learning progress using atomic operations
 func (s *UserService) UpdateProgress(userID uuid.UUID, updates map[string]interface{}) error {
+	// Ensure progress record exists
 	progress, err := s.repo.GetLearningProgress(userID)
 	if err != nil || progress == nil {
 		// Create progress if doesn't exist
@@ -597,53 +598,42 @@ func (s *UserService) UpdateProgress(userID uuid.UUID, updates map[string]interf
 		}
 	}
 
-	// Apply updates
-	if lessonsCompleted, ok := updates["lessons_completed"].(int); ok && lessonsCompleted > 0 {
-		progress.TotalLessonsCompleted += lessonsCompleted
-	}
-	if exercisesCompleted, ok := updates["exercises_completed"].(int); ok && exercisesCompleted > 0 {
-		progress.TotalExercisesCompleted += exercisesCompleted
-	}
-	if studyMinutes, ok := updates["study_minutes"].(int); ok && studyMinutes > 0 {
-		progress.TotalStudyHours += float64(studyMinutes) / 60.0
-	}
-
-	// Update last study date and streak
+	// Calculate streak logic (requires current state)
 	now := time.Now()
+	todayDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	streakUpdate := make(map[string]interface{})
 	if progress.LastStudyDate != nil {
-		lastDate := *progress.LastStudyDate
-		daysSince := int(now.Sub(lastDate).Hours() / 24)
+		// Compare date-only parts (fix timezone issues)
+		lastDateOnly := time.Date(progress.LastStudyDate.Year(), progress.LastStudyDate.Month(),
+			progress.LastStudyDate.Day(), 0, 0, 0, 0, time.UTC)
+		daysSince := int(todayDate.Sub(lastDateOnly).Hours() / 24)
 
 		if daysSince == 1 {
-			// Consecutive day, increment streak
-			progress.CurrentStreakDays++
-			if progress.CurrentStreakDays > progress.LongestStreakDays {
-				progress.LongestStreakDays = progress.CurrentStreakDays
-			}
+			// Consecutive day - increment streak
+			streakUpdate["increment_current_streak"] = 1
+			streakUpdate["update_longest_if_needed"] = true
 		} else if daysSince > 1 {
-			// Streak broken
-			progress.CurrentStreakDays = 1
+			// Streak broken - reset to 1
+			streakUpdate["current_streak_days"] = 1
 		}
 		// If daysSince == 0, same day, don't change streak
 	} else {
-		// First time studying
-		progress.CurrentStreakDays = 1
-		progress.LongestStreakDays = 1
+		// First time studying - start streak
+		streakUpdate["current_streak_days"] = 1
+		streakUpdate["longest_streak_days"] = 1
 	}
 
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	progress.LastStudyDate = &today
+	// Always update last study date
+	updates["last_study_date"] = todayDate
 
-	// Convert progress struct to map for update
-	updateMap := make(map[string]interface{})
-	updateMap["total_study_hours"] = progress.TotalStudyHours
-	updateMap["total_lessons_completed"] = progress.TotalLessonsCompleted
-	updateMap["total_exercises_completed"] = progress.TotalExercisesCompleted
-	updateMap["current_streak_days"] = progress.CurrentStreakDays
-	updateMap["longest_streak_days"] = progress.LongestStreakDays
-	updateMap["last_study_date"] = progress.LastStudyDate
+	// Merge streak updates
+	for k, v := range streakUpdate {
+		updates[k] = v
+	}
 
-	return s.repo.UpdateLearningProgress(userID, updateMap)
+	// Use repository method for atomic update
+	return s.repo.UpdateLearningProgressAtomic(userID, updates)
 }
 
 // UpdateSkillStatistics updates skill-specific statistics
@@ -663,17 +653,20 @@ func (s *UserService) UpdateSkillStatistics(userID uuid.UUID, skillType string, 
 
 	// Apply updates
 	if score, ok := updates["score"].(float64); ok {
+		// Calculate new average BEFORE incrementing count (clearer logic)
+		if stats.TotalPractices == 0 {
+			// First practice
+			stats.AverageScore = score
+		} else {
+			// Calculate total sum from average, add new score, divide by new count
+			totalSum := stats.AverageScore * float64(stats.TotalPractices)
+			stats.AverageScore = (totalSum + score) / float64(stats.TotalPractices+1)
+		}
+
+		// NOW increment counters
 		stats.TotalPractices++
 		if isCompleted, _ := updates["is_completed"].(bool); isCompleted {
 			stats.CompletedPractices++
-		}
-
-		// Update average score
-		if stats.AverageScore == 0 {
-			stats.AverageScore = score
-		} else {
-			newAvg := (stats.AverageScore*float64(stats.TotalPractices-1) + score) / float64(stats.TotalPractices)
-			stats.AverageScore = newAvg
 		}
 
 		// Update best score

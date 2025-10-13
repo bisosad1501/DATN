@@ -272,10 +272,20 @@ func (r *UserRepository) UpdateLearningProgress(userID uuid.UUID, updates map[st
 	query += fmt.Sprintf(" WHERE user_id = $%d", paramCount)
 	args = append(args, userID)
 
-	_, err := r.db.DB.Exec(query, args...)
+	result, err := r.db.DB.Exec(query, args...)
 	if err != nil {
 		log.Printf("❌ Error updating learning progress for user %s: %v", userID, err)
 		return fmt.Errorf("failed to update learning progress: %w", err)
+	}
+
+	// Check if row was actually updated
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		log.Printf("⚠️  Warning: No rows updated for user %s (may not exist)", userID)
+		return fmt.Errorf("learning progress not found for user %s", userID)
 	}
 
 	return nil
@@ -521,6 +531,85 @@ func (r *UserRepository) DeleteGoal(goalID uuid.UUID, userID uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete goal: %w", err)
 	}
+	return nil
+}
+
+// UpdateLearningProgressAtomic updates learning progress using atomic operations to prevent race conditions
+func (r *UserRepository) UpdateLearningProgressAtomic(userID uuid.UUID, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	query := "UPDATE learning_progress SET updated_at = CURRENT_TIMESTAMP"
+	args := []interface{}{}
+	paramCount := 0
+
+	// Handle atomic increments
+	if lessonsCompleted, ok := updates["lessons_completed"].(int); ok && lessonsCompleted > 0 {
+		paramCount++
+		query += fmt.Sprintf(", total_lessons_completed = total_lessons_completed + $%d", paramCount)
+		args = append(args, lessonsCompleted)
+	}
+	if exercisesCompleted, ok := updates["exercises_completed"].(int); ok && exercisesCompleted > 0 {
+		paramCount++
+		query += fmt.Sprintf(", total_exercises_completed = total_exercises_completed + $%d", paramCount)
+		args = append(args, exercisesCompleted)
+	}
+	if studyMinutes, ok := updates["study_minutes"].(int); ok && studyMinutes > 0 {
+		paramCount++
+		studyHours := float64(studyMinutes) / 60.0
+		query += fmt.Sprintf(", total_study_hours = total_study_hours + $%d", paramCount)
+		args = append(args, studyHours)
+	}
+
+	// Handle streak updates
+	if increment, ok := updates["increment_current_streak"].(int); ok && increment > 0 {
+		paramCount++
+		query += fmt.Sprintf(", current_streak_days = current_streak_days + $%d", paramCount)
+		args = append(args, increment)
+
+		// Update longest streak if needed
+		if shouldUpdate, ok := updates["update_longest_if_needed"].(bool); ok && shouldUpdate {
+			query += ", longest_streak_days = GREATEST(longest_streak_days, current_streak_days)"
+		}
+	} else if currentStreak, ok := updates["current_streak_days"].(int); ok {
+		paramCount++
+		query += fmt.Sprintf(", current_streak_days = $%d", paramCount)
+		args = append(args, currentStreak)
+	}
+
+	if longestStreak, ok := updates["longest_streak_days"].(int); ok {
+		paramCount++
+		query += fmt.Sprintf(", longest_streak_days = $%d", paramCount)
+		args = append(args, longestStreak)
+	}
+
+	// Handle direct updates
+	if lastStudyDate, ok := updates["last_study_date"].(time.Time); ok {
+		paramCount++
+		query += fmt.Sprintf(", last_study_date = $%d", paramCount)
+		args = append(args, lastStudyDate)
+	}
+
+	// Add WHERE clause
+	paramCount++
+	query += fmt.Sprintf(" WHERE user_id = $%d", paramCount)
+	args = append(args, userID)
+
+	result, err := r.db.DB.Exec(query, args...)
+	if err != nil {
+		log.Printf("❌ Error updating learning progress atomically for user %s: %v", userID, err)
+		return fmt.Errorf("failed to update learning progress: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("learning progress not found for user %s", userID)
+	}
+
 	return nil
 }
 

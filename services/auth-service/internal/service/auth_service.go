@@ -183,11 +183,9 @@ func (s *authService) Register(req *models.RegisterRequest, ip, userAgent string
 		return nil, err
 	}
 
-	s.logAudit(&user.ID, "register", "success", ip, userAgent, "")
-
 	log.Printf("[Auth-Service] Starting post-registration tasks for user %s (%s)", user.ID, user.Email)
 
-	// Call User Service to create profile (SYNCHRONOUS FOR DEBUGGING - CHANGE TO ASYNC LATER)
+	// Call User Service to create profile - CRITICAL: Must succeed for data consistency
 	log.Printf("[Auth-Service] Creating profile for user %s", user.ID)
 	profileReq := client.CreateProfileRequest{
 		UserID:   user.ID.String(),
@@ -197,16 +195,31 @@ func (s *authService) Register(req *models.RegisterRequest, ip, userAgent string
 	}
 	log.Printf("[Auth-Service] Calling User Service at %s", s.config.UserServiceURL)
 	if err := s.userServiceClient.CreateProfile(profileReq); err != nil {
-		log.Printf("[Auth-Service] ERROR: Failed to create user profile for %s: %v", user.Email, err)
-	} else {
-		log.Printf("[Auth-Service] SUCCESS: Created profile for user %s", user.ID)
+		log.Printf("[Auth-Service] CRITICAL ERROR: Failed to create user profile for %s: %v", user.Email, err)
+
+		// COMPENSATING TRANSACTION: Delete the user to maintain consistency
+		log.Printf("[Auth-Service] Rolling back user creation for %s", user.ID)
+		if deleteErr := s.userRepo.Delete(user.ID); deleteErr != nil {
+			log.Printf("[Auth-Service] ERROR: Failed to rollback user %s: %v", user.ID, deleteErr)
+			// Log to audit for manual cleanup
+			s.logAudit(&user.ID, "register_rollback", "failed", ip, userAgent, fmt.Sprintf("orphaned user in auth_db: %v", deleteErr))
+		} else {
+			log.Printf("[Auth-Service] SUCCESS: Rolled back user %s", user.ID)
+		}
+
+		s.logAudit(&user.ID, "register", "failed", ip, userAgent, fmt.Sprintf("profile creation failed: %v", err))
+		return nil, fmt.Errorf("registration failed: unable to create user profile. Please try again")
 	}
 
-	// Send welcome notification (SYNCHRONOUS FOR DEBUGGING)
+	log.Printf("[Auth-Service] SUCCESS: Created profile for user %s", user.ID)
+	s.logAudit(&user.ID, "register", "success", ip, userAgent, "")
+
+	// Send welcome notification (non-critical, can fail without blocking registration)
 	log.Printf("[Auth-Service] Sending welcome notification to %s", user.Email)
 	log.Printf("[Auth-Service] Calling Notification Service at %s", s.config.NotificationServiceURL)
 	if err := s.notificationClient.SendWelcomeNotification(user.ID.String(), user.Email); err != nil {
-		log.Printf("[Auth-Service] ERROR: Failed to send welcome notification to %s: %v", user.Email, err)
+		log.Printf("[Auth-Service] WARNING: Failed to send welcome notification to %s: %v", user.Email, err)
+		// Non-critical: Continue with registration even if notification fails
 	} else {
 		log.Printf("[Auth-Service] SUCCESS: Sent welcome notification to %s", user.Email)
 	}
