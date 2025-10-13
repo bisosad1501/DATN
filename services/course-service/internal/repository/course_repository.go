@@ -494,6 +494,72 @@ func (r *CourseRepository) UpdateLessonProgress(progress *models.LessonProgress)
 	return err
 }
 
+// UpdateLessonProgressAtomic atomically updates lesson progress using increments
+// FIX #7: Prevents race conditions when updating progress from multiple devices
+func (r *CourseRepository) UpdateLessonProgressAtomic(
+	userID, lessonID uuid.UUID,
+	videoWatchedSecondsIncrement int,
+	timeSpentMinutesIncrement int,
+	newProgressPercentage *float64,
+	newStatus *string,
+	newCompletedAt *string,
+) error {
+	query := `
+		UPDATE lesson_progress 
+		SET video_watched_seconds = video_watched_seconds + $3,
+		    time_spent_minutes = time_spent_minutes + $4,
+		    progress_percentage = COALESCE($5, progress_percentage),
+		    status = COALESCE($6, status),
+		    completed_at = COALESCE($7::timestamp, completed_at),
+		    last_accessed_at = CURRENT_TIMESTAMP
+		WHERE user_id = $1 AND lesson_id = $2
+	`
+
+	_, err := r.db.Exec(query,
+		userID, lessonID,
+		videoWatchedSecondsIncrement,
+		timeSpentMinutesIncrement,
+		newProgressPercentage,
+		newStatus,
+		newCompletedAt,
+	)
+
+	return err
+}
+
+// UpdateEnrollmentProgressAtomic atomically updates enrollment progress
+// FIX #8: Auto-update enrollment progress when lessons complete
+func (r *CourseRepository) UpdateEnrollmentProgressAtomic(
+	userID, courseID uuid.UUID,
+	lessonsCompletedIncrement int,
+	timeSpentMinutesIncrement int,
+) error {
+	// Calculate progress percentage based on total lessons in course
+	query := `
+		UPDATE course_enrollments ce
+		SET lessons_completed = lessons_completed + $3,
+		    total_time_spent_minutes = total_time_spent_minutes + $4,
+		    progress_percentage = CASE 
+		        WHEN c.total_lessons > 0 
+		        THEN ((ce.lessons_completed + $3)::float / c.total_lessons) * 100
+		        ELSE 0
+		    END,
+		    last_accessed_at = CURRENT_TIMESTAMP
+		FROM courses c
+		WHERE ce.user_id = $1 
+		  AND ce.course_id = $2 
+		  AND ce.course_id = c.id
+	`
+
+	_, err := r.db.Exec(query,
+		userID, courseID,
+		lessonsCompletedIncrement,
+		timeSpentMinutesIncrement,
+	)
+
+	return err
+}
+
 // CreateCourse creates a new course
 func (r *CourseRepository) CreateCourse(course *models.Course) error {
 	query := `

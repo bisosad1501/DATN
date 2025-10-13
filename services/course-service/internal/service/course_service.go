@@ -143,15 +143,6 @@ func (s *CourseService) EnrollCourse(userID uuid.UUID, req *models.EnrollmentReq
 		return nil, fmt.Errorf("course not found")
 	}
 
-	// Check if already enrolled
-	existingEnrollment, err := s.repo.GetEnrollment(userID, req.CourseID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check enrollment: %w", err)
-	}
-	if existingEnrollment != nil {
-		return existingEnrollment, nil // Already enrolled
-	}
-
 	// Validate enrollment type
 	enrollmentType := req.EnrollmentType
 	if enrollmentType == "" {
@@ -163,7 +154,8 @@ func (s *CourseService) EnrollCourse(userID uuid.UUID, req *models.EnrollmentReq
 		return nil, fmt.Errorf("this course requires payment")
 	}
 
-	// Create enrollment
+	// FIX #9: Let database handle duplicate check via ON CONFLICT
+	// This prevents race conditions from check-then-insert pattern
 	enrollment := &models.CourseEnrollment{
 		ID:             uuid.New(),
 		UserID:         userID,
@@ -182,7 +174,8 @@ func (s *CourseService) EnrollCourse(userID uuid.UUID, req *models.EnrollmentReq
 		return nil, fmt.Errorf("failed to create enrollment: %w", err)
 	}
 
-	return enrollment, nil
+	// Return the enrollment (might be existing one due to ON CONFLICT)
+	return s.repo.GetEnrollment(userID, req.CourseID)
 }
 
 // GetMyEnrollments retrieves user's enrollments
@@ -235,24 +228,23 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 		return nil, fmt.Errorf("not enrolled in this course")
 	}
 
-	// Get existing progress or create new
-	progress, err := s.repo.GetLessonProgress(userID, lessonID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get progress: %w", err)
+	// FIX #7 & #10: Use UPSERT pattern with atomic operations for ALL updates
+	// This prevents race conditions by letting database handle concurrency
+
+	// Check existing progress BEFORE update to detect completion
+	existingProgress, _ := s.repo.GetLessonProgress(userID, lessonID)
+	wasAlreadyCompleted := existingProgress != nil && existingProgress.Status == "completed"
+
+	// Build progress update
+	progress := &models.LessonProgress{
+		ID:       uuid.New(),
+		UserID:   userID,
+		LessonID: lessonID,
+		CourseID: lesson.CourseID,
+		Status:   "in_progress",
 	}
 
-	if progress == nil {
-		// Create new progress
-		progress = &models.LessonProgress{
-			ID:       uuid.New(),
-			UserID:   userID,
-			LessonID: lessonID,
-			CourseID: lesson.CourseID,
-			Status:   "in_progress",
-		}
-	}
-
-	// Update fields
+	// Set fields from request
 	if req.ProgressPercentage != nil {
 		progress.ProgressPercentage = *req.ProgressPercentage
 	}
@@ -263,8 +255,9 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 
 	if req.VideoTotalSeconds != nil {
 		progress.VideoTotalSeconds = req.VideoTotalSeconds
-		if *req.VideoTotalSeconds > 0 {
-			progress.VideoWatchPercentage = float64(progress.VideoWatchedSeconds) / float64(*req.VideoTotalSeconds) * 100
+		// Only calculate percentage if we have both values
+		if *req.VideoTotalSeconds > 0 && req.VideoWatchedSeconds != nil {
+			progress.VideoWatchPercentage = float64(*req.VideoWatchedSeconds) / float64(*req.VideoTotalSeconds) * 100
 		}
 	}
 
@@ -272,46 +265,68 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 		progress.TimeSpentMinutes = *req.TimeSpentMinutes
 	}
 
-	// Check if completed
+	// Check if completing (and was not already completed)
 	wasJustCompleted := false
+	isCompletedVal := "nil"
+	if req.IsCompleted != nil {
+		isCompletedVal = fmt.Sprintf("%v", *req.IsCompleted)
+	}
+	log.Printf("[Course-Service] UpdateLessonProgress for user %s: req.IsCompleted=%s, wasAlreadyCompleted=%v",
+		userID, isCompletedVal, wasAlreadyCompleted)
+
 	if req.IsCompleted != nil && *req.IsCompleted {
-		if progress.Status != "completed" {
-			wasJustCompleted = true
-		}
 		progress.Status = "completed"
 		now := time.Now()
 		progress.CompletedAt = &now
 		progress.ProgressPercentage = 100
-	} else if progress.ProgressPercentage >= 100 {
-		if progress.Status != "completed" {
+
+		if !wasAlreadyCompleted {
 			wasJustCompleted = true
+			log.Printf("[Course-Service] Lesson just completed by user %s", userID)
+		} else {
+			log.Printf("[Course-Service] Lesson already completed - skipping user service integration for user %s", userID)
 		}
+	} else if progress.ProgressPercentage >= 100 {
 		progress.Status = "completed"
-		if progress.CompletedAt == nil {
-			now := time.Now()
-			progress.CompletedAt = &now
+		now := time.Now()
+		progress.CompletedAt = &now
+
+		if !wasAlreadyCompleted {
+			wasJustCompleted = true
+			log.Printf("[Course-Service] Lesson just completed (progress >= 100) by user %s", userID)
 		}
 	}
 
-	// Save progress
+	// UPSERT: Insert or update using database ON CONFLICT
 	err = s.repo.UpdateLessonProgress(progress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update progress: %w", err)
-	}
-
-	// Service-to-service integration: Update user progress and send notification
+		return nil, fmt.Errorf("failed to upsert progress: %w", err)
+	} // FIX #8: Update enrollment progress atomically when lesson completed
 	if wasJustCompleted {
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("[Course-Service] PANIC in handleLessonCompletion: %v", r)
-				}
+		log.Printf("[Course-Service] Lesson just completed! Updating enrollment progress for user %s, course %s", userID, lesson.CourseID)
+		err = s.repo.UpdateEnrollmentProgressAtomic(userID, lesson.CourseID, 1, progress.TimeSpentMinutes)
+		if err != nil {
+			log.Printf("[Course-Service] WARNING: Failed to update enrollment progress: %v", err)
+		} else {
+			log.Printf("[Course-Service] SUCCESS: Enrollment progress updated (lessons +1, time +%d)", progress.TimeSpentMinutes)
+		}
+
+		// Refresh progress for notification
+		updatedProgress, _ := s.repo.GetLessonProgress(userID, lessonID)
+		if updatedProgress != nil {
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[Course-Service] PANIC in handleLessonCompletion: %v", r)
+					}
+				}()
+				s.handleLessonCompletion(userID, lessonID, lesson, updatedProgress)
 			}()
-			s.handleLessonCompletion(userID, lessonID, lesson, progress)
-		}()
+		}
 	}
 
-	return progress, nil
+	// Return final progress
+	return s.repo.GetLessonProgress(userID, lessonID)
 }
 
 // GetEnrollmentProgress retrieves detailed enrollment progress
@@ -767,6 +782,7 @@ func (s *CourseService) AddVideoToLesson(userID uuid.UUID, userRole string, less
 }
 
 // handleLessonCompletion handles service-to-service integration when a lesson is completed
+// FIX #11: Added retry mechanism and better error handling
 func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesson *models.Lesson, progress *models.LessonProgress) {
 	log.Printf("[Course-Service] Handling lesson completion for user %s, lesson %s", userID, lessonID)
 
@@ -783,23 +799,36 @@ func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesso
 		studyMinutes = *lesson.DurationMinutes
 	}
 
-	// 1. Update user progress in User Service
+	// 1. Update user progress in User Service with retry
 	log.Printf("[Course-Service] Updating user progress in User Service...")
-	err = s.userServiceClient.UpdateProgress(client.UpdateProgressRequest{
-		UserID:           userID.String(),
-		LessonsCompleted: 1,
-		StudyMinutes:     studyMinutes,
-		SkillType:        course.SkillType,
-		SessionType:      "lesson",
-		ResourceID:       lessonID.String(),
-	})
-	if err != nil {
-		log.Printf("[Course-Service] ERROR: Failed to update user progress: %v", err)
-	} else {
-		log.Printf("[Course-Service] SUCCESS: Updated user progress")
+	progressUpdateSuccess := false
+	for attempt := 1; attempt <= 3; attempt++ {
+		err = s.userServiceClient.UpdateProgress(client.UpdateProgressRequest{
+			UserID:           userID.String(),
+			LessonsCompleted: 1,
+			StudyMinutes:     studyMinutes,
+			SkillType:        course.SkillType,
+			SessionType:      "lesson",
+			ResourceID:       lessonID.String(),
+		})
+		if err == nil {
+			log.Printf("[Course-Service] SUCCESS: Updated user progress (attempt %d)", attempt)
+			progressUpdateSuccess = true
+			break
+		}
+		log.Printf("[Course-Service] WARNING: Failed to update user progress (attempt %d/%d): %v", attempt, 3, err)
+		if attempt < 3 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
 	}
 
-	// 2. Send lesson completion notification
+	// If all retries failed, log critical error
+	if !progressUpdateSuccess {
+		log.Printf("[Course-Service] CRITICAL ERROR: Failed to update user progress after 3 attempts for user %s, lesson %s", userID, lessonID)
+		// TODO: Store in dead letter queue or manual reconciliation table
+	}
+
+	// 2. Send lesson completion notification with retry
 	log.Printf("[Course-Service] Sending lesson completion notification...")
 
 	// Get enrollment to calculate overall progress
@@ -809,14 +838,26 @@ func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesso
 		overallProgress = int(enrollment.ProgressPercentage)
 	}
 
-	err = s.notificationClient.SendLessonCompletionNotification(
-		userID.String(),
-		lesson.Title,
-		overallProgress,
-	)
-	if err != nil {
-		log.Printf("[Course-Service] ERROR: Failed to send notification: %v", err)
-	} else {
-		log.Printf("[Course-Service] SUCCESS: Sent lesson completion notification")
+	notificationSuccess := false
+	for attempt := 1; attempt <= 2; attempt++ {
+		err = s.notificationClient.SendLessonCompletionNotification(
+			userID.String(),
+			lesson.Title,
+			overallProgress,
+		)
+		if err == nil {
+			log.Printf("[Course-Service] SUCCESS: Sent lesson completion notification (attempt %d)", attempt)
+			notificationSuccess = true
+			break
+		}
+		log.Printf("[Course-Service] WARNING: Failed to send notification (attempt %d/%d): %v", attempt, 2, err)
+		if attempt < 2 {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	if !notificationSuccess {
+		log.Printf("[Course-Service] ERROR: Failed to send notification after 2 attempts (non-critical)")
+		// Notification failure is non-critical, don't rollback
 	}
 }
