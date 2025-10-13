@@ -327,7 +327,7 @@ func (r *NotificationRepository) GetNotificationPreferences(userID uuid.UUID) (*
 			   email_weekly_report, email_course_updates, email_marketing,
 			   in_app_enabled, quiet_hours_enabled, 
 			   quiet_hours_start::TEXT, quiet_hours_end::TEXT,
-			   max_notifications_per_day, updated_at
+			   max_notifications_per_day, timezone, updated_at
 		FROM notification_preferences
 		WHERE user_id = $1
 	`
@@ -338,7 +338,7 @@ func (r *NotificationRepository) GetNotificationPreferences(userID uuid.UUID) (*
 		&prefs.PushCourseUpdates, &prefs.PushExerciseGraded, &prefs.EmailEnabled,
 		&prefs.EmailWeeklyReport, &prefs.EmailCourseUpdates, &prefs.EmailMarketing,
 		&prefs.InAppEnabled, &prefs.QuietHoursEnabled, &prefs.QuietHoursStart,
-		&prefs.QuietHoursEnd, &prefs.MaxNotificationsPerDay, &prefs.UpdatedAt,
+		&prefs.QuietHoursEnd, &prefs.MaxNotificationsPerDay, &prefs.Timezone, &prefs.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -363,7 +363,7 @@ func (r *NotificationRepository) CreateDefaultPreferences(userID uuid.UUID) (*mo
 				  in_app_enabled, quiet_hours_enabled, 
 				  quiet_hours_start::TEXT,
 				  quiet_hours_end::TEXT,
-				  max_notifications_per_day, updated_at
+				  max_notifications_per_day, timezone, updated_at
 	`
 
 	var prefs models.NotificationPreferences
@@ -372,7 +372,7 @@ func (r *NotificationRepository) CreateDefaultPreferences(userID uuid.UUID) (*mo
 		&prefs.PushCourseUpdates, &prefs.PushExerciseGraded, &prefs.EmailEnabled,
 		&prefs.EmailWeeklyReport, &prefs.EmailCourseUpdates, &prefs.EmailMarketing,
 		&prefs.InAppEnabled, &prefs.QuietHoursEnabled, &prefs.QuietHoursStart,
-		&prefs.QuietHoursEnd, &prefs.MaxNotificationsPerDay, &prefs.UpdatedAt,
+		&prefs.QuietHoursEnd, &prefs.MaxNotificationsPerDay, &prefs.Timezone, &prefs.UpdatedAt,
 	)
 
 	if err != nil {
@@ -393,7 +393,7 @@ func (r *NotificationRepository) UpdateNotificationPreferences(prefs *models.Not
 			in_app_enabled = $11, quiet_hours_enabled = $12,
 			quiet_hours_start = $13::TEXT::TIME,
 			quiet_hours_end = $14::TEXT::TIME,
-			max_notifications_per_day = $15, updated_at = NOW()
+			max_notifications_per_day = $15, timezone = $16, updated_at = NOW()
 		WHERE user_id = $1
 	`
 
@@ -413,6 +413,7 @@ func (r *NotificationRepository) UpdateNotificationPreferences(prefs *models.Not
 		prefs.QuietHoursStart,
 		prefs.QuietHoursEnd,
 		prefs.MaxNotificationsPerDay,
+		prefs.Timezone,
 	)
 
 	if err != nil {

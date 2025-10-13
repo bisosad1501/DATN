@@ -90,6 +90,7 @@ type UpdatePreferencesRequest struct {
 	QuietHoursStart        *string `json:"quiet_hours_start,omitempty"` // "22:00:00"
 	QuietHoursEnd          *string `json:"quiet_hours_end,omitempty"`   // "08:00:00"
 	MaxNotificationsPerDay *int    `json:"max_notifications_per_day,omitempty"`
+	Timezone               *string `json:"timezone,omitempty"` // e.g., "Asia/Ho_Chi_Minh"
 }
 
 // PreferencesResponse represents preferences response
@@ -108,6 +109,7 @@ type PreferencesResponse struct {
 	QuietHoursStart        *string `json:"quiet_hours_start,omitempty"`
 	QuietHoursEnd          *string `json:"quiet_hours_end,omitempty"`
 	MaxNotificationsPerDay int     `json:"max_notifications_per_day"`
+	Timezone               string  `json:"timezone"`
 	UpdatedAt              string  `json:"updated_at"` // ISO8601
 }
 

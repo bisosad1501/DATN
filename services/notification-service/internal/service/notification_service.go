@@ -306,6 +306,9 @@ func (s *NotificationService) UpdatePreferences(userID uuid.UUID, req *models.Up
 	if req.MaxNotificationsPerDay != nil {
 		prefs.MaxNotificationsPerDay = *req.MaxNotificationsPerDay
 	}
+	if req.Timezone != nil {
+		prefs.Timezone = *req.Timezone
+	}
 
 	// Update in database
 	err = s.repo.UpdateNotificationPreferences(prefs)

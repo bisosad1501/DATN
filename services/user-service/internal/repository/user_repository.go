@@ -984,7 +984,7 @@ func (r *UserRepository) GetTopLearners(limit int) ([]models.LeaderboardEntry, e
 	query := `
 		SELECT 
 			ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC, lp.total_study_hours DESC) as rank,
-			up.user_id, up.full_name, up.avatar_url, 
+			up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
 			(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
 			lp.current_streak_days, lp.total_study_hours,
 			(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
@@ -1018,7 +1018,7 @@ func (r *UserRepository) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry
 		WITH ranked_users AS (
 			SELECT 
 				ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC, lp.total_study_hours DESC) as rank,
-				up.user_id, up.full_name, up.avatar_url, 
+				up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
 				(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
 				lp.current_streak_days, lp.total_study_hours,
 				(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count

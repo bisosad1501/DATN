@@ -24,16 +24,25 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		c.JSON(http.StatusOK, gin.H{
 			"service": "IELTS Platform API Gateway",
 			"version": "1.0.0",
+			"status":  "running",
 			"endpoints": gin.H{
 				"health":        "/health",
-				"auth":          "/api/v1/auth/*",
-				"user":          "/api/v1/user/*",
-				"courses":       "/api/v1/courses/*",
-				"exercises":     "/api/v1/exercises/*",
-				"submissions":   "/api/v1/submissions/*",
-				"notifications": "/api/v1/notifications/*",
-				"admin":         "/api/v1/admin/*",
+				"auth":          "/api/v1/auth/* (login, register, OAuth, password reset)",
+				"user":          "/api/v1/user/* (profile, progress, goals, reminders, leaderboard)",
+				"courses":       "/api/v1/courses/* (browse, enroll, reviews, videos, materials)",
+				"categories":    "/api/v1/categories (course categories)",
+				"lessons":       "/api/v1/lessons/* (lesson details)",
+				"enrollments":   "/api/v1/enrollments/* (enrollment management)",
+				"progress":      "/api/v1/progress/* (lesson progress tracking)",
+				"videos":        "/api/v1/videos/* (video tracking, subtitles)",
+				"materials":     "/api/v1/materials/* (material downloads)",
+				"exercises":     "/api/v1/exercises/* (browse, start exercises)",
+				"submissions":   "/api/v1/submissions/* (submit answers, get results)",
+				"tags":          "/api/v1/tags (exercise tags)",
+				"notifications": "/api/v1/notifications/* (notifications, preferences, timezone, scheduled)",
+				"admin":         "/api/v1/admin/* (course/exercise/notification management)",
 			},
+			"documentation": "See README.md for detailed API documentation",
 		})
 	})
 
@@ -50,15 +59,28 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		authGroup.POST("/login", proxy.ReverseProxy(cfg.Services.AuthService))
 		authGroup.POST("/refresh", proxy.ReverseProxy(cfg.Services.AuthService))
 		authGroup.POST("/logout", proxy.ReverseProxy(cfg.Services.AuthService))
-		authGroup.POST("/verify-email", proxy.ReverseProxy(cfg.Services.AuthService))
+		
+		// Email verification
+		authGroup.GET("/verify-email", proxy.ReverseProxy(cfg.Services.AuthService))               // Legacy token-based verification
+		authGroup.POST("/verify-email-by-code", proxy.ReverseProxy(cfg.Services.AuthService))      // New 6-digit code verification
 		authGroup.POST("/resend-verification", proxy.ReverseProxy(cfg.Services.AuthService))
-		authGroup.POST("/forgot-password", proxy.ReverseProxy(cfg.Services.AuthService))
-		authGroup.POST("/reset-password", proxy.ReverseProxy(cfg.Services.AuthService))
+		
+		// Password reset
+		authGroup.POST("/forgot-password", proxy.ReverseProxy(cfg.Services.AuthService))           // Request reset (sends 6-digit code)
+		authGroup.POST("/reset-password", proxy.ReverseProxy(cfg.Services.AuthService))            // Legacy token-based reset
+		authGroup.POST("/reset-password-by-code", proxy.ReverseProxy(cfg.Services.AuthService))    // New 6-digit code reset
+		
+		// Google OAuth
+		authGroup.GET("/google/url", proxy.ReverseProxy(cfg.Services.AuthService))                 // Get OAuth URL (Mobile/Web)
+		authGroup.GET("/google", proxy.ReverseProxy(cfg.Services.AuthService))                     // Web flow: Redirect to Google
+		authGroup.GET("/google/callback", proxy.ReverseProxy(cfg.Services.AuthService))            // Web flow: Handle callback
+		authGroup.POST("/google/token", proxy.ReverseProxy(cfg.Services.AuthService))              // Mobile flow: Exchange code
 
 		// Protected auth endpoints (require token)
 		authProtected := authGroup.Group("")
 		authProtected.Use(authMiddleware.ValidateToken())
 		{
+			authProtected.GET("/validate", proxy.ReverseProxy(cfg.Services.AuthService))
 			authProtected.POST("/change-password", proxy.ReverseProxy(cfg.Services.AuthService))
 			authProtected.GET("/me", proxy.ReverseProxy(cfg.Services.AuthService))
 		}
@@ -114,24 +136,43 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		// Public endpoints (browsing courses)
 		courseGroup.GET("", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))
 		courseGroup.GET("/:id", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))
-		courseGroup.GET("/:id/modules", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))
-		courseGroup.GET("/:id/modules/:module_id/lessons", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))
+		courseGroup.GET("/:id/reviews", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))          // Get course reviews
+		courseGroup.GET("/:id/categories", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))       // Get course categories
 
-		// Protected endpoints (enrollment, progress)
+		// Protected review endpoints
 		courseProtected := courseGroup.Group("")
 		courseProtected.Use(authMiddleware.ValidateToken())
 		{
 			courseProtected.POST("/:id/enroll", proxy.ReverseProxy(cfg.Services.CourseService))
 			courseProtected.GET("/my-courses", proxy.ReverseProxy(cfg.Services.CourseService))
 			courseProtected.GET("/:id/progress", proxy.ReverseProxy(cfg.Services.CourseService))
-			courseProtected.POST("/:id/lessons/:lesson_id/complete", proxy.ReverseProxy(cfg.Services.CourseService))
+			courseProtected.POST("/:id/reviews", proxy.ReverseProxy(cfg.Services.CourseService))                               // Create course review
 		}
 	}
+
+	// Categories (public)
+	v1.GET("/categories", proxy.ReverseProxy(cfg.Services.CourseService))
 
 	// Lessons endpoints (from Course Service)
 	lessonGroup := v1.Group("/lessons")
 	{
 		lessonGroup.GET("/:id", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.CourseService))
+	}
+
+	// Video endpoints (protected)
+	videoGroup := v1.Group("/videos")
+	videoGroup.Use(authMiddleware.ValidateToken())
+	{
+		videoGroup.POST("/track", proxy.ReverseProxy(cfg.Services.CourseService))              // Track video watch progress
+		videoGroup.GET("/history", proxy.ReverseProxy(cfg.Services.CourseService))             // Get watch history
+		videoGroup.GET("/:id/subtitles", proxy.ReverseProxy(cfg.Services.CourseService))       // Get video subtitles
+	}
+
+	// Materials endpoints (protected)
+	materialGroup := v1.Group("/materials")
+	materialGroup.Use(authMiddleware.ValidateToken())
+	{
+		materialGroup.POST("/:id/download", proxy.ReverseProxy(cfg.Services.CourseService))    // Record material download
 	}
 
 	// Enrollments endpoints (from Course Service)
@@ -198,8 +239,12 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		notificationGroup.PUT("/mark-all-read", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.DELETE("/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.POST("/devices", proxy.ReverseProxy(cfg.Services.NotificationService))
+		
+		// Preferences (including timezone)
 		notificationGroup.GET("/preferences", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.PUT("/preferences", proxy.ReverseProxy(cfg.Services.NotificationService))
+		notificationGroup.GET("/preferences/timezone", proxy.ReverseProxy(cfg.Services.NotificationService))        // Get timezone
+		notificationGroup.PUT("/preferences/timezone", proxy.ReverseProxy(cfg.Services.NotificationService))        // Update timezone
 
 		// Scheduled notifications
 		notificationGroup.POST("/scheduled", proxy.ReverseProxy(cfg.Services.NotificationService))
@@ -207,6 +252,14 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		notificationGroup.GET("/scheduled/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.PUT("/scheduled/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.DELETE("/scheduled/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
+	}
+
+	// Internal notification routes (service-to-service communication)
+	notificationInternal := v1.Group("/notifications/internal")
+	// TODO: Add internal auth middleware for service-to-service calls
+	{
+		notificationInternal.POST("/send", proxy.ReverseProxy(cfg.Services.NotificationService))      // Send notification from another service
+		notificationInternal.POST("/bulk", proxy.ReverseProxy(cfg.Services.NotificationService))      // Send bulk notifications
 	}
 
 	// ============================================
@@ -219,8 +272,14 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		adminGroup.POST("/courses", proxy.ReverseProxy(cfg.Services.CourseService))
 		adminGroup.PUT("/courses/:id", proxy.ReverseProxy(cfg.Services.CourseService))
 		adminGroup.DELETE("/courses/:id", proxy.ReverseProxy(cfg.Services.CourseService))
-		adminGroup.POST("/courses/:id/modules", proxy.ReverseProxy(cfg.Services.CourseService))
-		adminGroup.POST("/modules/:id/lessons", proxy.ReverseProxy(cfg.Services.CourseService))
+		adminGroup.POST("/courses/:id/publish", proxy.ReverseProxy(cfg.Services.CourseService))
+		
+		// Module and lesson management
+		adminGroup.POST("/modules", proxy.ReverseProxy(cfg.Services.CourseService))
+		adminGroup.POST("/lessons", proxy.ReverseProxy(cfg.Services.CourseService))
+		
+		// Video management
+		adminGroup.POST("/lessons/:lesson_id/videos", proxy.ReverseProxy(cfg.Services.CourseService))
 
 		// Exercise management
 		adminGroup.POST("/exercises", proxy.ReverseProxy(cfg.Services.ExerciseService))
