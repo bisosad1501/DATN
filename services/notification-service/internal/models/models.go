@@ -62,7 +62,7 @@ type NotificationPreferences struct {
 	QuietHoursStart        *string   `json:"quiet_hours_start,omitempty"` // TIME string "22:00:00"
 	QuietHoursEnd          *string   `json:"quiet_hours_end,omitempty"`   // TIME string "08:00:00"
 	MaxNotificationsPerDay int       `json:"max_notifications_per_day"`
-	Timezone               string    `json:"timezone"`                 // User timezone (e.g., "Asia/Ho_Chi_Minh", "America/New_York")
+	Timezone               string    `json:"timezone"` // User timezone (e.g., "Asia/Ho_Chi_Minh", "America/New_York")
 	UpdatedAt              time.Time `json:"updated_at"`
 }
 

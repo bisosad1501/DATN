@@ -34,9 +34,9 @@ func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, internalH
 		student.POST("/devices", handler.RegisterDevice) // Register device token
 
 		// Preferences
-		student.GET("/preferences", handler.GetPreferences)       // Get preferences
-		student.PUT("/preferences", handler.UpdatePreferences)    // Update preferences
-		student.GET("/preferences/timezone", handler.GetTimezone) // Get timezone
+		student.GET("/preferences", handler.GetPreferences)          // Get preferences
+		student.PUT("/preferences", handler.UpdatePreferences)       // Update preferences
+		student.GET("/preferences/timezone", handler.GetTimezone)    // Get timezone
 		student.PUT("/preferences/timezone", handler.UpdateTimezone) // Update timezone
 
 		// Scheduled notifications
