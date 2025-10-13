@@ -200,7 +200,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		notificationGroup.POST("/devices", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.GET("/preferences", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.PUT("/preferences", proxy.ReverseProxy(cfg.Services.NotificationService))
-		
+
 		// Scheduled notifications
 		notificationGroup.POST("/scheduled", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.GET("/scheduled", proxy.ReverseProxy(cfg.Services.NotificationService))
