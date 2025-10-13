@@ -1,33 +1,58 @@
 # IELTS Learning Platform - Backend Microservices
 
-## 🚀 Quick Start (cho Team Members)
+## 🚀 Quick Start
+
+### Cài đặt mới (Lần đầu hoặc Fresh Install)
 
 ```bash
-# Clone và khởi động hệ thống
+# 1. Clone project
 git clone https://github.com/bisosad1501/DATN.git
 cd DATN
-make start
 
-# Đợi ~30 giây để hệ thống khởi động, sau đó:
-# ✅ Auth Service: http://localhost:8081
-# ✅ PgAdmin: http://localhost:5050 (admin@ielts.local / admin_password)
-# ✅ RabbitMQ: http://localhost:15672 (admin / admin123)
+# 2. Chạy script tự động (tất cả trong 1 lệnh!)
+chmod +x setup.sh
+./setup.sh
+
+# ✅ Script sẽ tự động:
+#    - Kiểm tra Docker & Docker Compose
+#    - Tạo .env file (nếu chưa có)
+#    - Build tất cả Docker images
+#    - Start database & infrastructure
+#    - Chạy migrations
+#    - Start tất cả services
 ```
 
-**Chi tiết**: Xem [TEAM_SETUP.md](./TEAM_SETUP.md) để hướng dẫn đầy đủ.
-
----ng Platform - Backend Microservices
-
-## � Quick Start (cho Team Members)
+### Update code (Khi đã có project và cần pull code mới)
 
 ```bash
-# Clone và khởi động hệ thống trong 2 lệnh
-git clone <repository-url>
-cd DATN
-make start
+# Chỉ cần 1 lệnh!
+chmod +x update.sh
+./update.sh
+
+# ✅ Script sẽ tự động:
+#    - Pull code mới từ git
+#    - Rebuild các services đã thay đổi
+#    - Chạy migrations mới (nếu có)
+#    - Restart services
 ```
 
-**Chi tiết**: Xem [TEAM_SETUP.md](./TEAM_SETUP.md) để hướng dẫn đầy đủ.
+### Manual Setup (Nếu muốn control từng bước)
+
+```bash
+# 1. Tạo .env từ template
+cp .env.example .env
+
+# 2. Build và start services
+docker-compose up -d --build
+
+# 3. Chạy migrations
+docker-compose up migrations
+
+# 4. Kiểm tra status
+docker-compose ps
+```
+
+**Chi tiết**: Xem [TEAM_SETUP.md](./TEAM_SETUP.md) hoặc [QUICK_START.md](./QUICK_START.md)
 
 ---
 

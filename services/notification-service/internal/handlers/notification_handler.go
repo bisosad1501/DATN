@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -170,6 +171,7 @@ func (h *NotificationHandler) MarkAsRead(c *gin.Context) {
 
 // MarkAllAsRead marks all notifications as read
 // PUT /api/v1/notifications/mark-all-read
+// FIX #19: Returns count of marked notifications
 func (h *NotificationHandler) MarkAllAsRead(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -183,7 +185,7 @@ func (h *NotificationHandler) MarkAllAsRead(c *gin.Context) {
 	uid := userID.(uuid.UUID)
 
 	// Mark all as read
-	err := h.service.MarkAllAsRead(uid)
+	count, err := h.service.MarkAllAsRead(uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
@@ -193,7 +195,10 @@ func (h *NotificationHandler) MarkAllAsRead(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, models.SuccessResponse{
-		Message: "All notifications marked as read",
+		Message: fmt.Sprintf("Marked %d notifications as read", count),
+		Data: gin.H{
+			"marked_count": count,
+		},
 	})
 }
 

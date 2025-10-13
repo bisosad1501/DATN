@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -300,48 +301,52 @@ func (r *ExerciseRepository) CreateSubmission(userID, exerciseID uuid.UUID, devi
 		return nil, err
 	}
 
-	// Calculate attempt number
+	// FIX #13: Use database calculation in INSERT to avoid race condition
+	// Instead of SELECT + INSERT, do INSERT with subquery for attempt_number
+	submissionID := uuid.New()
+	now := time.Now()
+	status := "in_progress"
+	questionsAnswered := 0
+	correctAnswers := 0
+	timeSpent := 0
+
 	var attemptNumber int
 	err = r.db.QueryRow(`
-		SELECT COALESCE(MAX(attempt_number), 0) + 1
-		FROM user_exercise_attempts
-		WHERE user_id = $1 AND exercise_id = $2
-	`, userID, exerciseID).Scan(&attemptNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	submission := &models.Submission{
-		ID:                uuid.New(),
-		UserID:            userID,
-		ExerciseID:        exerciseID,
-		AttemptNumber:     attemptNumber,
-		Status:            "in_progress",
-		TotalQuestions:    totalQuestions,
-		QuestionsAnswered: 0,
-		CorrectAnswers:    0,
-		TimeSpentSeconds:  0,
-		TimeLimitMinutes:  timeLimitMinutes,
-		StartedAt:         time.Now(),
-		DeviceType:        deviceType,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
-	}
-
-	_, err = r.db.Exec(`
 		INSERT INTO user_exercise_attempts (
 			id, user_id, exercise_id, attempt_number, status, 
 			total_questions, questions_answered, correct_answers, 
 			time_limit_minutes, time_spent_seconds, started_at, device_type,
 			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-	`, submission.ID, submission.UserID, submission.ExerciseID, submission.AttemptNumber,
-		submission.Status, submission.TotalQuestions, submission.QuestionsAnswered,
-		submission.CorrectAnswers, submission.TimeLimitMinutes, submission.TimeSpentSeconds,
-		submission.StartedAt, submission.DeviceType, submission.CreatedAt, submission.UpdatedAt)
+		) VALUES (
+			$1, $2, $3, 
+			(SELECT COALESCE(MAX(attempt_number), 0) + 1 
+			 FROM user_exercise_attempts 
+			 WHERE user_id = $2 AND exercise_id = $3),
+			$4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+		)
+		RETURNING attempt_number
+	`, submissionID, userID, exerciseID, status, totalQuestions, questionsAnswered,
+		correctAnswers, timeLimitMinutes, timeSpent, now, deviceType, now, now).Scan(&attemptNumber)
 
 	if err != nil {
 		return nil, err
+	}
+
+	submission := &models.Submission{
+		ID:                submissionID,
+		UserID:            userID,
+		ExerciseID:        exerciseID,
+		AttemptNumber:     attemptNumber,
+		Status:            status,
+		TotalQuestions:    totalQuestions,
+		QuestionsAnswered: questionsAnswered,
+		CorrectAnswers:    correctAnswers,
+		TimeSpentSeconds:  timeSpent,
+		TimeLimitMinutes:  timeLimitMinutes,
+		StartedAt:         now,
+		DeviceType:        deviceType,
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 
 	return submission, nil
@@ -425,12 +430,20 @@ func (r *ExerciseRepository) SaveSubmissionAnswers(submissionID uuid.UUID, answe
 			}
 		}
 
-		// Save user answer
+		// FIX #12: Use UPSERT to prevent duplicate answers for same question
+		// Save user answer with conflict handling (last answer wins)
 		_, err = tx.Exec(`
 			INSERT INTO user_answers (
 				id, attempt_id, question_id, user_id, answer_text, selected_option_id,
 				is_correct, points_earned, time_spent_seconds, answered_at
 			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			ON CONFLICT (attempt_id, question_id) DO UPDATE SET
+				answer_text = EXCLUDED.answer_text,
+				selected_option_id = EXCLUDED.selected_option_id,
+				is_correct = EXCLUDED.is_correct,
+				points_earned = EXCLUDED.points_earned,
+				time_spent_seconds = COALESCE(EXCLUDED.time_spent_seconds, user_answers.time_spent_seconds),
+				answered_at = EXCLUDED.answered_at
 		`, uuid.New(), submissionID, answer.QuestionID, userID, answer.TextAnswer,
 			answer.SelectedOptionID, isCorrect, pointsEarned, answer.TimeSpentSeconds,
 			time.Now())
@@ -450,17 +463,24 @@ func (r *ExerciseRepository) CompleteSubmission(submissionID uuid.UUID) error {
 	}
 	defer tx.Rollback()
 
-	// Get attempt details
+	// FIX #18: Check if already completed to prevent duplicate completion
+	var currentStatus string
 	var startedAt time.Time
 	var totalQuestions int
 	var exerciseID uuid.UUID
 	err = tx.QueryRow(`
-		SELECT started_at, total_questions, exercise_id 
+		SELECT status, started_at, total_questions, exercise_id 
 		FROM user_exercise_attempts 
 		WHERE id = $1
-	`, submissionID).Scan(&startedAt, &totalQuestions, &exerciseID)
+	`, submissionID).Scan(&currentStatus, &startedAt, &totalQuestions, &exerciseID)
 	if err != nil {
 		return err
+	}
+
+	// If already completed, skip to avoid duplicate statistics
+	if currentStatus == "completed" {
+		log.Printf("[Exercise-Repo] Submission %s already completed, skipping duplicate completion", submissionID)
+		return nil
 	}
 
 	// Calculate statistics from user_answers

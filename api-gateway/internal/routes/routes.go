@@ -158,6 +158,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		// Public browsing
 		exerciseGroup.GET("", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.ExerciseService))
 		exerciseGroup.GET("/:id", authMiddleware.OptionalAuth(), proxy.ReverseProxy(cfg.Services.ExerciseService))
+		exerciseGroup.GET("/:id/tags", proxy.ReverseProxy(cfg.Services.ExerciseService)) // Get exercise tags
 
 		// Protected (requires login)
 		exerciseProtected := exerciseGroup.Group("")
@@ -167,14 +168,21 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		}
 	}
 
+	// Tags (public)
+	tagsGroup := v1.Group("/tags")
+	{
+		tagsGroup.GET("", proxy.ReverseProxy(cfg.Services.ExerciseService)) // Get all tags
+	}
+
 	// Submissions (all protected)
 	submissionGroup := v1.Group("/submissions")
 	submissionGroup.Use(authMiddleware.ValidateToken())
 	{
+		submissionGroup.POST("", proxy.ReverseProxy(cfg.Services.ExerciseService)) // Start new submission
 		submissionGroup.PUT("/:id/answers", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		submissionGroup.GET("/:id/result", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		submissionGroup.GET("/my", proxy.ReverseProxy(cfg.Services.ExerciseService))
-		submissionGroup.GET("", proxy.ReverseProxy(cfg.Services.ExerciseService)) // List my submissions
+		submissionGroup.GET("", proxy.ReverseProxy(cfg.Services.ExerciseService)) // List my submissions (duplicate of /my)
 	}
 
 	// ============================================
@@ -192,6 +200,13 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		notificationGroup.POST("/devices", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.GET("/preferences", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.PUT("/preferences", proxy.ReverseProxy(cfg.Services.NotificationService))
+		
+		// Scheduled notifications
+		notificationGroup.POST("/scheduled", proxy.ReverseProxy(cfg.Services.NotificationService))
+		notificationGroup.GET("/scheduled", proxy.ReverseProxy(cfg.Services.NotificationService))
+		notificationGroup.GET("/scheduled/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
+		notificationGroup.PUT("/scheduled/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
+		notificationGroup.DELETE("/scheduled/:id", proxy.ReverseProxy(cfg.Services.NotificationService))
 	}
 
 	// ============================================
@@ -211,10 +226,26 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		adminGroup.POST("/exercises", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		adminGroup.PUT("/exercises/:id", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		adminGroup.DELETE("/exercises/:id", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.POST("/exercises/:id/publish", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.POST("/exercises/:id/unpublish", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		adminGroup.POST("/exercises/:id/sections", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.GET("/exercises/:id/analytics", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.POST("/exercises/:id/tags", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.DELETE("/exercises/:id/tags/:tag_id", proxy.ReverseProxy(cfg.Services.ExerciseService))
+
+		// Question management
 		adminGroup.POST("/questions", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		adminGroup.POST("/questions/:id/options", proxy.ReverseProxy(cfg.Services.ExerciseService))
 		adminGroup.POST("/questions/:id/answer", proxy.ReverseProxy(cfg.Services.ExerciseService))
+
+		// Question Bank management
+		adminGroup.GET("/question-bank", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.POST("/question-bank", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.PUT("/question-bank/:id", proxy.ReverseProxy(cfg.Services.ExerciseService))
+		adminGroup.DELETE("/question-bank/:id", proxy.ReverseProxy(cfg.Services.ExerciseService))
+
+		// Tag management
+		adminGroup.POST("/tags", proxy.ReverseProxy(cfg.Services.ExerciseService))
 
 		// Notification management
 		adminGroup.POST("/notifications", proxy.ReverseProxy(cfg.Services.NotificationService))

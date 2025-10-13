@@ -2,6 +2,7 @@ package service
 
 import (
 	"log"
+	"time"
 
 	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/bisosad1501/ielts-platform/exercise-service/internal/models"
@@ -253,21 +254,36 @@ func (s *ExerciseService) handleExerciseCompletion(submissionID uuid.UUID) {
 		timeMinutes = int(duration.Minutes())
 	}
 
+	// FIX #15: Add retry mechanism for service integration
+	maxRetries := 3
+	retryDelay := time.Second
+
 	// 1. Update skill statistics in User Service (only if score > 0)
 	if score > 0 {
 		log.Printf("[Exercise-Service] Updating skill statistics in User Service...")
-		err = s.userServiceClient.UpdateSkillStatistics(client.UpdateSkillStatsRequest{
-			UserID:         submission.UserID.String(),
-			SkillType:      skillType,
-			Score:          score,
-			TimeMinutes:    timeMinutes,
-			IsCompleted:    true,
-			TotalPractices: 1,
-		})
-		if err != nil {
-			log.Printf("[Exercise-Service] ERROR: Failed to update skill stats: %v", err)
-		} else {
-			log.Printf("[Exercise-Service] SUCCESS: Updated skill statistics")
+		var lastErr error
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			err = s.userServiceClient.UpdateSkillStatistics(client.UpdateSkillStatsRequest{
+				UserID:         submission.UserID.String(),
+				SkillType:      skillType,
+				Score:          score,
+				TimeMinutes:    timeMinutes,
+				IsCompleted:    true,
+				TotalPractices: 1,
+			})
+			if err == nil {
+				log.Printf("[Exercise-Service] SUCCESS: Updated skill statistics (attempt %d)", attempt)
+				break
+			}
+			lastErr = err
+			if attempt < maxRetries {
+				log.Printf("[Exercise-Service] Attempt %d failed, retrying in %v...", attempt, retryDelay)
+				time.Sleep(retryDelay)
+				retryDelay *= 2 // Exponential backoff
+			}
+		}
+		if lastErr != nil {
+			log.Printf("[Exercise-Service] ERROR: Failed to update skill stats after %d attempts: %v", maxRetries, lastErr)
 		}
 	} else {
 		log.Printf("[Exercise-Service] Skipping skill statistics update (score = 0)")
@@ -275,31 +291,55 @@ func (s *ExerciseService) handleExerciseCompletion(submissionID uuid.UUID) {
 
 	// 2. Update overall progress in User Service
 	log.Printf("[Exercise-Service] Updating user progress in User Service...")
-	err = s.userServiceClient.UpdateProgress(client.UpdateProgressRequest{
-		UserID:            submission.UserID.String(),
-		ExercisesComplete: 1,
-		StudyMinutes:      timeMinutes,
-		SkillType:         skillType,
-		SessionType:       "exercise",
-		ResourceID:        submission.ExerciseID.String(),
-		Score:             score,
-	})
-	if err != nil {
-		log.Printf("[Exercise-Service] ERROR: Failed to update user progress: %v", err)
-	} else {
-		log.Printf("[Exercise-Service] SUCCESS: Updated user progress")
+	retryDelay = time.Second // Reset delay
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err = s.userServiceClient.UpdateProgress(client.UpdateProgressRequest{
+			UserID:            submission.UserID.String(),
+			ExercisesComplete: 1,
+			StudyMinutes:      timeMinutes,
+			SkillType:         skillType,
+			SessionType:       "exercise",
+			ResourceID:        submission.ExerciseID.String(),
+			Score:             score,
+		})
+		if err == nil {
+			log.Printf("[Exercise-Service] SUCCESS: Updated user progress (attempt %d)", attempt)
+			break
+		}
+		lastErr = err
+		if attempt < maxRetries {
+			log.Printf("[Exercise-Service] Attempt %d failed, retrying in %v...", attempt, retryDelay)
+			time.Sleep(retryDelay)
+			retryDelay *= 2 // Exponential backoff
+		}
+	}
+	if lastErr != nil {
+		log.Printf("[Exercise-Service] ERROR: Failed to update user progress after %d attempts: %v", maxRetries, lastErr)
 	}
 
 	// 3. Send exercise result notification
 	log.Printf("[Exercise-Service] Sending exercise result notification...")
-	err = s.notificationClient.SendExerciseResultNotification(
-		submission.UserID.String(),
-		exercise.Title,
-		score,
-	)
-	if err != nil {
-		log.Printf("[Exercise-Service] ERROR: Failed to send notification: %v", err)
-	} else {
-		log.Printf("[Exercise-Service] SUCCESS: Sent exercise result notification")
+	retryDelay = time.Second // Reset delay
+	lastErr = nil
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err = s.notificationClient.SendExerciseResultNotification(
+			submission.UserID.String(),
+			exercise.Title,
+			score,
+		)
+		if err == nil {
+			log.Printf("[Exercise-Service] SUCCESS: Sent exercise result notification (attempt %d)", attempt)
+			break
+		}
+		lastErr = err
+		if attempt < maxRetries {
+			log.Printf("[Exercise-Service] Attempt %d failed, retrying in %v...", attempt, retryDelay)
+			time.Sleep(retryDelay)
+			retryDelay *= 2 // Exponential backoff
+		}
+	}
+	if lastErr != nil {
+		log.Printf("[Exercise-Service] ERROR: Failed to send notification after %d attempts: %v", maxRetries, lastErr)
 	}
 }

@@ -68,6 +68,25 @@ services:
       retries: 3
 
   # ============================================
+  # Database Migrations Runner
+  # ============================================
+  
+  migrations:
+    image: postgres:15-alpine
+    container_name: ielts_migrations
+    volumes:
+      - ./database/migrations:/migrations
+      - ./scripts/run-migrations.sh:/run-migrations.sh
+    networks:
+      - ielts_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command: -c "chmod +x /run-migrations.sh && /run-migrations.sh"
+    restart: "no"
+
+  # ============================================
   # PgAdmin - Database Management UI
   # ============================================
   

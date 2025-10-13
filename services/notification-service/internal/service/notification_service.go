@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -20,11 +21,15 @@ func NewNotificationService(repo *repository.NotificationRepository) *Notificati
 }
 
 // CreateNotification creates a new notification after checking permissions
+// FIX #23: Use retry mechanism for preference checks
 func (s *NotificationService) CreateNotification(req *models.CreateNotificationRequest) (*models.Notification, error) {
-	// Check if notification can be sent
-	canSend, err := s.repo.CanSendNotification(req.UserID, req.Type, req.Category)
+	// Check if notification can be sent with retry
+	canSend, err := s.checkNotificationPermissionsWithRetry(req.UserID, req.Type, req.Category)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check notification permissions: %w", err)
+		// Log error but continue with default behavior (allow)
+		// Better to send than miss important notification
+		log.Printf("[Notification-Service] WARNING: Failed to check preferences after retry: %v. Allowing notification by default.", err)
+		canSend = true // Fail open
 	}
 
 	if !canSend {
@@ -156,16 +161,19 @@ func (s *NotificationService) MarkAsRead(id uuid.UUID, userID uuid.UUID) error {
 }
 
 // MarkAllAsRead marks all notifications as read for a user
-func (s *NotificationService) MarkAllAsRead(userID uuid.UUID) error {
-	err := s.repo.MarkAllAsRead(userID)
+// FIX #19: Returns count of marked notifications for idempotency
+func (s *NotificationService) MarkAllAsRead(userID uuid.UUID) (int, error) {
+	count, err := s.repo.MarkAllAsRead(userID)
 	if err != nil {
-		return fmt.Errorf("failed to mark all as read: %w", err)
+		return 0, fmt.Errorf("failed to mark all as read: %w", err)
 	}
 
-	// Log the event
-	s.logNotificationEvent(nil, userID, "mark_all_read", "success", nil, nil)
+	// Log the event (only if changes were made)
+	if count > 0 {
+		s.logNotificationEvent(nil, userID, "mark_all_read", "success", nil, nil)
+	}
 
-	return nil
+	return count, nil
 }
 
 // DeleteNotification deletes a notification
@@ -315,33 +323,76 @@ func (s *NotificationService) UpdatePreferences(userID uuid.UUID, req *models.Up
 }
 
 // SendBulkNotifications sends notifications to multiple users
+// FIX #21: Use batch insert with transaction for better performance and atomicity
 func (s *NotificationService) SendBulkNotifications(req *models.SendBulkNotificationRequest) (int, int, error) {
+	if len(req.UserIDs) == 0 {
+		return 0, 0, nil
+	}
+
+	// Pre-fetch all users' preferences in single query (optimization)
+	prefsMap, err := s.repo.GetBulkNotificationPreferences(req.UserIDs, req.Type, req.Category)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get bulk preferences: %w", err)
+	}
+
+	// Marshal action_data to JSON string if provided
+	var actionDataJSON *string
+	if req.ActionData != nil {
+		dataBytes, err := json.Marshal(req.ActionData)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to marshal action_data: %w", err)
+		}
+		jsonStr := string(dataBytes)
+		actionDataJSON = &jsonStr
+	}
+
+	// Filter users who can receive this notification and build notification list
+	var notifications []*models.Notification
 	successCount := 0
 	failedCount := 0
+	now := time.Now()
 
 	for _, userID := range req.UserIDs {
-		// Create notification request for each user
-		notifReq := &models.CreateNotificationRequest{
+		canSend, exists := prefsMap[userID]
+		if !exists || !canSend {
+			failedCount++
+			errMsg := "blocked by user preferences"
+			s.logNotificationEvent(nil, userID, "bulk_send", "blocked", &req.Type, &errMsg)
+			continue
+		}
+
+		notification := &models.Notification{
+			ID:         uuid.New(),
 			UserID:     userID,
 			Type:       req.Type,
 			Category:   req.Category,
 			Title:      req.Title,
 			Message:    req.Message,
 			ActionType: req.ActionType,
-			ActionData: req.ActionData,
+			ActionData: actionDataJSON,
 			IconURL:    req.IconURL,
 			ImageURL:   req.ImageURL,
+			IsRead:     false,
+			IsSent:     true,
+			SentAt:     &now,
+			CreatedAt:  now,
+			UpdatedAt:  now,
 		}
 
-		_, err := s.CreateNotification(notifReq)
+		notifications = append(notifications, notification)
+		successCount++
+	}
+
+	// Batch insert all notifications in single transaction
+	if len(notifications) > 0 {
+		err = s.repo.CreateBulkNotifications(notifications)
 		if err != nil {
-			failedCount++
-			// Log error but continue with other users
-			errMsg := err.Error()
-			s.logNotificationEvent(nil, userID, "bulk_send", "failed", &req.Type, &errMsg)
-		} else {
-			successCount++
+			// If batch insert fails, all notifications fail
+			return 0, len(req.UserIDs), fmt.Errorf("failed to create bulk notifications: %w", err)
 		}
+
+		// Log success
+		s.logNotificationEvent(nil, uuid.Nil, "bulk_send", "success", &req.Type, nil)
 	}
 
 	return successCount, failedCount, nil
@@ -380,6 +431,33 @@ func (s *NotificationService) RenderTemplate(templateCode string, variables map[
 	}
 
 	return title, body, nil
+}
+
+// checkNotificationPermissionsWithRetry checks notification permissions with retry
+// FIX #23: Retry mechanism for preference checks with fallback
+func (s *NotificationService) checkNotificationPermissionsWithRetry(userID uuid.UUID, notifType, category string) (bool, error) {
+	maxRetries := 3
+	baseDelay := 100 * time.Millisecond
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		canSend, err := s.repo.CanSendNotification(userID, notifType, category)
+
+		if err == nil {
+			if attempt > 1 {
+				log.Printf("[Notification-Service] SUCCESS: Preferences check succeeded on attempt %d", attempt)
+			}
+			return canSend, nil
+		}
+
+		log.Printf("[Notification-Service] WARNING: Preferences check failed (attempt %d/%d): %v", attempt, maxRetries, err)
+
+		if attempt < maxRetries {
+			delay := baseDelay * time.Duration(attempt)
+			time.Sleep(delay)
+		}
+	}
+
+	return false, fmt.Errorf("failed after %d attempts", maxRetries)
 }
 
 // logNotificationEvent creates a log entry for notification events
