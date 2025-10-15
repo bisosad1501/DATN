@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"github.com/bisosad1501/DATN/services/auth-service/internal/config"
@@ -26,13 +27,13 @@ type GoogleOAuthService interface {
 }
 
 type googleOAuthService struct {
-	config       *oauth2.Config
-	userRepo     repository.UserRepository
-	roleRepo     repository.RoleRepository
-	tokenRepo    repository.TokenRepository
-	auditRepo    repository.AuditLogRepository
-	authService  AuthService
-	appConfig    *config.Config
+	config      *oauth2.Config
+	userRepo    repository.UserRepository
+	roleRepo    repository.RoleRepository
+	tokenRepo   repository.TokenRepository
+	auditRepo   repository.AuditLogRepository
+	authService AuthService
+	appConfig   *config.Config
 }
 
 type GoogleUserInfo struct {
@@ -111,8 +112,10 @@ func (s *googleOAuthService) GetUserInfo(token *oauth2.Token) (*GoogleUserInfo, 
 
 func (s *googleOAuthService) AuthenticateUser(googleUser *GoogleUserInfo, ip, userAgent string) (*models.AuthResponse, error) {
 	// Find or create user by Google ID
+	log.Printf("[AuthenticateUser] Finding/creating user for Google ID: %s, Email: %s", googleUser.ID, googleUser.Email)
 	user, err := s.userRepo.FindOrCreateByGoogleID(googleUser.ID, googleUser.Email, googleUser.Name)
 	if err != nil {
+		log.Printf("[AuthenticateUser] ❌ Failed to find/create user: %v", err)
 		ipPtr := &ip
 		uaPtr := &userAgent
 		errMsg := fmt.Sprintf("Failed to find/create user: %v", err)
@@ -131,6 +134,7 @@ func (s *googleOAuthService) AuthenticateUser(googleUser *GoogleUserInfo, ip, us
 			},
 		}, nil
 	}
+	log.Printf("[AuthenticateUser] ✅ Found/created user: ID=%s, Email=%s, IsActive=%v", user.ID, user.Email, user.IsActive)
 
 	// Check if account is active
 	if !user.IsActive {

@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/bisosad1501/DATN/services/auth-service/internal/models"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/service"
@@ -318,6 +320,7 @@ func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	c.JSON(http.StatusOK, models.SuccessResponse{
 		Success: true,
 		Data: map[string]interface{}{
+			"valid":   true,
 			"user_id": userID,
 			"email":   email,
 			"role":    role,
@@ -462,60 +465,89 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
 	// Exchange code for token
+	log.Printf("[GoogleCallback] Starting token exchange for code: %s...", code[:10])
 	token, err := h.googleOAuthService.ExchangeCode(code)
 	if err != nil {
-		log.Printf("[GoogleCallback] Failed to exchange code: %v", err)
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Success: false,
-			Error: &models.ErrorData{
-				Code:    "EXCHANGE_FAILED",
-				Message: "Failed to exchange authorization code",
-			},
-		})
+		log.Printf("[GoogleCallback] ❌ Failed to exchange code: %v", err)
+		// Redirect to frontend with error
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:3000"
+		}
+		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, "Failed to exchange authorization code")
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 		return
 	}
+	log.Printf("[GoogleCallback] ✅ Token exchange successful")
 
 	// Get user info from Google
+	log.Printf("[GoogleCallback] Getting user info from Google...")
 	googleUser, err := h.googleOAuthService.GetUserInfo(token)
 	if err != nil {
-		log.Printf("[GoogleCallback] Failed to get user info: %v", err)
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Success: false,
-			Error: &models.ErrorData{
-				Code:    "USER_INFO_FAILED",
-				Message: "Failed to get user information from Google",
-			},
-		})
+		log.Printf("[GoogleCallback] ❌ Failed to get user info: %v", err)
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:3000"
+		}
+		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, "Failed to get user information from Google")
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 		return
 	}
+	log.Printf("[GoogleCallback] ✅ Got user info: %s (%s)", googleUser.Email, googleUser.ID)
 
 	// Authenticate or create user
 	ip := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
 
+	log.Printf("[GoogleCallback] Authenticating user...")
 	authResp, err := h.googleOAuthService.AuthenticateUser(googleUser, ip, userAgent)
 	if err != nil {
-		log.Printf("[GoogleCallback] Failed to authenticate user: %v", err)
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Success: false,
-			Error: &models.ErrorData{
-				Code:    "AUTH_FAILED",
-				Message: "Failed to authenticate user",
-			},
-		})
+		log.Printf("[GoogleCallback] ❌ Failed to authenticate user: %v", err)
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:3000"
+		}
+		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, "Failed to authenticate user")
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 		return
 	}
+	log.Printf("[GoogleCallback] ✅ User authenticated successfully")
+	log.Printf("[GoogleCallback] 🔍 authResp.Success = %v", authResp.Success)
+	log.Printf("[GoogleCallback] 🔍 authResp.Data != nil = %v", authResp.Data != nil)
+	if authResp.Data != nil {
+		log.Printf("[GoogleCallback] 🔍 authResp.Data.AccessToken = %s...", authResp.Data.AccessToken[:20])
+		log.Printf("[GoogleCallback] 🔍 authResp.Data.UserID = %s", authResp.Data.UserID)
+	}
 
-	// Return response
-	if authResp.Success {
-		c.JSON(http.StatusOK, authResp)
+	// For web flow: Redirect to frontend with tokens
+	// Frontend URL from environment or default
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+
+	if authResp.Success && authResp.Data != nil {
+		// Success: Redirect to frontend callback with tokens
+		redirectURL := fmt.Sprintf(
+			"%s/auth/google/callback?success=true&access_token=%s&refresh_token=%s&user_id=%s&email=%s&role=%s",
+			frontendURL,
+			authResp.Data.AccessToken,
+			authResp.Data.RefreshToken,
+			authResp.Data.UserID,
+			authResp.Data.Email,
+			authResp.Data.Role,
+		)
+		log.Printf("[GoogleCallback] 🎉 Redirecting to frontend: %s", frontendURL+"/auth/google/callback?success=true&...")
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 	} else {
-		// Handle specific error cases
-		statusCode := http.StatusBadRequest
-		if authResp.Error.Code == "ACCOUNT_INACTIVE" {
-			statusCode = http.StatusForbidden
+		// Error: Redirect to frontend login with error
+		errorMessage := "Authentication failed"
+		if authResp.Error != nil {
+			errorMessage = authResp.Error.Message
 		}
-		c.JSON(statusCode, authResp)
+		redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, errorMessage)
+		log.Printf("[GoogleCallback] ⚠️ Redirecting to login with error: %s", errorMessage)
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 	}
 }
 

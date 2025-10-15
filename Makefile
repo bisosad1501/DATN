@@ -1,15 +1,24 @@
-.PHONY: help setup start stop restart logs clean status health
+.PHONY: help setup start stop restart logs clean status health setup-frontend dev-frontend dev-all
 
 help: ## Hiển thị danh sách lệnh
 	@echo "Các lệnh có sẵn:"
-	@echo "  make setup   - Thiết lập ban đầu (tạo .env file)"
-	@echo "  make start   - Khởi động tất cả services"
-	@echo "  make stop    - Dừng tất cả services"
-	@echo "  make restart - Khởi động lại tất cả services"
-	@echo "  make logs    - Xem logs của tất cả services"
-	@echo "  make health  - Kiểm tra health của các services"
-	@echo "  make clean   - Dọn dẹp containers và volumes"
-	@echo "  make status  - Kiểm tra trạng thái các services"
+	@echo ""
+	@echo "Backend:"
+	@echo "  make setup         - Thiết lập ban đầu (tạo .env file)"
+	@echo "  make start         - Khởi động tất cả backend services"
+	@echo "  make stop          - Dừng tất cả backend services"
+	@echo "  make restart       - Khởi động lại tất cả backend services"
+	@echo "  make logs          - Xem logs của tất cả services"
+	@echo "  make health        - Kiểm tra health của các services"
+	@echo "  make clean         - Dọn dẹp containers và volumes"
+	@echo "  make status        - Kiểm tra trạng thái các services"
+	@echo ""
+	@echo "Frontend:"
+	@echo "  make setup-frontend - Thiết lập frontend (chạy setup script)"
+	@echo "  make dev-frontend   - Khởi động frontend dev server"
+	@echo ""
+	@echo "Full Stack:"
+	@echo "  make dev-all        - Khởi động cả backend và frontend"
 
 setup: ## Thiết lập môi trường ban đầu
 	@echo "📦 Đang thiết lập môi trường..."
@@ -69,3 +78,27 @@ status: ## Kiểm tra trạng thái các services
 health: ## Kiểm tra health của các services
 	@chmod +x scripts/health-check.sh
 	@./scripts/health-check.sh
+
+setup-frontend: ## Thiết lập frontend
+	@echo "🎨 Đang thiết lập Frontend..."
+	@cd Frontend-IELTSGo && chmod +x setup-frontend.sh && ./setup-frontend.sh
+
+dev-frontend: ## Khởi động frontend dev server
+	@echo "🎨 Đang khởi động Frontend dev server..."
+	@cd Frontend-IELTSGo && pnpm dev
+
+dev-all: ## Khởi động cả backend và frontend
+	@echo "🚀 Đang khởi động toàn bộ hệ thống..."
+	@echo ""
+	@echo "📦 Khởi động Backend services..."
+	@make start
+	@echo ""
+	@echo "⏳ Đợi 5 giây để backend khởi động..."
+	@sleep 5
+	@echo ""
+	@echo "🎨 Khởi động Frontend..."
+	@echo "Frontend sẽ chạy tại: http://localhost:3000"
+	@echo "Backend API Gateway: http://localhost:8080"
+	@echo ""
+	@cd Frontend-IELTSGo && pnpm dev
+

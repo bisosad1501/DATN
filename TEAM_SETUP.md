@@ -2,13 +2,18 @@
 
 ## Yêu cầu
 
+### Backend
 - **Docker Desktop** đã cài đặt và đang chạy
 - **Git** đã cài đặt
 - **Make** (có sẵn trên macOS/Linux, Windows cần cài thêm)
 
+### Frontend
+- **Node.js 18+** (recommended: 20.x LTS)
+- **pnpm** (hoặc npm/yarn)
+
 ---
 
-## Setup trong 3 bước đơn giản
+## 🎯 Setup Full Stack (Backend + Frontend)
 
 ### Bước 1: Clone repository
 
@@ -17,9 +22,14 @@ git clone <repository-url>
 cd DATN
 ```
 
-### Bước 2: Khởi động hệ thống
+### Bước 2: Setup Backend
 
 ```bash
+# Tự động setup tất cả
+chmod +x setup.sh
+./setup.sh
+
+# Hoặc dùng Make
 make start
 ```
 
@@ -32,10 +42,40 @@ Lệnh này sẽ tự động:
 
 **Lần đầu có thể mất 5-10 phút để build images.**
 
-### Bước 3: Kiểm tra
+### Bước 3: Setup Frontend
+
+```bash
+cd Frontend-IELTSGo
+./setup-frontend.sh
+```
+
+Script sẽ tự động:
+- ✅ Kiểm tra Node.js version
+- ✅ Cài đặt pnpm (nếu cần)
+- ✅ Tạo `.env.local` từ template
+- ✅ Install dependencies
+- ✅ Kiểm tra backend connection
+
+### Bước 4: Chạy Frontend
+
+```bash
+pnpm dev
+```
+
+Hoặc từ thư mục root:
+```bash
+make dev-frontend
+```
+
+### Bước 5: Kiểm tra
 
 Sau khi khởi động xong, truy cập:
 
+**Frontend & Backend:**
+- **Frontend App**: http://localhost:3000
+- **Backend API Gateway**: http://localhost:8080
+
+**Admin Tools:**
 - **PgAdmin** (quản lý DB): http://localhost:5050
   - Email: `admin@ielts.com`
   - Password: `admin123`
@@ -44,11 +84,47 @@ Sau khi khởi động xong, truy cập:
   - Username: `admin`
   - Password: `admin123`
 
-- **Auth Service API**: http://localhost:8001/health
+---
+
+## 🚀 Setup Chỉ Backend
+
+Nếu chỉ làm việc với Backend:
+
+```bash
+# Clone và setup
+git clone <repository-url>
+cd DATN
+make start
+
+# Kiểm tra
+make status
+```
 
 ---
 
-## Các lệnh hữu ích
+## 🎨 Setup Chỉ Frontend
+
+Nếu chỉ làm việc với Frontend (Backend đã chạy):
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd DATN/Frontend-IELTSGo
+
+# Setup tự động
+./setup-frontend.sh
+
+# Start dev server
+pnpm dev
+```
+
+**Chi tiết:** Xem [Frontend-IELTSGo/QUICK_START.md](./Frontend-IELTSGo/QUICK_START.md)
+
+---
+
+## 🛠️ Các lệnh hữu ích
+
+### Backend Commands
 
 ```bash
 # Xem trạng thái các services
@@ -65,13 +141,51 @@ make restart
 
 # Dọn dẹp hoàn toàn (xóa data)
 make clean
+
+# Kiểm tra health
+make health
+```
+
+### Frontend Commands
+
+```bash
+# Từ thư mục Frontend-IELTSGo/
+
+# Start dev server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+
+# Run linter
+pnpm lint
+```
+
+### Full Stack Commands
+
+```bash
+# Từ thư mục root
+
+# Setup frontend
+make setup-frontend
+
+# Start frontend dev server
+make dev-frontend
+
+# Start cả backend và frontend
+make dev-all
 ```
 
 ---
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
-### ❌ Lỗi "port already in use"
+### Backend Issues
+
+#### ❌ Lỗi "port already in use"
 
 Một service khác đang dùng port. Dừng service đó hoặc thay đổi port trong `docker-compose.yml`:
 
@@ -79,23 +193,74 @@ Một service khác đang dùng port. Dừng service đó hoặc thay đổi por
 # Kiểm tra process đang dùng port
 lsof -i :5432  # PostgreSQL
 lsof -i :6379  # Redis
+lsof -i :8080  # API Gateway
 lsof -i :8001  # Auth Service
 ```
 
-### ❌ Lỗi "permission denied"
+#### ❌ Lỗi "permission denied"
 
 Cấp quyền thực thi cho scripts:
 
 ```bash
 chmod +x database/init/*.sh
+chmod +x setup.sh
+chmod +x update.sh
 ```
 
-### ❌ Lỗi "database does not exist"
+#### ❌ Lỗi "database does not exist"
 
 Khởi động lại PostgreSQL để chạy lại init scripts:
 
 ```bash
 docker-compose restart postgres
+```
+
+### Frontend Issues
+
+#### ❌ Backend không kết nối được
+
+Kiểm tra backend có chạy không:
+```bash
+curl http://localhost:8080/api/v1/health
+```
+
+Nếu chưa chạy:
+```bash
+cd .. && make start
+```
+
+#### ❌ Port 3000 đã được sử dụng
+
+Kill process hoặc dùng port khác:
+```bash
+# Kill process
+lsof -ti:3000 | xargs kill -9
+
+# Hoặc dùng port khác
+PORT=3001 pnpm dev
+```
+
+#### ❌ Dependencies không cài được
+
+Xóa và cài lại:
+```bash
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+#### ❌ Lỗi TypeScript
+
+Xóa cache và rebuild:
+```bash
+rm -rf .next
+pnpm dev
+```
+
+#### ❌ Lỗi ".env.local not found"
+
+Tạo file từ template:
+```bash
+cp .env.local.example .env.local
 ```
 
 ### ❌ Lỗi "cannot connect to docker daemon"

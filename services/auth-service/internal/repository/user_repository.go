@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/bisosad1501/DATN/services/auth-service/internal/models"
@@ -132,35 +133,49 @@ func (r *userRepository) FindByGoogleID(googleID string) (*models.User, error) {
 
 func (r *userRepository) FindOrCreateByGoogleID(googleID, email, name string) (*models.User, error) {
 	// Try to find existing user
+	log.Printf("[FindOrCreateByGoogleID] Searching for Google ID: %s", googleID)
 	user, err := r.FindByGoogleID(googleID)
 	if err == nil {
+		log.Printf("[FindOrCreateByGoogleID] Found existing user by Google ID: %s", user.ID)
 		return user, nil
 	}
+	log.Printf("[FindOrCreateByGoogleID] No user found by Google ID, checking email: %s", email)
 
 	// Check if user exists with this email (non-Google account)
 	existingUser, err := r.FindByEmail(email)
-	if err == nil && existingUser.GoogleID == nil {
-		// Link Google ID to existing account
-		query := `
-			UPDATE users 
-			SET google_id = $1, oauth_provider = $2, is_verified = true, 
-			    email_verified_at = $3, updated_at = $4
-			WHERE id = $5
-			RETURNING id, email, password_hash, phone, google_id, oauth_provider,
-			          is_active, is_verified, email_verified_at,
-			          failed_login_attempts, locked_until, last_login_at, last_login_ip,
-			          created_at, updated_at, deleted_at
-		`
-		now := time.Now()
-		provider := "google"
-		err := r.db.Get(existingUser, query, googleID, provider, now, now, existingUser.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to link Google account: %w", err)
+	if err == nil {
+		log.Printf("[FindOrCreateByGoogleID] Found existing user by email: ID=%s, GoogleID=%v", existingUser.ID, existingUser.GoogleID)
+		if existingUser.GoogleID == nil {
+			log.Printf("[FindOrCreateByGoogleID] Linking Google ID to existing account...")
+			// Link Google ID to existing account
+			query := `
+				UPDATE users 
+				SET google_id = $1, oauth_provider = $2, is_verified = true, 
+				    email_verified_at = $3, updated_at = $4
+				WHERE id = $5
+				RETURNING id, email, password_hash, phone, google_id, oauth_provider,
+				          is_active, is_verified, email_verified_at,
+				          failed_login_attempts, locked_until, last_login_at, last_login_ip,
+				          created_at, updated_at, deleted_at
+			`
+			now := time.Now()
+			provider := "google"
+			err := r.db.Get(existingUser, query, googleID, provider, now, now, existingUser.ID)
+			if err != nil {
+				log.Printf("[FindOrCreateByGoogleID] ❌ Failed to link: %v", err)
+				return nil, fmt.Errorf("failed to link Google account: %w", err)
+			}
+			log.Printf("[FindOrCreateByGoogleID] ✅ Successfully linked Google ID to existing account")
+			return existingUser, nil
+		} else {
+			log.Printf("[FindOrCreateByGoogleID] ⚠️ User already has Google ID: %v", existingUser.GoogleID)
 		}
-		return existingUser, nil
+	} else {
+		log.Printf("[FindOrCreateByGoogleID] No user found by email, creating new user...")
 	}
 
 	// Create new user
+	log.Printf("[FindOrCreateByGoogleID] Creating new user with email: %s, Google ID: %s", email, googleID)
 	query := `
 		INSERT INTO users (id, email, google_id, oauth_provider, is_active, is_verified, 
 		                   email_verified_at, created_at, updated_at)
@@ -186,9 +201,11 @@ func (r *userRepository) FindOrCreateByGoogleID(googleID, email, name string) (*
 	)
 
 	if err != nil {
+		log.Printf("[FindOrCreateByGoogleID] ❌ Failed to create user: %v", err)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
+	log.Printf("[FindOrCreateByGoogleID] ✅ Successfully created new user: %s", newUser.ID)
 	return newUser, nil
 }
 

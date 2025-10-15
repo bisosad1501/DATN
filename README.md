@@ -2,7 +2,44 @@
 
 ## 🚀 Quick Start
 
-### Cài đặt mới (Lần đầu hoặc Fresh Install)
+### 🎯 Full Stack Setup (Backend + Frontend)
+
+```bash
+# 1. Clone project
+git clone https://github.com/bisosad1501/DATN.git
+cd DATN
+
+# 2. Setup Backend (Docker services)
+chmod +x setup.sh
+./setup.sh
+
+# 3. Setup Frontend
+cd Frontend-IELTSGo
+./setup-team.sh    # Script tự động setup cho team
+
+# Script sẽ tự động:
+# ✓ Check & install pnpm nếu chưa có
+# ✓ Copy .env.example → .env.local
+# ✓ Install dependencies (pnpm install)
+# ✓ Check backend status
+# ✓ Hỏi có muốn chạy dev server không
+```
+
+**Access:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8080
+- PgAdmin: http://localhost:5050
+
+**Frontend Documentation:**
+- 📖 **Setup Guide**: `Frontend-IELTSGo/SETUP_GUIDE.md` (chi tiết nhất)
+- 🚀 **Quick Start**: `FRONTEND_TEAM_SETUP.md` (ở root)
+- 🏗️ **Architecture**: `Frontend-IELTSGo/ARCHITECTURE.md`
+
+---
+
+### 📦 Backend Only Setup
+
+#### Cài đặt mới (Lần đầu hoặc Fresh Install)
 
 ```bash
 # 1. Clone project
@@ -22,7 +59,7 @@ chmod +x setup.sh
 #    - Start tất cả services
 ```
 
-### Update code (Khi đã có project và cần pull code mới)
+#### Update code (Khi đã có project và cần pull code mới)
 
 ```bash
 # Chỉ cần 1 lệnh!
@@ -36,7 +73,7 @@ chmod +x update.sh
 #    - Restart services
 ```
 
-### Manual Setup (Nếu muốn control từng bước)
+#### Manual Setup (Nếu muốn control từng bước)
 
 ```bash
 # 1. Tạo .env từ template
@@ -56,9 +93,16 @@ docker-compose ps
 
 ---
 
-## �📋 Tổng quan
+## 📋 Tổng quan
 
 Hệ thống học IELTS trực tuyến với kiến trúc microservices, được xây dựng bằng Golang và PostgreSQL.
+
+**Tech Stack:**
+- **Backend**: Go 1.21+ (Microservices)
+- **Frontend**: Next.js 14, TypeScript, TailwindCSS (trong folder `Frontend-IELTSGo/`)
+- **Database**: PostgreSQL 15
+- **Cache**: Redis
+- **Message Queue**: RabbitMQ
 
 ## 🏗️ Kiến trúc Microservices
 

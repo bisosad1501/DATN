@@ -1,0 +1,134 @@
+import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from "axios"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
+
+// Create axios instance
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 30000,
+})
+
+// Request interceptor - Add JWT token
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = getToken()
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+
+    // Log request in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("[API Request]", config.method?.toUpperCase(), config.url)
+    }
+
+    return config
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error)
+  },
+)
+
+// Response interceptor - Handle errors and token refresh
+apiClient.interceptors.response.use(
+  (response) => {
+    // Log response in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("[API Response]", response.status, response.config.url)
+    }
+    return response
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+
+      try {
+        // Try to refresh token
+        const refreshToken = getRefreshToken()
+        if (refreshToken) {
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+            refreshToken,
+          })
+
+          const { token } = response.data
+          setToken(token)
+
+          // Retry original request with new token
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+          }
+          return apiClient(originalRequest)
+        }
+      } catch (refreshError) {
+        // Refresh failed, redirect to login
+        removeToken()
+        removeRefreshToken()
+        if (typeof window !== "undefined") {
+          window.location.href = "/login"
+        }
+        return Promise.reject(refreshError)
+      }
+    }
+
+    // Handle other errors
+    if (process.env.NODE_ENV === "development") {
+      // Don't log 404 errors for progress endpoints (not yet implemented)
+      const is404ProgressEndpoint =
+        error.response?.status === 404 && originalRequest.url?.includes("/progress")
+
+      if (!is404ProgressEndpoint) {
+        console.error("[API Error]", error.response?.status, error.message)
+      }
+    }
+
+    return Promise.reject(error)
+  },
+)
+
+// Token management functions
+function getToken(): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("access_token")
+}
+
+function setToken(token: string): void {
+  if (typeof window === "undefined") return
+  localStorage.setItem("access_token", token)
+}
+
+function removeToken(): void {
+  if (typeof window === "undefined") return
+  localStorage.removeItem("access_token")
+}
+
+function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("refresh_token")
+}
+
+function setRefreshToken(token: string): void {
+  if (typeof window === "undefined") return
+  localStorage.setItem("refresh_token", token)
+}
+
+function removeRefreshToken(): void {
+  if (typeof window === "undefined") return
+  localStorage.removeItem("refresh_token")
+}
+
+// Export API client and token functions
+export { apiClient, getToken, setToken, removeToken, getRefreshToken, setRefreshToken, removeRefreshToken }
+
+// Export typed API methods
+export const api = {
+  get: <T = any>(url: string, config?: any) => apiClient.get<T>(url, config),
+  post: <T = any>(url: string, data?: any, config?: any) => apiClient.post<T>(url, data, config),
+  put: <T = any>(url: string, data?: any, config?: any) => apiClient.put<T>(url, data, config),
+  patch: <T = any>(url: string, data?: any, config?: any) => apiClient.patch<T>(url, data, config),
+  delete: <T = any>(url: string, config?: any) => apiClient.delete<T>(url, config),
+}
