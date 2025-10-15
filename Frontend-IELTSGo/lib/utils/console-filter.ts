@@ -13,7 +13,10 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     /progress\/summary/i,
     /progress\/analytics/i,
     /progress\/history/i,
+    /leaderboard/i,
     /Request failed with status code 404.*progress/i,
+    /Request failed with status code 404/i,
+    /Failed to load leaderboard/i,
   ]
 
   console.error = (...args: any[]) => {
