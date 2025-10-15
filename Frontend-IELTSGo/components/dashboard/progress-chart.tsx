@@ -17,10 +17,16 @@ interface ProgressChartProps {
 
 export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Value" }: ProgressChartProps) {
   const maxValue = useMemo(() => {
-    return Math.max(...data.map((d) => d.value), 1)
+    if (!data || data.length === 0) return 100
+    const values = data.map((d) => d.value).filter(v => typeof v === 'number' && !isNaN(v))
+    if (values.length === 0) return 100
+    return Math.max(...values, 1)
   }, [data])
 
   const chartHeight = 200
+  
+  // Ensure data is valid
+  const validData = data?.filter(d => d && typeof d.value === 'number' && !isNaN(d.value)) || []
 
   return (
     <Card>
@@ -31,14 +37,14 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
         <div className="relative" style={{ height: chartHeight }}>
           {/* Y-axis labels */}
           <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground pr-2">
-            <span>{maxValue}</span>
+            <span>{maxValue.toFixed(0)}</span>
             <span>{Math.round(maxValue / 2)}</span>
             <span>0</span>
           </div>
 
           {/* Chart area */}
           <div className="ml-8 h-full flex items-end justify-between gap-1">
-            {data.map((point, index) => {
+            {validData.map((point, index) => {
               const height = (point.value / maxValue) * 100
               return (
                 <div key={index} className="flex-1 flex flex-col items-center group">
@@ -68,16 +74,16 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
 
           {/* X-axis labels */}
           <div className="ml-8 mt-2 flex justify-between text-xs text-muted-foreground">
-            {data.length > 0 && (
+            {validData.length > 0 && (
               <>
                 <span>
-                  {new Date(data[0].date).toLocaleDateString("vi-VN", {
+                  {new Date(validData[0].date).toLocaleDateString("vi-VN", {
                     month: "short",
                     day: "numeric",
                   })}
                 </span>
                 <span>
-                  {new Date(data[data.length - 1].date).toLocaleDateString("vi-VN", {
+                  {new Date(validData[validData.length - 1].date).toLocaleDateString("vi-VN", {
                     month: "short",
                     day: "numeric",
                   })}

@@ -25,9 +25,10 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead }: Notifi
     try {
       setLoading(true)
       const response = await notificationsApi.getNotifications(1, 10)
-      setNotifications(response.data)
+      setNotifications(response.data || [])
     } catch (error) {
       console.error("Failed to load notifications:", error)
+      setNotifications([])
     } finally {
       setLoading(false)
     }
@@ -56,7 +57,7 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead }: Notifi
     return <div className="p-4 text-center text-sm text-muted-foreground">Loading notifications...</div>
   }
 
-  if (notifications.length === 0) {
+  if (!notifications || notifications.length === 0) {
     return (
       <div className="p-8 text-center">
         <p className="text-sm text-muted-foreground">No notifications yet</p>
@@ -74,7 +75,7 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead }: Notifi
       </div>
       <Separator />
       <ScrollArea className="h-[400px]">
-        {notifications.map((notification) => (
+        {notifications && notifications.map((notification) => (
           <NotificationItem
             key={notification.id}
             notification={notification}
