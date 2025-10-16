@@ -9,27 +9,43 @@ import type {
 } from "@/types/admin"
 import type { User, Course, Exercise, PaginatedResponse } from "@/types"
 
-// Dashboard & Analytics
+// Admin Analytics API
+// Note: Backend admin analytics endpoints are not yet implemented
+// Using available user and course endpoints as workaround
 export const adminApi = {
-  // Dashboard Overview
-  async getDashboardStats(): Promise<DashboardStats> {
-    const response = await apiClient.get<DashboardStats>("/admin/analytics/overview")
-    return response.data
+  // Get overview analytics (MOCK - backend not implemented)
+  getOverviewAnalytics: async () => {
+    // TODO: Backend needs to implement /admin/analytics/overview
+    // For now, return mock data
+    return {
+      totalUsers: 0,
+      totalCourses: 0,
+      totalExercises: 0,
+      activeUsers: 0,
+    }
   },
 
-  async getUserGrowthData(days = 30): Promise<{ date: string; count: number }[]> {
-    const response = await apiClient.get(`/admin/analytics/users?days=${days}`)
-    return response.data
+  // Get user analytics (MOCK - backend not implemented)
+  getUserAnalytics: async (days: number = 30) => {
+    // TODO: Backend needs to implement /admin/analytics/users
+    return {
+      newUsers: [],
+      activeUsers: [],
+    }
   },
 
-  async getEnrollmentData(days = 7): Promise<{ date: string; enrollments: number; completions: number }[]> {
-    const response = await apiClient.get(`/admin/analytics/enrollments?days=${days}`)
-    return response.data
+  // Get enrollment analytics (MOCK - backend not implemented)  
+  getEnrollmentAnalytics: async (days: number = 7) => {
+    // TODO: Backend needs to implement /admin/analytics/enrollments
+    return {
+      enrollments: [],
+    }
   },
 
-  async getRecentActivities(limit = 20): Promise<Activity[]> {
-    const response = await apiClient.get<Activity[]>(`/admin/activities?limit=${limit}`)
-    return response.data
+  // Get recent activities (MOCK - backend not implemented)
+  getRecentActivities: async (limit: number = 20) => {
+    // TODO: Backend needs to implement /admin/activities
+    return []
   },
 
   // User Management

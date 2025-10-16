@@ -7,16 +7,16 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const originalError = console.error
   const originalWarn = console.warn
 
-  // List of error patterns to suppress
+    // List of error patterns to suppress
   const suppressPatterns = [
     /Failed to load resource.*404.*Not Found/i,
     /progress\/summary/i,
     /progress\/analytics/i,
     /progress\/history/i,
-    /leaderboard/i,
     /Request failed with status code 404.*progress/i,
-    /Request failed with status code 404/i,
-    /Failed to load leaderboard/i,
+    /admin\/analytics/i,
+    /admin\/activities/i,
+    /Request failed with status code 404.*admin/i,
   ]
 
   console.error = (...args: any[]) => {
@@ -38,7 +38,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   }
 
   // Log that filter is active
-  console.log('[Console Filter] Suppressing known 404 errors for unimplemented progress endpoints')
+  console.log('[Console Filter] Suppressing known 404 errors for unimplemented endpoints (progress, admin)')
 }
 
 export {}

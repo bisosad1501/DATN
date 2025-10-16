@@ -42,16 +42,62 @@ export default function AdminDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const [statsData, growthData, enrollData, activitiesData] = await Promise.all([
-        adminApi.getDashboardStats(),
-        adminApi.getUserGrowthData(30),
-        adminApi.getEnrollmentData(7),
-        adminApi.getRecentActivities(20),
-      ])
-      setStats(statsData)
-      setUserGrowthData(growthData)
-      setEnrollmentData(enrollData)
-      setActivities(activitiesData)
+      
+      // TODO: Uncomment when backend admin API is implemented
+      // const [statsData, growthData, enrollData, activitiesData] = await Promise.all([
+      //   adminApi.getDashboardStats(),
+      //   adminApi.getUserGrowthData(30),
+      //   adminApi.getEnrollmentData(7),
+      //   adminApi.getRecentActivities(20),
+      // ])
+      // setStats(statsData)
+      // setUserGrowthData(growthData)
+      // setEnrollmentData(enrollData)
+      // setActivities(activitiesData)
+      
+      // Using mock data until backend is ready
+      setStats({
+        totalUsers: 1247,
+        totalCourses: 45,
+        totalExercises: 234,
+        totalInstructors: 23,
+        activeStudents: 892,
+        newUsersThisWeek: 45,
+        completionRate: 78.5,
+        averageRating: 4.6,
+      } as any)
+      
+      setUserGrowthData(
+        Array.from({ length: 30 }, (_, i) => ({
+          date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
+          count: Math.floor(Math.random() * 50) + 20,
+        }))
+      )
+      
+      setEnrollmentData(
+        Array.from({ length: 7 }, (_, i) => ({
+          date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
+          enrollments: Math.floor(Math.random() * 20) + 10,
+          completions: Math.floor(Math.random() * 10) + 5,
+        }))
+      )
+      
+      setActivities([
+        {
+          id: "1",
+          type: "user",
+          user: { id: "1", name: "John Doe", email: "john@example.com" },
+          description: "New user registered",
+          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "2",
+          type: "course",
+          user: { id: "2", name: "Jane Smith", email: "jane@example.com" },
+          description: "Completed IELTS Writing Masterclass",
+          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        },
+      ] as any)
     } catch (error) {
       console.error("Failed to load dashboard data:", error)
     } finally {
@@ -61,8 +107,11 @@ export default function AdminDashboard() {
 
   const loadActivities = async () => {
     try {
-      const activitiesData = await adminApi.getRecentActivities(20)
-      setActivities(activitiesData)
+      // TODO: Uncomment when backend admin API is implemented
+      // const activitiesData = await adminApi.getRecentActivities(20)
+      // setActivities(activitiesData)
+      
+      // Mock data - no need to refresh
     } catch (error) {
       console.error("Failed to load activities:", error)
     }

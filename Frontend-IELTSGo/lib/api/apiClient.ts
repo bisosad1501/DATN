@@ -75,13 +75,16 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Handle other errors
+        // Handle other errors
     if (process.env.NODE_ENV === "development") {
-      // Don't log 404 errors for progress endpoints (not yet implemented)
-      const is404ProgressEndpoint =
-        error.response?.status === 404 && originalRequest.url?.includes("/progress")
+      // Don't log 404 errors for unimplemented endpoints
+      const is404UnimplementedEndpoint =
+        error.response?.status === 404 && 
+        (originalRequest.url?.includes("/progress") || 
+         originalRequest.url?.includes("/admin/analytics") ||
+         originalRequest.url?.includes("/admin/activities"))
 
-      if (!is404ProgressEndpoint) {
+      if (!is404UnimplementedEndpoint) {
         console.error("[API Error]", error.response?.status, error.message)
       }
     }
