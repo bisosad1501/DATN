@@ -117,16 +117,26 @@ export function AdminSidebar() {
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-gray-800 px-4">
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <Logo variant="light" size="sm" />
-              <span className="font-heading text-lg font-bold text-primary">Admin</span>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                <span className="font-heading text-xl font-bold text-white">I</span>
+              </div>
+              <div>
+                <div className="font-heading text-lg font-bold text-white">IELTSGo</div>
+                <div className="text-xs text-gray-400">Admin Panel</div>
+              </div>
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-600 shadow-lg mx-auto">
+              <span className="font-heading text-xl font-bold text-white">I</span>
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-white hover:bg-gray-800"
+            className={cn("text-white hover:bg-gray-800", collapsed && "hidden")}
           >
             {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
           </Button>
@@ -145,8 +155,10 @@ export function AdminSidebar() {
                   }
                 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive(item.href) ? "bg-primary text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  isActive(item.href) 
+                    ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/20" 
+                    : "text-gray-300 hover:bg-gray-800/50 hover:text-white",
                 )}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -166,10 +178,10 @@ export function AdminSidebar() {
                       key={child.href}
                       href={child.href}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
                         isActive(child.href)
-                          ? "bg-primary/20 text-primary"
-                          : "text-gray-400 hover:bg-gray-800 hover:text-white",
+                          ? "bg-red-500/10 text-red-400 font-medium"
+                          : "text-gray-400 hover:bg-gray-800/50 hover:text-white",
                       )}
                     >
                       <child.icon className="h-4 w-4" />
@@ -184,12 +196,19 @@ export function AdminSidebar() {
 
         {/* Footer */}
         <div className="border-t border-gray-800 p-4">
-          {!collapsed && (
-            <div className="text-xs text-gray-400">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                <span>All systems operational</span>
+          {!collapsed ? (
+            <div className="rounded-lg bg-gray-800/50 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-xs font-medium text-green-400">System Operational</span>
               </div>
+              <div className="text-xs text-gray-500">
+                Version 1.0.0
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
             </div>
           )}
         </div>
