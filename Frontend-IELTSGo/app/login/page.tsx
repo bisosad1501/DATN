@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { BrandText } from "@/components/ui/brand-text"
 
 export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth()
@@ -90,7 +91,9 @@ export default function LoginPage() {
             <Link href="/" className="inline-block">
               <Image src="/images/logo.png" alt="IELTSGo" width={80} height={80} className="mx-auto" />
             </Link>
-            <h1 className="mt-6 text-3xl font-bold text-foreground">Welcome back</h1>
+            <h1 className="mt-6 text-3xl font-bold">
+              Welcome back to <BrandText className="text-3xl" />
+            </h1>
             <p className="mt-2 text-muted-foreground">Sign in to continue your IELTS journey</p>
           </div>
 

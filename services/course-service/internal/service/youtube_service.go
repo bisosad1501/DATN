@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
@@ -89,6 +91,28 @@ func (s *YouTubeService) UploadVideo(req *UploadVideoRequest) (*UploadVideoRespo
 	}, nil
 }
 
+// GetVideoDuration retrieves video duration in seconds
+func (s *YouTubeService) GetVideoDuration(videoID string) (int64, error) {
+	call := s.service.Videos.List([]string{"contentDetails"})
+	call.Id(videoID)
+
+	response, err := call.Do()
+	if err != nil {
+		return 0, fmt.Errorf("error fetching video duration: %w", err)
+	}
+
+	if len(response.Items) == 0 {
+		return 0, fmt.Errorf("video not found: %s", videoID)
+	}
+
+	video := response.Items[0]
+
+	// Parse duration (ISO 8601 format: PT1H2M3S)
+	duration := parseDuration(video.ContentDetails.Duration)
+
+	return duration, nil
+}
+
 // GetVideoDetails retrieves video information
 func (s *YouTubeService) GetVideoDetails(videoID string) (*UploadVideoResponse, error) {
 	call := s.service.Videos.List([]string{"snippet", "contentDetails", "status"})
@@ -137,8 +161,38 @@ func ExtractVideoID(url string) string {
 // Helper functions
 func parseDuration(isoDuration string) int64 {
 	// Parse ISO 8601 duration format (PT1H2M3S) to seconds
-	// Simplified implementation - use proper parser in production
-	return 0
+	// Example: "PT1H20M23S" = 1 hour 20 minutes 23 seconds = 4823 seconds
+
+	if isoDuration == "" || !strings.HasPrefix(isoDuration, "PT") {
+		return 0
+	}
+
+	// Remove "PT" prefix
+	duration := strings.TrimPrefix(isoDuration, "PT")
+
+	var hours, minutes, seconds int64
+
+	// Parse hours
+	if strings.Contains(duration, "H") {
+		parts := strings.Split(duration, "H")
+		hours, _ = strconv.ParseInt(parts[0], 10, 64)
+		duration = parts[1]
+	}
+
+	// Parse minutes
+	if strings.Contains(duration, "M") {
+		parts := strings.Split(duration, "M")
+		minutes, _ = strconv.ParseInt(parts[0], 10, 64)
+		duration = parts[1]
+	}
+
+	// Parse seconds
+	if strings.Contains(duration, "S") {
+		parts := strings.Split(duration, "S")
+		seconds, _ = strconv.ParseInt(parts[0], 10, 64)
+	}
+
+	return hours*3600 + minutes*60 + seconds
 }
 
 func getBestThumbnail(thumbnails *youtube.ThumbnailDetails) string {

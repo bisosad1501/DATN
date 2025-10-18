@@ -73,10 +73,16 @@ type CourseDetailResponse struct {
 	EnrollmentDetails *CourseEnrollment   `json:"enrollment_details,omitempty"`
 }
 
-// ModuleWithLessons represents a module with its lessons
+// ModuleWithLessons represents a module with its lessons (including videos)
 type ModuleWithLessons struct {
-	Module  Module   `json:"module"`
-	Lessons []Lesson `json:"lessons"`
+	Module  Module             `json:"module"`
+	Lessons []LessonWithVideos `json:"lessons"`
+}
+
+// LessonWithVideos represents a lesson with its video information
+type LessonWithVideos struct {
+	Lesson
+	Videos []LessonVideo `json:"videos,omitempty"`
 }
 
 // EnrollmentRequest represents enrollment request

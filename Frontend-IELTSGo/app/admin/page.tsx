@@ -57,14 +57,20 @@ export default function AdminDashboard() {
       // Using mock data until backend is ready
       setStats({
         totalUsers: 1247,
-        totalCourses: 45,
-        totalExercises: 234,
+        totalStudents: 892,
         totalInstructors: 23,
-        activeStudents: 892,
-        newUsersThisWeek: 45,
-        completionRate: 78.5,
-        averageRating: 4.6,
-      } as any)
+        totalAdmins: 5,
+        userGrowth: 12.5,
+        totalCourses: 45,
+        activeCourses: 38,
+        draftCourses: 7,
+        totalExercises: 234,
+        submissionsToday: 87,
+        averageCompletionRate: 78.5,
+        systemHealth: "healthy",
+        cpuUsage: 45,
+        memoryUsage: 62,
+      })
       
       setUserGrowthData(
         Array.from({ length: 30 }, (_, i) => ({
@@ -135,119 +141,91 @@ export default function AdminDashboard() {
 
   if (loading || !stats) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="h-32 bg-gray-200 rounded-lg"></CardHeader>
-              </Card>
-            ))}
-          </div>
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="h-32 bg-gray-200 rounded-lg"></CardHeader>
+            </Card>
+          ))}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your platform.</p>
-        </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your platform.</p>
+      </div>
         {/* Stat Cards */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Users */}
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium opacity-90">Total Users</CardTitle>
-              <Users className="h-6 w-6 opacity-75" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="text-3xl font-bold mb-2">{stats.totalUsers.toLocaleString()}</div>
-              <div className="flex items-center gap-2 text-sm mb-3">
-                {stats.userGrowth >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                <span className="opacity-90">{Math.abs(stats.userGrowth)}% this month</span>
-              </div>
-              <div className="space-y-1 text-xs opacity-80 border-t border-white/20 pt-3">
-                <div>Students: {stats.totalStudents}</div>
-                <div>Instructors: {stats.totalInstructors}</div>
-                <div>Admins: {stats.totalAdmins}</div>
-              </div>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                {stats.userGrowth >= 0 ? (
+                  <>
+                    <TrendingUp className="w-3 h-3 text-green-500" />
+                    <span className="text-green-500">+{stats.userGrowth}%</span>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown className="w-3 h-3 text-red-500" />
+                    <span className="text-red-500">{stats.userGrowth}%</span>
+                  </>
+                )}
+                {" "}from last month
+              </p>
             </CardContent>
           </Card>
 
           {/* Total Courses */}
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium opacity-90">Total Courses</CardTitle>
-              <BookOpen className="h-6 w-6 opacity-75" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="text-3xl font-bold mb-4">{stats.totalCourses.toLocaleString()}</div>
-              <div className="space-y-1 text-sm opacity-80 border-t border-white/20 pt-3">
-                <div>Active: {stats.activeCourses}</div>
-                <div>Draft: {stats.draftCourses}</div>
-              </div>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalCourses.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.activeCourses} active, {stats.draftCourses} draft
+              </p>
             </CardContent>
           </Card>
 
           {/* Total Exercises */}
-          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium opacity-90">Total Exercises</CardTitle>
-              <PenTool className="h-6 w-6 opacity-75" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Exercises</CardTitle>
+              <PenTool className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="text-3xl font-bold mb-4">{stats.totalExercises.toLocaleString()}</div>
-              <div className="space-y-1 text-sm opacity-80 border-t border-white/20 pt-3">
-                <div>Submissions today: {stats.submissionsToday}</div>
-                <div>Avg completion: {stats.averageCompletionRate}%</div>
-              </div>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalExercises.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.submissionsToday} submissions today
+              </p>
             </CardContent>
           </Card>
 
-          {/* System Health */}
-          <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium opacity-90">System Health</CardTitle>
-              <ActivityIcon className="h-6 w-6 opacity-75" />
+          {/* Total Students */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <ActivityIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div
-                  className={`h-3 w-3 rounded-full animate-pulse ${stats.systemHealth === "healthy" ? "bg-green-300" : stats.systemHealth === "warning" ? "bg-yellow-300" : "bg-red-300"}`}
-                ></div>
-                <span className="text-lg font-semibold">
-                  {stats.systemHealth === "healthy"
-                    ? "Operational"
-                    : stats.systemHealth === "warning"
-                      ? "Warning"
-                      : "Critical"}
-                </span>
-              </div>
-              <div className="space-y-3 border-t border-white/20 pt-3">
-                <div>
-                  <div className="flex justify-between text-xs mb-1.5 opacity-80">
-                    <span>CPU</span>
-                    <span>{stats.cpuUsage}%</span>
-                  </div>
-                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${stats.cpuUsage}%` }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1.5 opacity-80">
-                    <span>Memory</span>
-                    <span>{stats.memoryUsage}%</span>
-                  </div>
-                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${stats.memoryUsage}%` }}></div>
-                  </div>
-                </div>
-              </div>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalStudents.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.totalInstructors} instructors
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -255,52 +233,52 @@ export default function AdminDashboard() {
         {/* Charts */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* User Growth Chart */}
-          <Card className="shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">User Growth (Last 30 Days)</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle>User Growth (Last 30 Days)</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-6">
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={userGrowthData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ED372A20" />
                   <XAxis 
                     dataKey="date" 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: '#101615' }}
                     tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#101615' }} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                     labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    contentStyle={{ border: '1px solid #ED372A20', borderRadius: '8px' }}
                   />
-                  <Line type="monotone" dataKey="count" stroke="#ED372A" strokeWidth={3} dot={{ fill: '#ED372A', r: 4 }} />
+                  <Line type="monotone" dataKey="count" stroke="#ED372A" strokeWidth={3} dot={{ fill: '#ED372A' }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
           {/* Enrollment Statistics */}
-          <Card className="shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">Enrollment Statistics (Last 7 Days)</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle>Enrollment Statistics (Last 7 Days)</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-6">
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={enrollmentData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ED372A20" />
                   <XAxis 
                     dataKey="date" 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: '#101615' }}
                     tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#101615' }} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                     labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    contentStyle={{ border: '1px solid #ED372A20', borderRadius: '8px' }}
                   />
                   <Legend />
-                  <Bar dataKey="enrollments" fill="#ED372A" name="New Enrollments" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="completions" fill="#101615" name="Completions" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="enrollments" fill="#ED372A" name="New Enrollments" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completions" fill="#101615" name="Completions" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -310,40 +288,37 @@ export default function AdminDashboard() {
         {/* Activity Feed & Quick Actions */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Activity Feed */}
-          <Card className="lg:col-span-2 shadow-lg">
-            <CardHeader className="pb-4 border-b">
-              <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4">
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+            <CardContent className="pt-6">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
                 {activities && activities.length > 0 ? (
                   activities.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                      <Avatar className="h-10 w-10 border-2 border-white shadow">
+                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <Avatar className="h-10 w-10">
                         <AvatarImage src={activity.actorAvatar || "/placeholder.svg"} />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                        <AvatarFallback>
                           {activity.actorName?.charAt(0) || "?"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm leading-relaxed">
-                          <span className="font-semibold text-gray-900">{activity.actorName || "Unknown"}</span>{" "}
-                          <span className="text-gray-600">{activity.action || "performed an action"}</span>
+                        <p className="text-sm">
+                          <span className="font-medium">{activity.actorName || "Unknown"}</span>{" "}
+                          <span className="text-muted-foreground">{activity.action || "performed an action"}</span>
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {activity.timestamp ? formatDistanceToNow(activity.timestamp) : "Just now"}
                         </p>
                       </div>
-                      <Badge
-                        variant={activity.type === "user" ? "default" : activity.type === "course" ? "secondary" : "outline"}
-                        className="text-xs"
-                      >
+                      <Badge variant="outline" className="text-xs">
                         {activity.type}
                       </Badge>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <p>No recent activity</p>
                   </div>
                 )}
@@ -352,31 +327,30 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <Card className="shadow-lg">
-            <CardHeader className="pb-4 border-b">
-              <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 space-y-2">
-              <Button className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors" variant="outline">
-                <Bell className="mr-3 h-4 w-4" />
+            <CardContent className="space-y-2 pt-6">
+              <Button className="w-full justify-start" variant="default">
+                <Bell className="mr-2 h-4 w-4" />
                 Create Notification
               </Button>
-              <Button className="w-full justify-start hover:bg-green-50 hover:text-green-600 transition-colors" variant="outline">
-                <Users className="mr-3 h-4 w-4" />
+              <Button className="w-full justify-start" variant="outline">
+                <Users className="mr-2 h-4 w-4" />
                 Add New User
               </Button>
-              <Button className="w-full justify-start hover:bg-orange-50 hover:text-orange-600 transition-colors" variant="outline">
-                <BookOpen className="mr-3 h-4 w-4" />
+              <Button className="w-full justify-start" variant="outline">
+                <BookOpen className="mr-2 h-4 w-4" />
                 Review Pending Content
               </Button>
-              <Button className="w-full justify-start hover:bg-purple-50 hover:text-purple-600 transition-colors" variant="outline">
-                <FileText className="mr-3 h-4 w-4" />
+              <Button className="w-full justify-start" variant="outline">
+                <FileText className="mr-2 h-4 w-4" />
                 View System Logs
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
   )
 }

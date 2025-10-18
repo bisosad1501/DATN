@@ -94,6 +94,12 @@ func SetupRoutes(
 
 			// Video management (instructor and admin)
 			admin.POST("/lessons/:lesson_id/videos", authMiddleware.RequireRole("instructor", "admin"), handler.AddVideoToLesson)
+
+			// Video duration sync (admin only)
+			admin.POST("/videos/sync-all", authMiddleware.RequireRole("admin"), handler.SyncAllVideoDurations)                      // Sync videos with missing duration
+			admin.POST("/videos/force-resync-all", authMiddleware.RequireRole("admin"), handler.ForceResyncAllVideos)               // Force re-sync ALL videos
+			admin.POST("/videos/:video_id/sync-duration", authMiddleware.RequireRole("admin"), handler.SyncSingleVideoDuration)     // Sync single video
+			admin.POST("/lessons/:lesson_id/sync-durations", authMiddleware.RequireRole("admin"), handler.SyncLessonVideoDurations) // Sync lesson videos
 		}
 	}
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -100,12 +99,11 @@ export default function AdminContentPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Content Management</h1>
-          <p className="text-muted-foreground">Review and moderate content submissions</p>
-        </div>
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">Content Management</h1>
+        <p className="text-muted-foreground mt-1">Review and moderate content submissions</p>
+      </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
@@ -179,6 +177,5 @@ export default function AdminContentPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
   )
 }

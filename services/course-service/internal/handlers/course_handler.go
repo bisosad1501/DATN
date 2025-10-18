@@ -11,11 +11,15 @@ import (
 )
 
 type CourseHandler struct {
-	service *service.CourseService
+	service          *service.CourseService
+	videoSyncService *service.VideoSyncService
 }
 
-func NewCourseHandler(service *service.CourseService) *CourseHandler {
-	return &CourseHandler{service: service}
+func NewCourseHandler(service *service.CourseService, videoSyncService *service.VideoSyncService) *CourseHandler {
+	return &CourseHandler{
+		service:          service,
+		videoSyncService: videoSyncService,
+	}
 }
 
 type Response struct {
@@ -1196,5 +1200,159 @@ func (h *CourseHandler) AddVideoToLesson(c *gin.Context) {
 		Success: true,
 		Message: "Video added to lesson successfully",
 		Data:    video,
+	})
+}
+
+// SyncAllVideoDurations triggers sync for all videos with missing duration
+func (h *CourseHandler) SyncAllVideoDurations(c *gin.Context) {
+	if h.videoSyncService == nil {
+		c.JSON(http.StatusServiceUnavailable, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "SYNC_UNAVAILABLE",
+				Message: "Video sync service not available",
+			},
+		})
+		return
+	}
+
+	// Run sync in background
+	go h.videoSyncService.SyncMissingDurations()
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Video duration sync started in background",
+	})
+}
+
+// SyncLessonVideoDurations syncs durations for all videos in a lesson
+func (h *CourseHandler) SyncLessonVideoDurations(c *gin.Context) {
+	lessonID := c.Param("id")
+	if lessonID == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_LESSON_ID",
+				Message: "Lesson ID is required",
+			},
+		})
+		return
+	}
+
+	if h.videoSyncService == nil {
+		c.JSON(http.StatusServiceUnavailable, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "SYNC_UNAVAILABLE",
+				Message: "Video sync service not available",
+			},
+		})
+		return
+	}
+
+	count, err := h.videoSyncService.SyncLessonVideos(lessonID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "SYNC_FAILED",
+				Message: "Failed to sync lesson videos",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Lesson videos synced successfully",
+		Data: map[string]interface{}{
+			"lesson_id":      lessonID,
+			"videos_updated": count,
+		},
+	})
+}
+
+// SyncSingleVideoDuration syncs duration for a specific video
+func (h *CourseHandler) SyncSingleVideoDuration(c *gin.Context) {
+	videoID := c.Param("video_id")
+	if videoID == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_VIDEO_ID",
+				Message: "Video ID is required",
+			},
+		})
+		return
+	}
+
+	if h.videoSyncService == nil {
+		c.JSON(http.StatusServiceUnavailable, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "SYNC_UNAVAILABLE",
+				Message: "Video sync service not available",
+			},
+		})
+		return
+	}
+
+	err := h.videoSyncService.SyncSingleVideo(videoID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "SYNC_FAILED",
+				Message: "Failed to sync video duration",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Video duration synced successfully",
+		Data: map[string]string{
+			"video_id": videoID,
+		},
+	})
+}
+
+// ForceResyncAllVideos forces re-sync for ALL YouTube videos (regardless of current duration)
+func (h *CourseHandler) ForceResyncAllVideos(c *gin.Context) {
+	if h.videoSyncService == nil {
+		c.JSON(http.StatusServiceUnavailable, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "SYNC_UNAVAILABLE",
+				Message: "Video sync service not available",
+			},
+		})
+		return
+	}
+
+	successCount, failCount, err := h.videoSyncService.ForceResyncAllVideos()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "FORCE_RESYNC_FAILED",
+				Message: "Failed to force re-sync videos",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "All YouTube videos force re-synced successfully",
+		Data: map[string]interface{}{
+			"success_count": successCount,
+			"fail_count":    failCount,
+			"total":         successCount + failCount,
+		},
 	})
 }

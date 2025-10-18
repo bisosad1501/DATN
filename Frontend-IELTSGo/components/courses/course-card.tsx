@@ -16,26 +16,33 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, showProgress, progress }: CourseCardProps) {
-  const skillColors = {
-    LISTENING: "bg-blue-500",
-    READING: "bg-green-500",
-    WRITING: "bg-orange-500",
-    SPEAKING: "bg-purple-500",
+  const skillColors: Record<string, string> = {
+    listening: "bg-blue-500",
+    reading: "bg-green-500",
+    writing: "bg-orange-500",
+    speaking: "bg-purple-500",
+    general: "bg-gray-500",
   }
 
-  const levelColors = {
-    BEGINNER: "bg-emerald-500",
-    INTERMEDIATE: "bg-yellow-500",
-    ADVANCED: "bg-red-500",
+  const levelColors: Record<string, string> = {
+    beginner: "bg-emerald-500",
+    intermediate: "bg-yellow-500",
+    advanced: "bg-red-500",
   }
+
+  const skillType = course.skill_type || course.skillType || ''
+  const level = course.level || 'beginner'
+  const thumbnail = course.thumbnail_url || course.thumbnail
+  const enrollmentType = course.enrollment_type || course.enrollmentType
+  const instructorName = course.instructor_name
 
   return (
     <Card className="group overflow-hidden hover:shadow-lg transition-shadow">
       <Link href={`/courses/${course.id}`}>
         <div className="relative aspect-video overflow-hidden bg-muted">
-          {course.thumbnail ? (
+          {thumbnail ? (
             <Image
-              src={course.thumbnail || "/placeholder.svg"}
+              src={thumbnail || "/placeholder.svg"}
               alt={course.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -46,12 +53,14 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
             </div>
           )}
           <div className="absolute top-3 left-3 flex gap-2">
-            <Badge className={skillColors[course.skillType]}>{course.skillType}</Badge>
-            <Badge className={levelColors[course.level]} variant="secondary">
-              {course.level}
+            <Badge className={skillColors[skillType.toLowerCase()] || skillColors.general}>
+              {skillType.toUpperCase()}
+            </Badge>
+            <Badge className={levelColors[level.toLowerCase()] || levelColors.beginner} variant="secondary">
+              {level.toUpperCase()}
             </Badge>
           </div>
-          {course.enrollmentType === "PAID" && course.price && (
+          {(enrollmentType === "premium" || enrollmentType === "PAID") && course.price > 0 && (
             <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full">
               <span className="font-bold text-primary">${course.price}</span>
             </div>
@@ -65,37 +74,39 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
             {course.title}
           </h3>
         </Link>
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{course.description}</p>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          {course.short_description || course.description}
+        </p>
 
-        {course.instructor && (
+        {instructorName && (
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-xs font-medium text-primary">{course.instructor.fullName.charAt(0)}</span>
+              <span className="text-xs font-medium text-primary">{instructorName.charAt(0)}</span>
             </div>
-            <span className="text-sm text-muted-foreground">{course.instructor.fullName}</span>
+            <span className="text-sm text-muted-foreground">{instructorName}</span>
           </div>
         )}
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-medium">{course.rating.toFixed(1)}</span>
-            <span>({formatNumber(course.reviewCount)})</span>
+            <span className="font-medium">{(course.average_rating || course.rating || 0).toFixed(1)}</span>
+            <span>({formatNumber(course.total_reviews || course.reviewCount || 0)})</span>
           </div>
           <div className="flex items-center gap-1">
             <Users className="w-4 h-4" />
-            <span>{formatNumber(course.enrollmentCount)}</span>
+            <span>{formatNumber(course.total_enrollments || course.enrollmentCount || 0)}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <BookOpen className="w-4 h-4" />
-            <span>{course.lessonCount} lessons</span>
+            <span>{course.total_lessons || course.lessonCount || 0} lessons</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{formatDuration(course.duration)}</span>
+            <span>{formatDuration((course.duration_hours || course.duration || 0) * 60)}</span>
           </div>
         </div>
 

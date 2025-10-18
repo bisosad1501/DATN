@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { BrandText } from "@/components/ui/brand-text"
 
 export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth()
@@ -139,8 +140,10 @@ export default function RegisterPage() {
             <Link href="/" className="inline-block">
               <Image src="/images/logo.png" alt="IELTSGo" width={80} height={80} className="mx-auto" />
             </Link>
-            <h1 className="mt-6 text-3xl font-bold text-foreground">Create your account</h1>
-            <p className="mt-2 text-muted-foreground">Join IELTSGo and start learning today</p>
+            <h1 className="mt-6 text-3xl font-bold">
+              Join <BrandText className="text-3xl" />
+            </h1>
+            <p className="mt-2 text-muted-foreground">Create your account and start learning today</p>
           </div>
 
           {/* Error Alert */}

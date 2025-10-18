@@ -64,48 +64,85 @@ export interface UserPreferences {
   playbackSpeed: number
 }
 
-// Course Types
+// Course Types (matching backend)
 export interface Course {
   id: string
   title: string
-  description: string
+  slug: string
+  description?: string
+  short_description?: string
+  skill_type: string // listening, reading, writing, speaking, general
+  level: string // beginner, intermediate, advanced
+  target_band_score?: number
+  thumbnail_url?: string
+  preview_video_url?: string
+  instructor_id: string
+  instructor_name?: string
+  duration_hours?: number
+  total_lessons: number
+  total_videos: number
+  enrollment_type: string // free, premium, subscription
+  price: number
+  currency: string
+  status: string // draft, published, archived
+  is_featured: boolean
+  is_recommended: boolean
+  total_enrollments: number
+  average_rating: number
+  total_reviews: number
+  display_order: number
+  published_at?: string
+  created_at: string
+  updated_at: string
+  
+  // Legacy support for frontend components
   thumbnail?: string
-  skillType: SkillType
-  level: Level
-  categoryId: string
-  instructorId: string
-  instructor?: User
-  enrollmentType: "FREE" | "PAID"
-  price?: number
-  rating: number
-  reviewCount: number
-  enrollmentCount: number
-  duration: number
-  lessonCount: number
-  lastUpdated: string
-  createdAt: string
+  skillType?: string
+  enrollmentType?: "FREE" | "PAID"
+  rating?: number
+  reviewCount?: number
+  enrollmentCount?: number
+  duration?: number
+  lessonCount?: number
 }
 
 export interface Module {
   id: string
-  courseId: string
+  course_id: string
   title: string
   description?: string
-  order: number
-  duration: number
-  lessons: Lesson[]
+  duration_hours?: number
+  total_lessons: number
+  display_order: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
+  lessons?: Lesson[]
 }
 
 export interface Lesson {
   id: string
-  moduleId: string
+  module_id: string
+  course_id: string
   title: string
   description?: string
-  contentType: "VIDEO" | "ARTICLE" | "QUIZ"
+  content_type: string // video, article, quiz, exercise
+  duration_minutes?: number
+  display_order: number
+  is_free: boolean
+  is_published: boolean
+  total_completions: number
+  average_time_spent?: number
+  created_at: string
+  updated_at: string
+  
+  // Legacy support
+  moduleId?: string
+  contentType?: "VIDEO" | "ARTICLE" | "QUIZ"
   contentUrl?: string
-  duration: number
-  order: number
-  isPreview: boolean
+  duration?: number
+  order?: number
+  isPreview?: boolean
 }
 
 // Exercise Types

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -144,12 +143,11 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
-          <p className="text-muted-foreground mt-2">Manage system configuration and monitor health</p>
-        </div>
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+        <p className="text-muted-foreground mt-1">Manage system configuration and monitor health</p>
+      </div>
 
         {/* System Health Monitor */}
         <Card>
@@ -514,6 +512,5 @@ export default function AdminSettingsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
   )
 }

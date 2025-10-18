@@ -30,6 +30,7 @@ export default function LessonPlayerPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const [lesson, setLesson] = useState<Lesson | null>(null)
+  const [videos, setVideos] = useState<any[]>([])
   const [modules, setModules] = useState<Module[]>([])
   const [loading, setLoading] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -43,30 +44,32 @@ export default function LessonPlayerPage() {
     const fetchLessonData = async () => {
       try {
         setLoading(true)
-        const lessonData = await coursesApi.getLessonById(params.courseId as string, params.lessonId as string)
-        setLesson(lessonData)
+        // Fix: getLessonById only takes lessonId, not courseId
+        const lessonData = await coursesApi.getLessonById(params.lessonId as string)
+        setLesson(lessonData.lesson)
+        setVideos(lessonData.videos || [])
 
-        const lessonsData = await coursesApi.getCourseLessons(params.courseId as string)
-        const groupedModules: Module[] = lessonsData.reduce((acc: Module[], lesson) => {
-          const existingModule = acc.find((m) => m.id === lesson.moduleId)
-          if (existingModule) {
-            existingModule.lessons.push(lesson)
-          } else {
-            acc.push({
-              id: lesson.moduleId,
-              courseId: params.courseId as string,
-              title: `Module ${acc.length + 1}`,
-              order: acc.length + 1,
-              duration: 0,
-              lessons: [lesson],
-            })
-          }
-          return acc
-        }, [])
-        setModules(groupedModules)
+        // Get course detail with modules and lessons (including videos)
+        const courseDetail = await coursesApi.getCourseById(params.courseId as string)
+        
+        // Transform the modules data to match our Module type
+        const transformedModules: Module[] = courseDetail.modules.map((moduleData: any, index: number) => ({
+          id: moduleData.module.id,
+          course_id: params.courseId as string,
+          title: moduleData.module.title || `Module ${index + 1}`,
+          display_order: moduleData.module.display_order || index + 1,
+          total_lessons: moduleData.lessons?.length || 0,
+          is_published: true,
+          created_at: moduleData.module.created_at || new Date().toISOString(),
+          updated_at: moduleData.module.updated_at || new Date().toISOString(),
+          lessons: moduleData.lessons || [],
+        }))
+        
+        setModules(transformedModules)
 
-        const lessonNotes = await coursesApi.getLessonNotes(params.courseId as string, params.lessonId as string)
-        setNotes(lessonNotes)
+        // TODO: Backend notes endpoint not implemented yet
+        // const lessonNotes = await coursesApi.getLessonNotes(params.courseId as string, params.lessonId as string)
+        // setNotes(lessonNotes)
       } catch (error) {
         console.error("[v0] Failed to fetch lesson:", error)
       } finally {
@@ -124,6 +127,8 @@ export default function LessonPlayerPage() {
     }
   }
 
+  // TODO: Backend notes feature not implemented yet
+  /*
   const handleAddNote = async () => {
     if (!note.trim()) return
 
@@ -139,10 +144,13 @@ export default function LessonPlayerPage() {
       console.error("[v0] Failed to add note:", error)
     }
   }
+  */
+
 
   const handleCompleteLesson = async () => {
     try {
-      await coursesApi.completLesson(params.courseId as string, params.lessonId as string)
+      // TODO: Backend progress endpoint not implemented yet
+      // await coursesApi.completLesson(params.lessonId as string)
       handleNextLesson()
     } catch (error) {
       console.error("[v0] Failed to complete lesson:", error)
@@ -150,22 +158,26 @@ export default function LessonPlayerPage() {
   }
 
   const handleNextLesson = () => {
-    const allLessons = modules.flatMap((m) => m.lessons)
-    const currentIndex = allLessons.findIndex((l) => l.id === params.lessonId)
+    const allLessons = modules.flatMap((m) => m.lessons || [])
+    const currentIndex = allLessons.findIndex((l) => l?.id === params.lessonId)
     if (currentIndex < allLessons.length - 1) {
       const nextLesson = allLessons[currentIndex + 1]
-      router.push(`/courses/${params.courseId}/lessons/${nextLesson.id}`)
+      if (nextLesson?.id) {
+        router.push(`/courses/${params.courseId}/lessons/${nextLesson.id}`)
+      }
     } else {
       router.push(`/courses/${params.courseId}`)
     }
   }
 
   const handlePreviousLesson = () => {
-    const allLessons = modules.flatMap((m) => m.lessons)
-    const currentIndex = allLessons.findIndex((l) => l.id === params.lessonId)
+    const allLessons = modules.flatMap((m) => m.lessons || [])
+    const currentIndex = allLessons.findIndex((l) => l?.id === params.lessonId)
     if (currentIndex > 0) {
       const prevLesson = allLessons[currentIndex - 1]
-      router.push(`/courses/${params.courseId}/lessons/${prevLesson.id}`)
+      if (prevLesson?.id) {
+        router.push(`/courses/${params.courseId}/lessons/${prevLesson.id}`)
+      }
     }
   }
 
@@ -186,24 +198,39 @@ export default function LessonPlayerPage() {
     )
   }
 
-  const allLessons = modules.flatMap((m) => m.lessons)
-  const currentIndex = allLessons.findIndex((l) => l.id === params.lessonId)
+  const allLessons = modules.flatMap((m) => m.lessons || [])
+  const currentIndex = allLessons.findIndex((l) => l?.id === params.lessonId)
   const hasPrevious = currentIndex > 0
   const hasNext = currentIndex < allLessons.length - 1
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => router.push(`/courses/${params.courseId}`)}>
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Course
+      {/* Header */}
+      <div className="border-b bg-white sticky top-0 z-10 shadow-sm">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => router.push(`/courses/${params.courseId}`)}
+              className="flex-shrink-0"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Quay lại
             </Button>
-            <h1 className="text-lg font-semibold">{lesson.title}</h1>
-            <Button onClick={handleCompleteLesson}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Complete & Continue
+            
+            <h1 className="text-base md:text-lg font-semibold truncate flex-1 text-center px-4">
+              {lesson.title}
+            </h1>
+            
+            <Button 
+              onClick={handleCompleteLesson}
+              size="sm"
+              className="flex-shrink-0"
+              disabled={!hasNext}
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Tiếp theo
             </Button>
           </div>
         </div>
@@ -212,57 +239,87 @@ export default function LessonPlayerPage() {
       <div className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {lesson.contentType === "VIDEO" && lesson.contentUrl && (
-              <Card>
+            {/* Video Content - Show if videos exist, regardless of content_type */}
+            {videos.length > 0 && (
+              <Card className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="relative bg-black aspect-video">
-                    <video ref={videoRef} src={lesson.contentUrl} className="w-full h-full" />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                      <div className="flex items-center gap-4">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={togglePlay}
-                          className="text-white hover:bg-white/20"
-                        >
-                          {isPlaying ? <PauseCircle className="w-6 h-6" /> : <PlayCircle className="w-6 h-6" />}
-                        </Button>
-                        <div className="flex-1">
-                          <div className="h-1 bg-white/30 rounded-full cursor-pointer" onClick={handleProgressClick}>
-                            <div
-                              className="h-full bg-primary rounded-full"
-                              style={{ width: `${(currentTime / duration) * 100}%` }}
-                            />
-                          </div>
-                          <div className="flex justify-between text-xs text-white mt-1">
-                            <span>{formatDuration(Math.floor(currentTime))}</span>
-                            <span>{formatDuration(Math.floor(duration))}</span>
-                          </div>
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={toggleMute}
-                          className="text-white hover:bg-white/20"
-                        >
-                          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => videoRef.current?.requestFullscreen()}
-                          className="text-white hover:bg-white/20"
-                        >
-                          <Maximize className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    </div>
+                    {videos[0].video_provider === "youtube" && videos[0].video_id ? (
+                      <iframe
+                        className="absolute inset-0 w-full h-full"
+                        src={`https://www.youtube-nocookie.com/embed/${videos[0].video_id}?rel=0&modestbranding=1&fs=1&iv_load_policy=3&cc_load_policy=0&playsinline=1&controls=1`}
+                        title={lesson.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        frameBorder="0"
+                      />
+                    ) : (
+                      <video
+                        ref={videoRef}
+                        src={videos[0].video_url}
+                        className="absolute inset-0 w-full h-full object-contain"
+                        controls
+                        controlsList="nodownload"
+                      />
+                    )}
                   </div>
                 </CardContent>
+                
+                {/* Video Info */}
+                <CardHeader className="border-t">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-2">{lesson.title}</CardTitle>
+                      {lesson.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {lesson.description}
+                        </p>
+                      )}
+                    </div>
+                    {/* Show actual video duration if available, fallback to lesson duration */}
+                    {(videos[0]?.duration_seconds || lesson.duration_minutes) && (
+                      <div className="ml-4 text-sm text-muted-foreground whitespace-nowrap">
+                        {videos[0]?.duration_seconds 
+                          ? formatDuration(videos[0].duration_seconds)
+                          : lesson.duration_minutes 
+                            ? `${lesson.duration_minutes} phút`
+                            : ''
+                        }
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
               </Card>
             )}
 
-            {lesson.contentType === "ARTICLE" && (
+            {/* Lesson Navigation */}
+            <div className="flex justify-between items-center gap-4 py-4">
+              <Button
+                variant="outline"
+                onClick={handlePreviousLesson}
+                disabled={!hasPrevious}
+                className="flex-1 max-w-[200px]"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Bài trước
+              </Button>
+              
+              <div className="text-sm text-muted-foreground">
+                Bài {currentIndex + 1} / {allLessons.length}
+              </div>
+              
+              <Button
+                onClick={handleNextLesson}
+                disabled={!hasNext}
+                className="flex-1 max-w-[200px]"
+              >
+                Bài sau
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+
+            {(lesson.content_type === "article" || lesson.contentType === "ARTICLE") && (
               <Card>
                 <CardHeader>
                   <CardTitle>{lesson.title}</CardTitle>
@@ -275,6 +332,7 @@ export default function LessonPlayerPage() {
               </Card>
             )}
 
+            {/* TODO: Backend notes feature not implemented yet
             <Card>
               <CardHeader>
                 <CardTitle>Lesson Notes</CardTitle>
@@ -316,52 +374,83 @@ export default function LessonPlayerPage() {
                 </Tabs>
               </CardContent>
             </Card>
-
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={handlePreviousLesson}
-                disabled={!hasPrevious}
-                className="bg-transparent"
-              >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Previous Lesson
-              </Button>
-              <Button onClick={handleNextLesson} disabled={!hasNext}>
-                Next Lesson
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
+            */}
           </div>
 
+          {/* Sidebar - Course Content */}
           <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Content</CardTitle>
+            <Card className="sticky top-20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Nội dung khóa học</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+              <CardContent className="p-0">
+                <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
                   {modules.map((module) => (
-                    <div key={module.id}>
-                      <h4 className="font-semibold text-sm mb-2">{module.title}</h4>
-                      <div className="space-y-1">
-                        {module.lessons.map((l) => (
-                          <button
-                            key={l.id}
-                            onClick={() => router.push(`/courses/${params.courseId}/lessons/${l.id}`)}
-                            className={`w-full text-left p-2 rounded-lg text-sm transition-colors ${
-                              l.id === params.lessonId ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              {l.contentType === "VIDEO" && <PlayCircle className="w-4 h-4" />}
-                              {l.contentType === "ARTICLE" && <FileText className="w-4 h-4" />}
-                              {l.contentType === "QUIZ" && <CheckCircle className="w-4 h-4" />}
-                              <span className="flex-1 truncate">{l.title}</span>
-                              <span className="text-xs opacity-70">{formatDuration(l.duration)}</span>
-                            </div>
-                          </button>
-                        ))}
+                    <div key={module.id} className="border-b last:border-b-0">
+                      <div className="p-4 bg-muted/50">
+                        <h4 className="font-semibold text-sm">{module.title}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {module.lessons?.length || 0} bài học
+                        </p>
+                      </div>
+                      <div className="divide-y">
+                        {module.lessons?.map((l, index) => {
+                          const contentType = (l.content_type || l.contentType || 'video').toLowerCase()
+                          
+                          // Prioritize video duration_seconds for accurate display
+                          const videoDurationSeconds = (l as any).videos?.[0]?.duration_seconds || 0
+                          const durationMinutes = l.duration_minutes || l.duration || 0
+                          const durationSeconds = videoDurationSeconds > 0 ? videoDurationSeconds : durationMinutes * 60
+                          
+                          const isActive = l.id === params.lessonId
+                          
+                          return (
+                            <button
+                              key={l.id}
+                              onClick={() => router.push(`/courses/${params.courseId}/lessons/${l.id}`)}
+                              className={`w-full text-left p-3 transition-all ${
+                                isActive 
+                                  ? "bg-primary/10 border-l-4 border-primary" 
+                                  : "hover:bg-muted/50 border-l-4 border-transparent"
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                }`}>
+                                  {index + 1}
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium truncate ${
+                                    isActive ? "text-primary" : ""
+                                  }`}>
+                                    {l.title}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {contentType === "video" && (
+                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <PlayCircle className="w-3 h-3" />
+                                        Video
+                                      </span>
+                                    )}
+                                    {contentType === "article" && (
+                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <FileText className="w-3 h-3" />
+                                        Bài đọc
+                                      </span>
+                                    )}
+                                    {durationSeconds > 0 && (
+                                      <span className="text-xs text-muted-foreground">
+                                        • {formatDuration(durationSeconds)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   ))}

@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BookOpen, Target, TrendingUp, Users } from "lucide-react"
 import { AppLayout } from "@/components/layout/app-layout"
+import { BrandText } from "@/components/ui/brand-text"
 
 export default function HomePage() {
   return (
@@ -12,7 +13,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-20">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6">
-              Chinh phục IELTS cùng <span className="text-primary">IELTSGo</span>
+              Chinh phục IELTS cùng <BrandText className="text-5xl md:text-6xl" />
             </h1>
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
               Nền tảng học IELTS trực tuyến với khóa học chuyên sâu, bài tập thực hành đa dạng và theo dõi tiến độ cá

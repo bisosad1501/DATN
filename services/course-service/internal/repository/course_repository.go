@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 
 	"github.com/bisosad1501/ielts-platform/course-service/internal/models"
@@ -25,14 +26,17 @@ func (r *CourseRepository) GetCourses(query *models.CourseListQuery) ([]models.C
 	argCount := 1
 
 	baseQuery := `
-		SELECT id, title, slug, description, short_description, skill_type, level, 
-			   target_band_score, thumbnail_url, preview_video_url, instructor_id, 
-			   instructor_name, duration_hours, total_lessons, total_videos, 
-			   enrollment_type, price, currency, status, is_featured, is_recommended,
-			   total_enrollments, average_rating, total_reviews, display_order,
-			   published_at, created_at, updated_at
-		FROM courses
-		WHERE deleted_at IS NULL AND status = 'published'
+		SELECT c.id, c.title, c.slug, c.description, c.short_description, c.skill_type, c.level, 
+			   c.target_band_score, c.thumbnail_url, c.preview_video_url, c.instructor_id, 
+			   c.instructor_name, c.duration_hours, 
+			   -- Compute total_lessons from actual lessons count
+			   COALESCE((SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id), 0) as total_lessons,
+			   c.total_videos, 
+			   c.enrollment_type, c.price, c.currency, c.status, c.is_featured, c.is_recommended,
+			   c.total_enrollments, c.average_rating, c.total_reviews, c.display_order,
+			   c.published_at, c.created_at, c.updated_at
+		FROM courses c
+		WHERE c.status = 'published'
 	`
 
 	if query.SkillType != "" {
@@ -115,14 +119,17 @@ func (r *CourseRepository) GetCourses(query *models.CourseListQuery) ([]models.C
 // GetCourseByID retrieves a course by ID
 func (r *CourseRepository) GetCourseByID(courseID uuid.UUID) (*models.Course, error) {
 	query := `
-		SELECT id, title, slug, description, short_description, skill_type, level, 
-			   target_band_score, thumbnail_url, preview_video_url, instructor_id, 
-			   instructor_name, duration_hours, total_lessons, total_videos, 
-			   enrollment_type, price, currency, status, is_featured, is_recommended,
-			   total_enrollments, average_rating, total_reviews, display_order,
-			   published_at, created_at, updated_at
-		FROM courses
-		WHERE id = $1 AND deleted_at IS NULL
+		SELECT c.id, c.title, c.slug, c.description, c.short_description, c.skill_type, c.level, 
+			   c.target_band_score, c.thumbnail_url, c.preview_video_url, c.instructor_id, 
+			   c.instructor_name, c.duration_hours, 
+			   -- Compute total_lessons from actual lessons count
+			   COALESCE((SELECT COUNT(*) FROM lessons WHERE course_id = c.id), 0) as total_lessons,
+			   c.total_videos, 
+			   c.enrollment_type, c.price, c.currency, c.status, c.is_featured, c.is_recommended,
+			   c.total_enrollments, c.average_rating, c.total_reviews, c.display_order,
+			   c.published_at, c.created_at, c.updated_at
+		FROM courses c
+		WHERE c.id = $1
 	`
 
 	var course models.Course
@@ -183,12 +190,26 @@ func (r *CourseRepository) GetModulesByCourseID(courseID uuid.UUID) ([]models.Mo
 // GetLessonsByModuleID retrieves lessons for a module
 func (r *CourseRepository) GetLessonsByModuleID(moduleID uuid.UUID) ([]models.Lesson, error) {
 	query := `
-		SELECT id, module_id, course_id, title, description, content_type,
-			   duration_minutes, display_order, is_free, is_published,
-			   total_completions, average_time_spent, created_at, updated_at
-		FROM lessons
-		WHERE module_id = $1 AND is_published = true
-		ORDER BY display_order ASC
+		SELECT 
+			l.id, l.module_id, l.course_id, l.title, l.description, l.content_type,
+			-- Use video duration if available, fallback to lesson duration_minutes
+			CASE 
+				WHEN l.content_type = 'video' THEN 
+					COALESCE(
+						(SELECT CEIL(v.duration_seconds / 60.0) 
+						 FROM lesson_videos v 
+						 WHERE v.lesson_id = l.id 
+						 ORDER BY v.display_order 
+						 LIMIT 1),
+						l.duration_minutes
+					)
+				ELSE l.duration_minutes
+			END as duration_minutes,
+			l.display_order, l.is_free, l.is_published,
+			l.total_completions, l.average_time_spent, l.created_at, l.updated_at
+		FROM lessons l
+		WHERE l.module_id = $1 AND l.is_published = true
+		ORDER BY l.display_order ASC
 	`
 
 	rows, err := r.db.Query(query, moduleID)
@@ -219,11 +240,25 @@ func (r *CourseRepository) GetLessonsByModuleID(moduleID uuid.UUID) ([]models.Le
 // GetLessonByID retrieves a lesson by ID
 func (r *CourseRepository) GetLessonByID(lessonID uuid.UUID) (*models.Lesson, error) {
 	query := `
-		SELECT id, module_id, course_id, title, description, content_type,
-			   duration_minutes, display_order, is_free, is_published,
-			   total_completions, average_time_spent, created_at, updated_at
-		FROM lessons
-		WHERE id = $1
+		SELECT 
+			l.id, l.module_id, l.course_id, l.title, l.description, l.content_type,
+			-- Use video duration if available, fallback to lesson duration_minutes
+			CASE 
+				WHEN l.content_type = 'video' THEN 
+					COALESCE(
+						(SELECT CEIL(v.duration_seconds / 60.0) 
+						 FROM lesson_videos v 
+						 WHERE v.lesson_id = l.id 
+						 ORDER BY v.display_order 
+						 LIMIT 1),
+						l.duration_minutes
+					)
+				ELSE l.duration_minutes
+			END as duration_minutes,
+			l.display_order, l.is_free, l.is_published,
+			l.total_completions, l.average_time_spent, l.created_at, l.updated_at
+		FROM lessons l
+		WHERE l.id = $1
 	`
 
 	var lesson models.Lesson
@@ -983,4 +1018,181 @@ func (r *CourseRepository) GetLessonVideoCount(lessonID uuid.UUID) (int, error) 
 	query := `SELECT COUNT(*) FROM lesson_videos WHERE lesson_id = $1`
 	err := r.db.QueryRow(query, lessonID).Scan(&count)
 	return count, err
+}
+
+// UpdateVideoDuration updates video duration by video_id
+func (r *CourseRepository) UpdateVideoDuration(videoID string, durationSeconds int) error {
+	query := `
+		UPDATE lesson_videos 
+		SET duration_seconds = $1,
+		    updated_at = NOW()
+		WHERE video_id = $2 AND video_provider = 'youtube'
+	`
+
+	result, err := r.db.Exec(query, durationSeconds, videoID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no video found with video_id: %s", videoID)
+	}
+
+	return nil
+}
+
+// UpdateVideoDurationAndSyncLesson updates video duration and auto-syncs lesson duration_minutes
+func (r *CourseRepository) UpdateVideoDurationAndSyncLesson(videoID string, durationSeconds int) error {
+	// Start transaction
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Update video duration and get lesson_id
+	var lessonID uuid.UUID
+	query := `
+		UPDATE lesson_videos 
+		SET duration_seconds = $1,
+		    updated_at = NOW()
+		WHERE video_id = $2 AND video_provider = 'youtube'
+		RETURNING lesson_id
+	`
+	err = tx.QueryRow(query, durationSeconds, videoID).Scan(&lessonID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("no video found with video_id: %s", videoID)
+		}
+		return fmt.Errorf("failed to update video: %w", err)
+	}
+
+	// Calculate duration in minutes (ceiling)
+	durationMinutes := int(math.Ceil(float64(durationSeconds) / 60.0))
+
+	// Update lesson duration_minutes
+	updateLessonQuery := `
+		UPDATE lessons 
+		SET duration_minutes = $1,
+		    updated_at = NOW()
+		WHERE id = $2
+	`
+	_, err = tx.Exec(updateLessonQuery, durationMinutes, lessonID)
+	if err != nil {
+		return fmt.Errorf("failed to update lesson duration: %w", err)
+	}
+
+	// Commit transaction
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// GetVideosWithMissingDuration gets all YouTube videos with missing or zero duration
+func (r *CourseRepository) GetVideosWithMissingDuration() ([]*models.LessonVideo, error) {
+	query := `
+		SELECT id, lesson_id, video_url, video_id, video_provider, 
+		       title, duration_seconds, display_order, thumbnail_url,
+		       created_at, updated_at
+		FROM lesson_videos
+		WHERE video_provider = 'youtube' 
+		  AND (duration_seconds IS NULL OR duration_seconds = 0)
+		  AND video_id IS NOT NULL
+		  AND video_id != ''
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var videos []*models.LessonVideo
+	for rows.Next() {
+		video := &models.LessonVideo{}
+		err := rows.Scan(
+			&video.ID,
+			&video.LessonID,
+			&video.VideoURL,
+			&video.VideoID,
+			&video.VideoProvider,
+			&video.Title,
+			&video.DurationSeconds,
+			&video.DisplayOrder,
+			&video.ThumbnailURL,
+			&video.CreatedAt,
+			&video.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		videos = append(videos, video)
+	}
+
+	return videos, nil
+}
+
+// GetAllYouTubeVideos gets ALL YouTube videos (for force re-sync)
+func (r *CourseRepository) GetAllYouTubeVideos() ([]*models.LessonVideo, error) {
+	query := `
+		SELECT id, lesson_id, video_url, video_id, video_provider, 
+		       title, duration_seconds, display_order, thumbnail_url,
+		       created_at, updated_at
+		FROM lesson_videos
+		WHERE video_provider = 'youtube' 
+		  AND video_id IS NOT NULL
+		  AND video_id != ''
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var videos []*models.LessonVideo
+	for rows.Next() {
+		video := &models.LessonVideo{}
+		err := rows.Scan(
+			&video.ID,
+			&video.LessonID,
+			&video.VideoURL,
+			&video.VideoID,
+			&video.VideoProvider,
+			&video.Title,
+			&video.DurationSeconds,
+			&video.DisplayOrder,
+			&video.ThumbnailURL,
+			&video.CreatedAt,
+			&video.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		videos = append(videos, video)
+	}
+
+	return videos, nil
+}
+
+// UpdateLessonDuration updates the duration_minutes field of a lesson
+func (r *CourseRepository) UpdateLessonDuration(lessonID uuid.UUID, durationMinutes int) error {
+	query := `
+		UPDATE lessons 
+		SET duration_minutes = $1, updated_at = NOW() 
+		WHERE id = $2
+	`
+
+	_, err := r.db.Exec(query, durationMinutes, lessonID)
+	return err
 }

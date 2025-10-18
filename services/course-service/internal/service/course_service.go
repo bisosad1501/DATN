@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/bisosad1501/DATN/shared/pkg/client"
@@ -15,13 +16,15 @@ type CourseService struct {
 	repo               *repository.CourseRepository
 	userServiceClient  *client.UserServiceClient
 	notificationClient *client.NotificationServiceClient
+	youtubeService     *YouTubeService
 }
 
-func NewCourseService(repo *repository.CourseRepository, userServiceClient *client.UserServiceClient, notificationClient *client.NotificationServiceClient) *CourseService {
+func NewCourseService(repo *repository.CourseRepository, userServiceClient *client.UserServiceClient, notificationClient *client.NotificationServiceClient, youtubeService *YouTubeService) *CourseService {
 	return &CourseService{
 		repo:               repo,
 		userServiceClient:  userServiceClient,
 		notificationClient: notificationClient,
+		youtubeService:     youtubeService,
 	}
 }
 
@@ -63,9 +66,28 @@ func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (
 			log.Printf("Warning: failed to get lessons for module %s: %v", module.ID, err)
 			lessons = []models.Lesson{}
 		}
+
+		// Load videos for each lesson
+		var lessonsWithVideos []models.LessonWithVideos
+		for _, lesson := range lessons {
+			lessonWithVideo := models.LessonWithVideos{
+				Lesson: lesson,
+			}
+
+			// Get videos for this lesson
+			videos, err := s.repo.GetVideosByLessonID(lesson.ID)
+			if err != nil {
+				log.Printf("Warning: failed to get videos for lesson %s: %v", lesson.ID, err)
+			} else {
+				lessonWithVideo.Videos = videos
+			}
+
+			lessonsWithVideos = append(lessonsWithVideos, lessonWithVideo)
+		}
+
 		modulesWithLessons = append(modulesWithLessons, models.ModuleWithLessons{
 			Module:  module,
-			Lessons: lessons,
+			Lessons: lessonsWithVideos,
 		})
 	}
 
@@ -773,9 +795,34 @@ func (s *CourseService) AddVideoToLesson(userID uuid.UUID, userRole string, less
 		video.DurationSeconds = *req.DurationSeconds
 	}
 
+	// Auto-fetch duration from YouTube API if provider is youtube and duration not provided
+	if s.youtubeService != nil && req.VideoProvider == "youtube" && req.VideoID != "" && (req.DurationSeconds == nil || *req.DurationSeconds == 0) {
+		log.Printf("[Course-Service] Auto-fetching YouTube video duration for video_id: %s", req.VideoID)
+
+		duration, err := s.youtubeService.GetVideoDuration(req.VideoID)
+		if err != nil {
+			log.Printf("[Course-Service] WARNING: Failed to fetch YouTube duration: %v (continuing with 0)", err)
+			// Continue anyway - duration can be updated later
+		} else {
+			video.DurationSeconds = int(duration)
+			log.Printf("[Course-Service] ✅ Auto-fetched YouTube duration: %d seconds for video_id: %s", duration, req.VideoID)
+		}
+	}
+
 	err = s.repo.CreateLessonVideo(video)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create video: %v", err)
+	}
+
+	// Auto-sync lesson duration_minutes from video duration_seconds
+	if video.DurationSeconds > 0 {
+		durationMinutes := int(math.Ceil(float64(video.DurationSeconds) / 60.0))
+		err = s.repo.UpdateLessonDuration(lessonID, durationMinutes)
+		if err != nil {
+			log.Printf("[Course-Service] WARNING: Failed to auto-sync lesson duration: %v", err)
+		} else {
+			log.Printf("[Course-Service] ✅ Auto-synced lesson duration: %d minutes (from %d seconds)", durationMinutes, video.DurationSeconds)
+		}
 	}
 
 	return video, nil
@@ -860,4 +907,27 @@ func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesso
 		log.Printf("[Course-Service] ERROR: Failed to send notification after 2 attempts (non-critical)")
 		// Notification failure is non-critical, don't rollback
 	}
+}
+
+// SyncYouTubeVideoDuration syncs video duration from YouTube API
+func (s *CourseService) SyncYouTubeVideoDuration(videoID string) error {
+	youtubeService, err := NewYouTubeService()
+	if err != nil {
+		return fmt.Errorf("failed to initialize YouTube service: %w", err)
+	}
+
+	// Get video details from YouTube
+	details, err := youtubeService.GetVideoDetails(videoID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch YouTube video details: %w", err)
+	}
+
+	// Update lesson_videos table
+	err = s.repo.UpdateVideoDuration(videoID, int(details.Duration))
+	if err != nil {
+		return fmt.Errorf("failed to update video duration: %w", err)
+	}
+
+	log.Printf("✅ Synced duration for video %s: %d seconds", videoID, details.Duration)
+	return nil
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AdminLayout } from "@/components/admin/admin-layout"
 import { UserTable } from "@/components/admin/user-table"
 import { UserFilters } from "@/components/admin/user-filters"
 import { UserFormModal } from "@/components/admin/user-form-modal"
@@ -122,43 +121,41 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">User Management</h1>
-            <p className="text-muted-foreground">Manage all users in the system</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-            <Button onClick={() => setModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">User Management</h1>
+          <p className="text-muted-foreground mt-1">Manage all users in the system</p>
         </div>
-
-        <UserFilters filters={filters} onFilterChange={handleFilterChange} onReset={handleResetFilters} />
-
-        {loading ? (
-          <div className="text-center py-12">Loading...</div>
-        ) : (
-          <UserTable users={users} onEdit={handleEdit} onDelete={handleDelete} onToggleStatus={handleToggleStatus} />
-        )}
-
-        <UserFormModal
-          open={modalOpen}
-          onClose={() => {
-            setModalOpen(false)
-            setEditingUser(null)
-          }}
-          onSubmit={handleSubmit}
-          user={editingUser}
-        />
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add User
+          </Button>
+        </div>
       </div>
-    </AdminLayout>
+
+      <UserFilters filters={filters} onFilterChange={handleFilterChange} onReset={handleResetFilters} />
+
+      {loading ? (
+        <div className="text-center py-12">Loading...</div>
+      ) : (
+        <UserTable users={users} onEdit={handleEdit} onDelete={handleDelete} onToggleStatus={handleToggleStatus} />
+      )}
+
+      <UserFormModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false)
+          setEditingUser(null)
+        }}
+        onSubmit={handleSubmit}
+        user={editingUser}
+      />
+    </div>
   )
 }

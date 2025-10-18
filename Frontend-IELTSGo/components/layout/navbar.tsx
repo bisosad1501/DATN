@@ -23,9 +23,11 @@ import { NotificationBell } from "@/components/notifications/notification-bell"
 interface NavbarProps {
   onMenuClick?: () => void
   showMenuButton?: boolean
+  hideLogo?: boolean
+  hideNavItems?: boolean
 }
 
-export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
+export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, hideNavItems = false }: NavbarProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, isAuthenticated, logout } = useAuth()
@@ -58,24 +60,26 @@ export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
               <Menu className="h-5 w-5" />
             </Button>
           )}
-          <Logo />
+          {!hideLogo && <Logo />}
         </div>
 
         {/* Center section - Desktop navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          {MAIN_NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === item.href ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {item.title}
-            </Link>
-          ))}
-        </nav>
+        {!hideNavItems && (
+          <nav className="hidden md:flex items-center gap-6">
+            {MAIN_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  pathname === item.href ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {item.title}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         {/* Right section */}
         <div className="flex items-center gap-2">

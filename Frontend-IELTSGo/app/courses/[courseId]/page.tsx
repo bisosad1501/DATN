@@ -29,31 +29,22 @@ export default function CourseDetailPage() {
     const fetchCourseData = async () => {
       try {
         setLoading(true)
-        const courseData = await coursesApi.getCourseById(params.courseId as string)
-        setCourse(courseData)
-
-        const lessonsData = await coursesApi.getCourseLessons(params.courseId as string)
-        const groupedModules: Module[] = lessonsData.reduce((acc: Module[], lesson) => {
-          const existingModule = acc.find((m) => m.id === lesson.moduleId)
-          if (existingModule) {
-            existingModule.lessons.push(lesson)
-          } else {
-            acc.push({
-              id: lesson.moduleId,
-              courseId: params.id as string,
-              title: `Module ${acc.length + 1}`,
-              order: acc.length + 1,
-              duration: 0,
-              lessons: [lesson],
-            })
-          }
-          return acc
-        }, [])
-        setModules(groupedModules)
-
-        if (user) {
-          const enrolledCourses = await coursesApi.getEnrolledCourses()
-          setIsEnrolled(enrolledCourses.some((c) => c.id === params.id))
+        const courseDetail = await coursesApi.getCourseById(params.courseId as string)
+        
+        // Backend returns { course, modules, is_enrolled, enrollment_details }
+        setCourse(courseDetail.course)
+        setIsEnrolled(courseDetail.is_enrolled || false)
+        
+        // Use modules from backend response
+        if (courseDetail.modules && Array.isArray(courseDetail.modules)) {
+          const formattedModules = courseDetail.modules.map((moduleData) => ({
+            ...moduleData.module,
+            lessons: moduleData.lessons || []
+          }))
+          setModules(formattedModules)
+          console.log('[DEBUG] Loaded modules:', formattedModules)
+        } else {
+          console.warn('[DEBUG] No modules in course detail response')
         }
       } catch (error) {
         console.error("[v0] Failed to fetch course:", error)
@@ -63,7 +54,7 @@ export default function CourseDetailPage() {
     }
 
     fetchCourseData()
-  }, [params.id, user])
+  }, [params.courseId, user])
 
   const handleEnroll = async () => {
     if (!user) {
@@ -73,18 +64,55 @@ export default function CourseDetailPage() {
 
     try {
       setEnrolling(true)
-      await coursesApi.enrollCourse(params.id as string)
+      // Get courseId and ensure it's a string
+      const courseId = Array.isArray(params.courseId) ? params.courseId[0] : params.courseId
+      console.log('[DEBUG] Full params:', params)
+      console.log('[DEBUG] Enrolling in course:', courseId)
+      console.log('[DEBUG] CourseId type:', typeof courseId)
+      
+      if (!courseId) {
+        throw new Error('Course ID is missing')
+      }
+      
+      await coursesApi.enrollCourse(courseId)
       setIsEnrolled(true)
-    } catch (error) {
+      console.log('[DEBUG] Enrollment successful')
+    } catch (error: any) {
       console.error("[v0] Failed to enroll:", error)
+      console.error("[DEBUG] Error response:", error.response?.data)
+      
+      const errorData = error.response?.data?.error
+      let errorMessage = "Không thể đăng ký khóa học"
+      
+      if (errorData?.details === "this course requires payment") {
+        errorMessage = "Khóa học này yêu cầu thanh toán. Vui lòng mua khóa học trước khi đăng ký."
+      } else if (errorData?.message) {
+        errorMessage = errorData.message
+      }
+      
+      alert(errorMessage)
     } finally {
       setEnrolling(false)
     }
   }
 
   const handleStartLearning = () => {
-    if (modules.length > 0 && modules[0].lessons.length > 0) {
-      router.push(`/courses/${params.id}/lessons/${modules[0].lessons[0].id}`)
+    console.log('[DEBUG] handleStartLearning called', {
+      modulesLength: modules.length,
+      modulesWithLessons: modules.filter(m => m.lessons && m.lessons.length > 0).length
+    })
+    
+    // Find first module that has lessons
+    const moduleWithLessons = modules.find(m => m.lessons && m.lessons.length > 0)
+    
+    if (moduleWithLessons && moduleWithLessons.lessons && moduleWithLessons.lessons.length > 0) {
+      const lessonId = moduleWithLessons.lessons[0].id
+      console.log('[DEBUG] Navigating to lesson:', lessonId, 'in module:', moduleWithLessons.title)
+      router.push(`/courses/${params.courseId}/lessons/${lessonId}`)
+    } else {
+      console.warn('[DEBUG] No lessons available to start')
+      // Show a toast or alert that no lessons are available
+      alert('Chưa có bài học nào. Nội dung đang được cập nhật.')
     }
   }
 
@@ -109,23 +137,28 @@ export default function CourseDetailPage() {
     )
   }
 
-  const skillColors = {
+  const skillColors: Record<string, string> = {
     LISTENING: "bg-blue-500",
     READING: "bg-green-500",
     WRITING: "bg-orange-500",
     SPEAKING: "bg-purple-500",
+    GENERAL: "bg-gray-500",
   }
 
-  const levelColors = {
+  const levelColors: Record<string, string> = {
     BEGINNER: "bg-emerald-500",
     INTERMEDIATE: "bg-yellow-500",
     ADVANCED: "bg-red-500",
   }
 
-  const contentTypeIcons = {
+  const contentTypeIcons: Record<string, any> = {
     VIDEO: PlayCircle,
+    video: PlayCircle,
     ARTICLE: FileText,
+    article: FileText,
     QUIZ: CheckCircle,
+    quiz: CheckCircle,
+    exercise: CheckCircle,
   }
 
   return (
@@ -135,35 +168,37 @@ export default function CourseDetailPage() {
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div className="flex gap-3 mb-4">
-                <Badge className={skillColors[course.skillType]}>{course.skillType}</Badge>
-                <Badge className={levelColors[course.level]} variant="secondary">
-                  {course.level}
+                <Badge className={skillColors[(course.skill_type || course.skillType || 'listening').toUpperCase()]}>
+                  {(course.skill_type || course.skillType || 'listening').toUpperCase()}
+                </Badge>
+                <Badge className={levelColors[(course.level || 'beginner').toUpperCase()]} variant="secondary">
+                  {(course.level || 'beginner').toUpperCase()}
                 </Badge>
               </div>
 
               <h1 className="text-4xl font-bold mb-4">{course.title}</h1>
-              <p className="text-lg text-muted-foreground mb-6">{course.description}</p>
+              <p className="text-lg text-muted-foreground mb-6">{course.short_description || course.description}</p>
 
               <div className="flex items-center gap-6 mb-6">
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold">{course.rating.toFixed(1)}</span>
-                  <span className="text-muted-foreground">({formatNumber(course.reviewCount)} reviews)</span>
+                  <span className="font-semibold">{(course.average_rating || course.rating || 0).toFixed(1)}</span>
+                  <span className="text-muted-foreground">({formatNumber(course.total_reviews || course.reviewCount || 0)} reviews)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-muted-foreground" />
-                  <span>{formatNumber(course.enrollmentCount)} students</span>
+                  <span>{formatNumber(course.total_enrollments || course.enrollmentCount || 0)} students</span>
                 </div>
               </div>
 
-              {course.instructor && (
+              {course.instructor_name && (
                 <div className="flex items-center gap-3 mb-8">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-lg font-semibold text-primary">{course.instructor.fullName.charAt(0)}</span>
+                    <span className="text-lg font-semibold text-primary">{course.instructor_name.charAt(0)}</span>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Instructor</p>
-                    <p className="font-semibold">{course.instructor.fullName}</p>
+                    <p className="font-semibold">{course.instructor_name}</p>
                   </div>
                 </div>
               )}
@@ -186,29 +221,44 @@ export default function CourseDetailPage() {
                   )}
                 </div>
                 <CardContent className="p-6">
-                  {course.enrollmentType === "PAID" && course.price ? (
+                  {/* Check both old and new field names */}
+                  {((course.enrollment_type || course.enrollmentType) === "premium" || 
+                    (course.enrollment_type || course.enrollmentType) === "paid") && course.price ? (
                     <div className="mb-4">
-                      <span className="text-3xl font-bold text-primary">${course.price}</span>
+                      <span className="text-3xl font-bold text-primary">
+                        {course.price.toLocaleString()} {course.currency || "VND"}
+                      </span>
                     </div>
                   ) : (
                     <div className="mb-4">
-                      <Badge className="text-lg px-3 py-1">FREE</Badge>
+                      <Badge className="text-lg px-3 py-1">MIỄN PHÍ</Badge>
                     </div>
                   )}
 
                   {isEnrolled ? (
-                    <Button className="w-full mb-4" size="lg" onClick={handleStartLearning}>
-                      Continue Learning
+                    modules.length > 0 && modules.some(m => m.lessons && m.lessons.length > 0) ? (
+                      <Button className="w-full mb-4" size="lg" onClick={handleStartLearning}>
+                        Tiếp tục học
+                      </Button>
+                    ) : (
+                      <Button className="w-full mb-4" size="lg" disabled variant="secondary">
+                        Nội dung đang cập nhật
+                      </Button>
+                    )
+                  ) : ((course.enrollment_type || course.enrollmentType) === "premium" || 
+                       (course.enrollment_type || course.enrollmentType) === "paid") ? (
+                    <Button className="w-full mb-4" size="lg" onClick={handleEnroll} disabled={true}>
+                      Yêu cầu thanh toán
                     </Button>
                   ) : (
                     <Button className="w-full mb-4" size="lg" onClick={handleEnroll} disabled={enrolling}>
                       {enrolling ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Enrolling...
+                          Đang đăng ký...
                         </>
                       ) : (
-                        "Enroll Now"
+                        "Đăng ký ngay"
                       )}
                     </Button>
                   )}
@@ -216,11 +266,11 @@ export default function CourseDetailPage() {
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Duration</span>
-                      <span className="font-medium">{formatDuration(course.duration)}</span>
+                      <span className="font-medium">{formatDuration((course.duration_hours || course.duration || 0) * 60)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Lessons</span>
-                      <span className="font-medium">{course.lessonCount} lessons</span>
+                      <span className="font-medium">{course.total_lessons || course.lessonCount || 0} lessons</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Level</span>
@@ -228,7 +278,7 @@ export default function CourseDetailPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Skill</span>
-                      <span className="font-medium">{course.skillType}</span>
+                      <span className="font-medium capitalize">{course.skill_type || course.skillType}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -248,26 +298,55 @@ export default function CourseDetailPage() {
           <TabsContent value="curriculum" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Course Curriculum</CardTitle>
+                <CardTitle>Nội dung khóa học</CardTitle>
               </CardHeader>
               <CardContent>
-                <Accordion type="single" collapsible className="w-full">
-                  {modules.map((module, index) => (
-                    <AccordionItem key={module.id} value={`module-${index}`}>
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center justify-between w-full pr-4">
-                          <span className="font-semibold">{module.title}</span>
-                          <span className="text-sm text-muted-foreground">{module.lessons.length} lessons</span>
-                        </div>
-                      </AccordionTrigger>
+                {modules.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-lg font-semibold mb-2">Nội dung đang được cập nhật</p>
+                    <p className="text-sm text-muted-foreground">
+                      Khóa học này sẽ có {course.total_lessons || course.lessonCount || 0} bài học. 
+                      Nội dung đang được chuẩn bị và sẽ sớm được cập nhật.
+                    </p>
+                  </div>
+                ) : (
+                  <Accordion type="single" collapsible className="w-full">
+                    {modules.map((module, index) => (
+                      <AccordionItem key={module.id} value={`module-${index}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <span className="font-semibold">{module.title}</span>
+                            <span className="text-sm text-muted-foreground">{module.lessons?.length || 0} bài học</span>
+                          </div>
+                        </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-2 pt-2">
-                          {module.lessons.map((lesson) => {
-                            const Icon = contentTypeIcons[lesson.contentType]
+                          {module.lessons?.map((lesson) => {
+                            const contentType = (lesson.content_type || lesson.contentType || 'video').toUpperCase()
+                            const Icon = contentTypeIcons[contentType] || PlayCircle
+                            const isPreview = lesson.is_free || lesson.isPreview || false
+                            
+                            // Prioritize video duration_seconds for accurate display
+                            const videoDurationSeconds = (lesson as any).videos?.[0]?.duration_seconds || 0
+                            const durationMinutes = lesson.duration_minutes || lesson.duration || 0
+                            const durationSeconds = videoDurationSeconds > 0 ? videoDurationSeconds : durationMinutes * 60
+                            
+                            const handleLessonClick = () => {
+                              // Check if user is enrolled or if lesson is free/preview
+                              if (isEnrolled || isPreview) {
+                                router.push(`/courses/${params.courseId}/lessons/${lesson.id}`)
+                              } else {
+                                // Show enroll prompt or error
+                                alert('Vui lòng đăng ký khóa học để xem bài học này')
+                              }
+                            }
+                            
                             return (
-                              <div
+                              <button
                                 key={lesson.id}
-                                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                                onClick={handleLessonClick}
+                                className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-left"
                               >
                                 <div className="flex items-center gap-3">
                                   <Icon className="w-4 h-4 text-muted-foreground" />
@@ -275,18 +354,19 @@ export default function CourseDetailPage() {
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="text-xs text-muted-foreground">
-                                    {formatDuration(lesson.duration)}
+                                    {durationSeconds > 0 ? formatDuration(durationSeconds) : ''}
                                   </span>
-                                  {lesson.isPreview && <Badge variant="outline">Preview</Badge>}
+                                  {isPreview && <Badge variant="outline">Preview</Badge>}
                                 </div>
-                              </div>
+                              </button>
                             )
                           })}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
                   ))}
-                </Accordion>
+                  </Accordion>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -294,17 +374,17 @@ export default function CourseDetailPage() {
           <TabsContent value="about" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>About This Course</CardTitle>
+                <CardTitle>Về khóa học này</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm max-w-none">
-                  <p>{course.description}</p>
-                  <h3 className="font-semibold mt-6 mb-3">What you'll learn</h3>
-                  <ul className="space-y-2">
-                    <li>Master essential {course.skillType.toLowerCase()} techniques for IELTS</li>
-                    <li>Practice with real IELTS-style questions and exercises</li>
-                    <li>Develop strategies to improve your band score</li>
-                    <li>Get personalized feedback on your progress</li>
+                  <p>{course.description || course.short_description}</p>
+                  <h3 className="font-semibold mt-6 mb-3">Bạn sẽ học được gì</h3>
+                  <ul className="space-y-3 text-muted-foreground">
+                    <li>Nắm vững các kỹ thuật {(course.skill_type || course.skillType || 'IELTS').toLowerCase()} cần thiết cho IELTS</li>
+                    <li>Thực hành với tài liệu chính thống</li>
+                    <li>Nhận phản hồi chi tiết</li>
+                    <li>Theo dõi tiến trình học tập</li>
                   </ul>
                 </div>
               </CardContent>

@@ -18,55 +18,40 @@ interface CourseFiltersProps {
 }
 
 const SKILL_OPTIONS = [
-  { value: "LISTENING", label: "Listening" },
-  { value: "READING", label: "Reading" },
-  { value: "WRITING", label: "Writing" },
-  { value: "SPEAKING", label: "Speaking" },
+  { value: "listening", label: "Listening" },
+  { value: "reading", label: "Reading" },
+  { value: "writing", label: "Writing" },
+  { value: "speaking", label: "Speaking" },
+  { value: "general", label: "General" },
 ]
 
 const LEVEL_OPTIONS = [
-  { value: "BEGINNER", label: "Beginner" },
-  { value: "INTERMEDIATE", label: "Intermediate" },
-  { value: "ADVANCED", label: "Advanced" },
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
 ]
 
-const DURATION_OPTIONS = [
-  { value: "short", label: "Short (< 2 hours)" },
-  { value: "medium", label: "Medium (2-5 hours)" },
-  { value: "long", label: "Long (> 5 hours)" },
-]
-
-const PRICE_OPTIONS = [
+const ENROLLMENT_TYPE_OPTIONS = [
   { value: "free", label: "Free" },
-  { value: "paid", label: "Paid" },
-]
-
-const SORT_OPTIONS = [
-  { value: "popular", label: "Most Popular" },
-  { value: "newest", label: "Newest" },
-  { value: "rating", label: "Highest Rated" },
-  { value: "price-low", label: "Price: Low to High" },
-  { value: "price-high", label: "Price: High to Low" },
+  { value: "premium", label: "Premium" },
 ]
 
 export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: CourseFiltersProps) {
   const [searchValue, setSearchValue] = useState(filters.search || "")
   const [isOpen, setIsOpen] = useState(false)
 
-  const handleSkillToggle = (skill: string) => {
-    const currentSkills = filters.skill || []
-    const newSkills = currentSkills.includes(skill)
-      ? currentSkills.filter((s) => s !== skill)
-      : [...currentSkills, skill]
-    onFiltersChange({ ...filters, skill: newSkills })
+  const handleSkillChange = (skill: string) => {
+    // Backend uses single skill_type, not array
+    onFiltersChange({ ...filters, skill_type: filters.skill_type === skill ? undefined : skill })
   }
 
-  const handleLevelToggle = (level: string) => {
-    const currentLevels = filters.level || []
-    const newLevels = currentLevels.includes(level)
-      ? currentLevels.filter((l) => l !== level)
-      : [...currentLevels, level]
-    onFiltersChange({ ...filters, level: newLevels })
+  const handleLevelChange = (level: string) => {
+    // Backend uses single level, not array
+    onFiltersChange({ ...filters, level: filters.level === level ? undefined : level })
+  }
+  
+  const handleEnrollmentTypeChange = (type: string) => {
+    onFiltersChange({ ...filters, enrollment_type: filters.enrollment_type === type ? undefined : type })
   }
 
   const handleClearFilters = () => {
@@ -76,7 +61,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
   }
 
   const activeFilterCount =
-    (filters.skill?.length || 0) + (filters.level?.length || 0) + (filters.duration ? 1 : 0) + (filters.price ? 1 : 0)
+    (filters.skill_type ? 1 : 0) + (filters.level ? 1 : 0) + (filters.enrollment_type ? 1 : 0) + (filters.is_featured ? 1 : 0)
 
   return (
     <div className="space-y-4">
@@ -125,8 +110,8 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                     <div key={option.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={`skill-${option.value}`}
-                        checked={filters.skill?.includes(option.value)}
-                        onCheckedChange={() => handleSkillToggle(option.value)}
+                        checked={filters.skill_type === option.value}
+                        onCheckedChange={() => handleSkillChange(option.value)}
                       />
                       <label
                         htmlFor={`skill-${option.value}`}
@@ -146,8 +131,8 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                     <div key={option.value} className="flex items-center space-x-2">
                       <Checkbox
                         id={`level-${option.value}`}
-                        checked={filters.level?.includes(option.value)}
-                        onCheckedChange={() => handleLevelToggle(option.value)}
+                        checked={filters.level === option.value}
+                        onCheckedChange={() => handleLevelChange(option.value)}
                       />
                       <label
                         htmlFor={`level-${option.value}`}
@@ -161,38 +146,35 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
               </div>
 
               <div>
-                <Label className="text-base font-semibold mb-3 block">Duration</Label>
-                <Select
-                  value={filters.duration}
-                  onValueChange={(value) => onFiltersChange({ ...filters, duration: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATION_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                <Label className="text-base font-semibold mb-3 block">Enrollment Type</Label>
+                <div className="space-y-2">
+                  {ENROLLMENT_TYPE_OPTIONS.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`enrollment-${option.value}`}
+                        checked={filters.enrollment_type === option.value}
+                        onCheckedChange={() => handleEnrollmentTypeChange(option.value)}
+                      />
+                      <label
+                        htmlFor={`enrollment-${option.value}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
                         {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <Label className="text-base font-semibold mb-3 block">Price</Label>
-                <Select value={filters.price} onValueChange={(value) => onFiltersChange({ ...filters, price: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select price" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRICE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="featured"
+                  checked={filters.is_featured || false}
+                  onCheckedChange={(checked) => onFiltersChange({ ...filters, is_featured: checked as boolean })}
+                />
+                <label htmlFor="featured" className="text-sm font-medium cursor-pointer">
+                  Featured courses only
+                </label>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -211,37 +193,36 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
-          {filters.skill?.map((skill) => (
-            <Badge key={skill} variant="secondary" className="gap-1">
-              {SKILL_OPTIONS.find((s) => s.value === skill)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => handleSkillToggle(skill)} />
+          {filters.skill_type && (
+            <Badge variant="secondary" className="gap-1">
+              {SKILL_OPTIONS.find((s) => s.value === filters.skill_type)?.label}
+              <X className="w-3 h-3 cursor-pointer" onClick={() => handleSkillChange(filters.skill_type!)} />
             </Badge>
-          ))}
-          {filters.level?.map((level) => (
-            <Badge key={level} variant="secondary" className="gap-1">
-              {LEVEL_OPTIONS.find((l) => l.value === level)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => handleLevelToggle(level)} />
+          )}
+          {filters.level && (
+            <Badge variant="secondary" className="gap-1">
+              {LEVEL_OPTIONS.find((l) => l.value === filters.level)?.label}
+              <X className="w-3 h-3 cursor-pointer" onClick={() => handleLevelChange(filters.level!)} />
             </Badge>
-          ))}
+          )}
+          {filters.enrollment_type && (
+            <Badge variant="secondary" className="gap-1">
+              {ENROLLMENT_TYPE_OPTIONS.find((e) => e.value === filters.enrollment_type)?.label}
+              <X className="w-3 h-3 cursor-pointer" onClick={() => handleEnrollmentTypeChange(filters.enrollment_type!)} />
+            </Badge>
+          )}
+          {filters.is_featured && (
+            <Badge variant="secondary" className="gap-1">
+              Featured
+              <X className="w-3 h-3 cursor-pointer" onClick={() => onFiltersChange({ ...filters, is_featured: false })} />
+            </Badge>
+          )}
           {activeFilterCount > 0 && (
             <Button variant="ghost" size="sm" onClick={handleClearFilters} className="h-7">
               Clear all
             </Button>
           )}
         </div>
-
-        <Select value={filters.sort} onValueChange={(value: any) => onFiltersChange({ ...filters, sort: value })}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   )

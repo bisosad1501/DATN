@@ -36,16 +36,36 @@ func main() {
 	notificationClient := client.NewNotificationServiceClient(cfg.NotificationServiceURL, cfg.InternalAPIKey)
 	log.Println("✅ Service clients initialized")
 
+	// Initialize YouTube service
+	youtubeService, err := service.NewYouTubeService()
+	if err != nil {
+		log.Printf("⚠️  Failed to initialize YouTube service: %v (video duration auto-fetch disabled)", err)
+		youtubeService = nil // Continue without YouTube service
+	} else {
+		log.Println("✅ YouTube service initialized")
+	}
+
 	// Initialize service
-	svc := service.NewCourseService(repo, userServiceClient, notificationClient)
+	svc := service.NewCourseService(repo, userServiceClient, notificationClient, youtubeService)
 	log.Println("✅ Service initialized")
+
+	// Initialize and start video sync service
+	var videoSyncService *service.VideoSyncService
+	if youtubeService != nil {
+		videoSyncService = service.NewVideoSyncService(repo, youtubeService)
+		videoSyncService.StartPeriodicSync()
+		log.Println("✅ Video sync service started (runs every 24 hours)")
+
+		// Graceful shutdown
+		defer videoSyncService.Stop()
+	}
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg)
 	log.Println("✅ Middleware initialized")
 
 	// Initialize handlers
-	handler := handlers.NewCourseHandler(svc)
+	handler := handlers.NewCourseHandler(svc, videoSyncService)
 	log.Println("✅ Handlers initialized")
 
 	// Setup Gin router

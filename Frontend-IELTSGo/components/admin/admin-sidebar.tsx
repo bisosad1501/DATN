@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -10,27 +8,25 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  PenTool,
   BarChart3,
   Bell,
   Settings,
   ChevronLeft,
   ChevronRight,
-  GraduationCap,
-  Shield,
-  FileText,
-  Activity,
-  Database,
-  FileSearch,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Logo } from "@/components/layout/logo"
 
 interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  children?: NavItem[]
+  children?: Array<{
+    title: string
+    href: string
+  }>
 }
 
 const navItems: NavItem[] = [
@@ -44,10 +40,10 @@ const navItems: NavItem[] = [
     href: "/admin/users",
     icon: Users,
     children: [
-      { title: "All Users", href: "/admin/users", icon: Users },
-      { title: "Students", href: "/admin/users/students", icon: GraduationCap },
-      { title: "Instructors", href: "/admin/users/instructors", icon: Shield },
-      { title: "Admins", href: "/admin/users/admins", icon: Shield },
+      { title: "All Users", href: "/admin/users" },
+      { title: "Students", href: "/admin/users?role=student" },
+      { title: "Instructors", href: "/admin/users?role=instructor" },
+      { title: "Admins", href: "/admin/users?role=admin" },
     ],
   },
   {
@@ -55,10 +51,10 @@ const navItems: NavItem[] = [
     href: "/admin/content",
     icon: BookOpen,
     children: [
-      { title: "Courses", href: "/admin/content/courses", icon: BookOpen },
-      { title: "Exercises", href: "/admin/content/exercises", icon: PenTool },
-      { title: "Reviews", href: "/admin/content/reviews", icon: FileText },
-      { title: "Question Bank", href: "/admin/content/questions", icon: FileSearch },
+      { title: "All Content", href: "/admin/content" },
+      { title: "Courses", href: "/admin/content?type=course" },
+      { title: "Lessons", href: "/admin/content?type=lesson" },
+      { title: "Exercises", href: "/admin/content?type=exercise" },
     ],
   },
   {
@@ -66,152 +62,148 @@ const navItems: NavItem[] = [
     href: "/admin/analytics",
     icon: BarChart3,
     children: [
-      { title: "Overview", href: "/admin/analytics", icon: BarChart3 },
-      { title: "User Analytics", href: "/admin/analytics/users", icon: Users },
-      { title: "Content Analytics", href: "/admin/analytics/content", icon: BookOpen },
-      { title: "Engagement", href: "/admin/analytics/engagement", icon: Activity },
+      { title: "Overview", href: "/admin/analytics" },
+      { title: "User Analytics", href: "/admin/analytics?tab=users" },
+      { title: "Course Analytics", href: "/admin/analytics?tab=courses" },
+      { title: "Revenue", href: "/admin/analytics?tab=revenue" },
     ],
   },
   {
     title: "Notifications",
     href: "/admin/notifications",
     icon: Bell,
+    children: [
+      { title: "Send Notification", href: "/admin/notifications" },
+      { title: "Templates", href: "/admin/notifications?tab=templates" },
+      { title: "History", href: "/admin/notifications?tab=history" },
+    ],
   },
   {
-    title: "System",
-    href: "/admin/system",
+    title: "Settings",
+    href: "/admin/settings",
     icon: Settings,
     children: [
-      { title: "Settings", href: "/admin/system/settings", icon: Settings },
-      { title: "Health Monitor", href: "/admin/system/health", icon: Activity },
-      { title: "Logs", href: "/admin/system/logs", icon: FileText },
-      { title: "Database", href: "/admin/system/database", icon: Database },
+      { title: "General", href: "/admin/settings" },
+      { title: "Email", href: "/admin/settings?tab=email" },
+      { title: "Security", href: "/admin/settings?tab=security" },
+      { title: "System Health", href: "/admin/settings?tab=health" },
     ],
   },
 ]
 
-export function AdminSidebar() {
-  const [collapsed, setCollapsed] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const pathname = usePathname()
+interface SidebarProps {
+  className?: string
+  defaultCollapsed?: boolean
+}
 
-  const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) => (prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]))
-  }
+export function AdminSidebar({ className, defaultCollapsed = false }: SidebarProps) {
+  const pathname = usePathname()
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+  const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   const isActive = (href: string) => {
     if (href === "/admin") {
       return pathname === href
     }
-    return pathname.startsWith(href)
+    return pathname.startsWith(href.split('?')[0])
+  }
+
+  const toggleExpanded = (title: string) => {
+    setExpandedItems((prev) =>
+      prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]
+    )
   }
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-[#101615] text-white transition-all duration-300",
-        collapsed ? "w-20" : "w-72",
+        "relative flex flex-col border-r bg-background transition-all duration-300 h-screen",
+        collapsed ? "w-20" : "w-[280px]",
+        className,
       )}
     >
-      <div className="flex h-full flex-col">
-        {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-gray-800 px-4">
-          {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                <span className="font-heading text-xl font-bold text-white">I</span>
-              </div>
-              <div>
-                <div className="font-heading text-lg font-bold text-white">IELTSGo</div>
-                <div className="text-xs text-gray-400">Admin Panel</div>
-              </div>
-            </div>
-          )}
-          {collapsed && (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-600 shadow-lg mx-auto">
-              <span className="font-heading text-xl font-bold text-white">I</span>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn("text-white hover:bg-gray-800", collapsed && "hidden")}
-          >
-            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-          </Button>
-        </div>
+      {/* Logo */}
+      <div className="flex h-16 items-center justify-center border-b px-4">
+        <Logo collapsed={collapsed} />
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-          {navItems.map((item) => (
-            <div key={item.title}>
-              <Link
-                href={item.href}
-                onClick={(e) => {
-                  if (item.children) {
-                    e.preventDefault()
-                    toggleExpanded(item.title)
-                  }
-                }}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                  isActive(item.href) 
-                    ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/20" 
-                    : "text-gray-300 hover:bg-gray-800/50 hover:text-white",
-                )}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span className="flex-1">{item.title}</span>}
-                {!collapsed && item.children && (
-                  <ChevronRight
-                    className={cn("h-4 w-4 transition-transform", expandedItems.includes(item.title) && "rotate-90")}
-                  />
-                )}
-              </Link>
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3 py-4">
+        <nav className="flex flex-col gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.href)
+            const isExpanded = expandedItems.includes(item.title)
+            const hasChildren = item.children && item.children.length > 0
 
-              {/* Submenu */}
-              {!collapsed && item.children && expandedItems.includes(item.title) && (
-                <div className="ml-4 mt-1 space-y-1 border-l border-gray-700 pl-4">
-                  {item.children.map((child) => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                        isActive(child.href)
-                          ? "bg-red-500/10 text-red-400 font-medium"
-                          : "text-gray-400 hover:bg-gray-800/50 hover:text-white",
-                      )}
+            return (
+              <div key={item.href}>
+                {/* Parent item */}
+                <div className="flex items-center">
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      active && !hasChildren
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent hover:text-accent-foreground",
+                      collapsed && "justify-center",
+                    )}
+                    title={collapsed ? item.title : undefined}
+                  >
+                    {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+                    {!collapsed && <span className="flex-1">{item.title}</span>}
+                  </Link>
+                  {hasChildren && !collapsed && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        toggleExpanded(item.title)
+                      }}
                     >
-                      <child.icon className="h-4 w-4" />
-                      <span>{child.title}</span>
-                    </Link>
-                  ))}
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          isExpanded && "transform rotate-180"
+                        )}
+                      />
+                    </Button>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
-        </nav>
 
-        {/* Footer */}
-        <div className="border-t border-gray-800 p-4">
-          {!collapsed ? (
-            <div className="rounded-lg bg-gray-800/50 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-xs font-medium text-green-400">System Operational</span>
+                {/* Children items */}
+                {hasChildren && !collapsed && isExpanded && (
+                  <div className="ml-8 mt-1 flex flex-col gap-1">
+                    {item.children!.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={cn(
+                          "rounded-lg px-3 py-1.5 text-sm transition-colors",
+                          isActive(child.href)
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        )}
+                      >
+                        {child.title}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="text-xs text-gray-500">
-                Version 1.0.0
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-            </div>
-          )}
-        </div>
+            )
+          })}
+        </nav>
+      </ScrollArea>
+
+      {/* Collapse button */}
+      <div className="border-t p-4">
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="w-full">
+          {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </Button>
       </div>
     </aside>
   )

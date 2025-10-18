@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -132,12 +131,11 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Notification Center</h1>
-          <p className="text-muted-foreground mt-2">Send bulk notifications, manage templates, and schedule messages</p>
-        </div>
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">Notification Center</h1>
+        <p className="text-muted-foreground mt-1">Send bulk notifications, manage templates, and schedule messages</p>
+      </div>
 
         <Tabs defaultValue="bulk" className="space-y-6">
           <TabsList>
@@ -398,6 +396,5 @@ export default function AdminNotificationsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
   )
 }
