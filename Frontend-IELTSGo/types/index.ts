@@ -149,50 +149,252 @@ export interface Lesson {
 export interface Exercise {
   id: string
   title: string
-  description: string
-  skillType: SkillType
-  difficulty: Difficulty
-  type: "PRACTICE" | "MOCK_TEST" | "QUESTION_BANK"
-  questionCount: number
-  sectionCount: number
-  timeLimit: number
-  passingScore: number
-  tags: string[]
-  averageScore?: number
+  slug?: string
+  description?: string
+  // Backend uses snake_case
+  exercise_type?: string  // practice, mock_test, full_test
+  skill_type?: string     // listening, reading, writing, speaking
+  difficulty?: string     // easy, medium, hard
+  difficulty_level?: string  // alias for difficulty
+  ielts_level?: string
+  total_questions?: number
+  total_sections?: number
+  time_limit_minutes?: number
+  thumbnail_url?: string
+  audio_url?: string
+  audio_duration_seconds?: number
+  audio_transcript?: string
+  passage_count?: number
+  course_id?: string
+  lesson_id?: string
+  passing_score?: number
+  max_score?: number
+  total_points?: number
+  is_free?: boolean
+  is_published?: boolean
+  is_official?: boolean
+  target_band_score?: number
+  instructions?: string
+  total_attempts?: number
+  average_score?: number
+  average_completion_time?: number
+  display_order?: number
+  created_by?: string
+  published_at?: string
+  created_at?: string
+  updated_at?: string
+  
+  // Legacy camelCase support (for backward compatibility)
+  skillType?: SkillType
+  type?: "PRACTICE" | "MOCK_TEST" | "QUESTION_BANK"
+  questionCount?: number
+  sectionCount?: number
+  timeLimit?: number
+  duration?: number
+  passingScore?: number
+  tags?: string[]
   attemptCount?: number
-  createdAt: string
+  createdAt?: string
+}
+
+// Exercise stats
+export interface ExerciseStats {
+  total_attempts: number
+  average_score?: number
+  best_score?: number
+  completion_rate?: number
+}
+
+// Section with details (flattened structure from API)
+export interface ExerciseSectionWithDetails {
+  id: string
+  exercise_id: string
+  title: string
+  description?: string
+  section_number: number
+  question_count: number
+  max_score?: number
+  audio_url?: string
+  audio_start_time?: number
+  audio_end_time?: number
+  transcript?: string
+  passage_title?: string
+  passage_content?: string
+  passage_word_count?: number
+  instructions?: string
+  total_questions?: number
+  time_limit_minutes?: number
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+// Exercise detail response with sections and questions
+export interface ExerciseDetailResponse {
+  exercise: Exercise
+  sections: ExerciseSection[]  // Backend returns array of {section, questions}
+  stats?: ExerciseStats
+}
+
+// Section with nested structure (for questions list)
+export interface ExerciseSection {
+  section: {
+    id: string
+    exercise_id: string
+    title: string
+    description?: string
+    section_number: number
+    audio_url?: string
+    audio_start_time?: number
+    audio_end_time?: number
+    transcript?: string
+    passage_title?: string
+    passage_content?: string
+    passage_word_count?: number
+    instructions?: string
+    total_questions: number
+    time_limit_minutes?: number
+    display_order: number
+    created_at: string
+    updated_at: string
+  }
+  questions: QuestionWithOptions[]
+}
+
+export interface QuestionOption {
+  id: string
+  question_id: string
+  option_label: string  // A, B, C, D
+  option_text: string
+  option_image_url?: string
+  is_correct: boolean
+  display_order: number
+  created_at: string
+}
+
+export interface QuestionWithOptions {
+  question: Question
+  options?: QuestionOption[]
 }
 
 export interface Question {
   id: string
-  exerciseId: string
-  sectionId: string
-  type: QuestionType
-  text: string
-  options?: string[]
-  correctAnswer: string | string[]
-  explanation?: string
-  order: number
+  exercise_id: string
+  section_id?: string
+  question_number: number
+  question_text: string
+  question_type: string  // multiple_choice, true_false_not_given, matching, fill_in_blank, etc.
+  audio_url?: string
+  image_url?: string
+  context_text?: string
   points: number
+  difficulty?: string
+  explanation?: string
+  tips?: string
+  display_order: number
+  created_at: string
+  updated_at: string
+  
+  // Legacy support
+  exerciseId?: string
+  sectionId?: string
+  type?: QuestionType
+  text?: string
+  options?: string[]
+  correctAnswer?: string | string[]
+  order?: number
+}
+
+export interface QuestionOption {
+  id: string
+  question_id: string
+  option_label: string  // A, B, C, D
+  option_text: string
+  option_image_url?: string
+  is_correct: boolean
+  display_order: number
+  created_at: string
 }
 
 export interface Submission {
   id: string
-  exerciseId: string
-  userId: string
-  startedAt: string
-  submittedAt?: string
+  user_id: string
+  exercise_id: string
+  attempt_number: number
+  status: 'in_progress' | 'completed' | 'abandoned'
+  total_questions: number
+  questions_answered: number
+  correct_answers: number
   score?: number
-  timeSpent?: number
-  status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED"
-  answers: Answer[]
+  band_score?: number
+  time_limit_minutes?: number
+  time_spent_seconds: number
+  started_at: string
+  completed_at?: string
+  device_type?: 'web' | 'android' | 'ios'
+  created_at: string
+  updated_at: string
 }
 
+export interface SubmissionAnswer {
+  id: string
+  attempt_id: string
+  question_id: string
+  user_id: string
+  answer_text?: string
+  selected_option_id?: string
+  is_correct?: boolean
+  points_earned?: number
+  time_spent_seconds?: number
+  answered_at: string
+}
+
+export interface SubmissionResult {
+  submission: Submission
+  exercise: Exercise
+  answers: Array<{
+    answer: SubmissionAnswer
+    question: Question
+    correct_answer: string | QuestionOption
+  }>
+  performance: {
+    total_questions: number
+    correct_answers: number
+    incorrect_answers: number
+    skipped_answers: number
+    accuracy: number
+    score: number
+    percentage: number
+    band_score?: number
+    is_passed: boolean
+    time_spent_seconds: number
+    average_time_per_question: number
+  }
+}
+
+// Legacy support
 export interface Answer {
   questionId: string
   answer: string | string[]
   isCorrect?: boolean
   timeSpent?: number
+}
+
+export interface ExerciseResult {
+  id: string
+  exerciseId: string
+  score: number
+  totalScore: number
+  correctAnswers: number
+  totalQuestions: number
+  timeSpent: number
+  feedback?: string
+  answers?: Array<{
+    question: string
+    userAnswer: string
+    correctAnswer: string
+    isCorrect: boolean
+  }>
 }
 
 // Progress Types

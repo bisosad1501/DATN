@@ -1,0 +1,318 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { AppLayout } from "@/components/layout/app-layout"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Loader2, Clock, ChevronLeft, ChevronRight, Flag } from "lucide-react"
+import { exercisesApi } from "@/lib/api/exercises"
+import type { ExerciseSection, QuestionWithOptions } from "@/types"
+
+interface ExerciseData {
+  exercise: {
+    id: string
+    title: string
+    time_limit_minutes?: number
+  }
+  sections: ExerciseSection[]
+}
+
+export default function TakeExercisePage() {
+  const params = useParams()
+  const router = useRouter()
+  const exerciseId = params.exerciseId as string
+  const submissionId = params.submissionId as string
+
+  const [exerciseData, setExerciseData] = useState<ExerciseData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [answers, setAnswers] = useState<Map<string, any>>(new Map())
+  const [timeSpent, setTimeSpent] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeSpent((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Fetch exercise data
+  useEffect(() => {
+    const fetchExercise = async () => {
+      try {
+        const data = await exercisesApi.getExerciseById(exerciseId)
+        setExerciseData(data)
+      } catch (error) {
+        console.error("Failed to fetch exercise:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchExercise()
+  }, [exerciseId])
+
+  // Get all questions flattened
+  const allQuestions: QuestionWithOptions[] = exerciseData?.sections.flatMap((s) => s.questions) || []
+  const currentQuestion = allQuestions[currentQuestionIndex]
+
+  const handleAnswerChange = (questionId: string, answer: any) => {
+    setAnswers(new Map(answers.set(questionId, answer)))
+  }
+
+  const handleNext = () => {
+    if (currentQuestionIndex < allQuestions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!confirm("Are you sure you want to submit? You cannot change your answers after submission.")) {
+      return
+    }
+
+    try {
+      setSubmitting(true)
+
+      // Format answers for API
+      const formattedAnswers = Array.from(answers.entries()).map(([questionId, answer]) => {
+        const question = allQuestions.find((q) => q.question.id === questionId)
+
+        if (question?.question.question_type === "multiple_choice") {
+          return {
+            question_id: questionId,
+            selected_option_id: answer,
+            time_spent_seconds: Math.floor(timeSpent / allQuestions.length),
+          }
+        } else {
+          return {
+            question_id: questionId,
+            text_answer: answer,
+            time_spent_seconds: Math.floor(timeSpent / allQuestions.length),
+          }
+        }
+      })
+
+      // Submit answers
+      await exercisesApi.submitAnswers(submissionId, formattedAnswers)
+
+      // Navigate to result page
+      router.push(`/exercises/${exerciseId}/result/${submissionId}`)
+    } catch (error) {
+      console.error("Failed to submit answers:", error)
+      alert("Failed to submit answers. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`
+  }
+
+  if (loading || !exerciseData || !currentQuestion) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    )
+  }
+
+  const progress = ((currentQuestionIndex + 1) / allQuestions.length) * 100
+  const answeredCount = answers.size
+
+  return (
+    <AppLayout>
+      <div className="container mx-auto px-4 py-4 max-w-5xl">
+        {/* Header with Timer */}
+        <Card className="mb-4">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">{exerciseData.exercise.title}</h2>
+                <p className="text-sm text-muted-foreground">
+                  Question {currentQuestionIndex + 1} of {allQuestions.length}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-mono text-lg">{formatTime(timeSpent)}</span>
+                </div>
+                <Badge variant="outline">
+                  {answeredCount}/{allQuestions.length} answered
+                </Badge>
+              </div>
+            </div>
+            <Progress value={progress} className="mt-3 h-2" />
+          </CardContent>
+        </Card>
+
+        {/* Question */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              Question {currentQuestion.question.question_number}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Question Text */}
+            <div className="text-lg">{currentQuestion.question.question_text}</div>
+
+            {/* Context */}
+            {currentQuestion.question.context_text && (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm">{currentQuestion.question.context_text}</p>
+              </div>
+            )}
+
+            {/* Image */}
+            {currentQuestion.question.image_url && (
+              <img
+                src={currentQuestion.question.image_url}
+                alt="Question"
+                className="max-w-full rounded-lg"
+              />
+            )}
+
+            {/* Answer Input */}
+            <div className="mt-6">
+              {currentQuestion.question.question_type === "multiple_choice" ? (
+                <div className="space-y-3">
+                  {currentQuestion.options?.map((option) => (
+                    <label
+                      key={option.id}
+                      className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        answers.get(currentQuestion.question.id) === option.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.question.id}`}
+                        value={option.id}
+                        checked={answers.get(currentQuestion.question.id) === option.id}
+                        onChange={(e) =>
+                          handleAnswerChange(currentQuestion.question.id, e.target.value)
+                        }
+                        className="mt-1 mr-3"
+                      />
+                      <div className="flex-1">
+                        <span className="font-medium mr-2">{option.option_label}.</span>
+                        <span>{option.option_text}</span>
+                        {option.option_image_url && (
+                          <img
+                            src={option.option_image_url}
+                            alt={option.option_label}
+                            className="mt-2 max-w-xs rounded"
+                          />
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={answers.get(currentQuestion.question.id) || ""}
+                  onChange={(e) =>
+                    handleAnswerChange(currentQuestion.question.id, e.target.value)
+                  }
+                  placeholder="Type your answer here..."
+                  className="w-full p-3 border-2 rounded-lg focus:border-primary outline-none"
+                />
+              )}
+            </div>
+
+            {/* Tips */}
+            {currentQuestion.question.tips && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">💡 Tip:</p>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  {currentQuestion.question.tips}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Navigation */}
+        <div className="flex justify-between mb-6">
+          <Button onClick={handlePrevious} disabled={currentQuestionIndex === 0} variant="outline">
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
+
+          {currentQuestionIndex === allQuestions.length - 1 ? (
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Flag className="w-4 h-4 mr-2" />
+                  Submit Exercise
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button onClick={handleNext}>
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+
+        {/* Question Navigator */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Question Navigator</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-10 gap-2">
+              {allQuestions.map((q, index) => (
+                <button
+                  key={q.question.id}
+                  onClick={() => setCurrentQuestionIndex(index)}
+                  className={`
+                    p-2 rounded text-sm font-medium transition-all
+                    ${index === currentQuestionIndex ? "bg-primary text-primary-foreground" : ""}
+                    ${
+                      answers.has(q.question.id)
+                        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
+                        : "bg-muted hover:bg-muted/80"
+                    }
+                  `}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  )
+}
+

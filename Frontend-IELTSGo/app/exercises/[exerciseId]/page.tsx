@@ -4,91 +4,62 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Loader2, Clock, ChevronLeft, ChevronRight, Flag } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Loader2, Clock, BookOpen, FileText, PlayCircle, Award, Target, CheckCircle } from "lucide-react"
 import { exercisesApi } from "@/lib/api/exercises"
-import type { Exercise, ExerciseSubmission } from "@/types"
+import type { ExerciseDetailResponse } from "@/types"
+import { useAuth } from "@/lib/contexts/auth-context"
 
-export default function ExercisePlayerPage() {
+export default function ExerciseDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
+  
   const exerciseId = params.exerciseId as string
-
-  const [exercise, setExercise] = useState<Exercise | null>(null)
+  
+  const [exerciseData, setExerciseData] = useState<ExerciseDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, any>>({})
-  const [timeRemaining, setTimeRemaining] = useState(0)
-  const [submitting, setSubmitting] = useState(false)
+  const [starting, setStarting] = useState(false)
 
   useEffect(() => {
     const fetchExercise = async () => {
       try {
+        setLoading(true)
         const data = await exercisesApi.getExerciseById(exerciseId)
-        setExercise(data)
-        setTimeRemaining(data.duration * 60) // Convert minutes to seconds
+        setExerciseData(data)
+        console.log('[Exercise Detail] Loaded:', data)
       } catch (error) {
-        console.error("[v0] Failed to fetch exercise:", error)
+        console.error('[Exercise Detail] Failed to load:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchExercise()
+    if (exerciseId) {
+      fetchExercise()
+    }
   }, [exerciseId])
 
-  // Timer countdown
-  useEffect(() => {
-    if (timeRemaining <= 0) return
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          handleSubmit()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [timeRemaining])
-
-  const handleAnswerChange = (questionId: string, value: any) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }))
-  }
-
-  const handleSubmit = async () => {
-    if (!exercise) return
-
-    setSubmitting(true)
-    try {
-      const submission: ExerciseSubmission = {
-        exerciseId: exercise.id,
-        answers,
-        timeSpent: exercise.duration * 60 - timeRemaining,
-        submittedAt: new Date().toISOString(),
-      }
-
-      const result = await exercisesApi.submitExercise(exerciseId, submission)
-      router.push(`/exercises/${exerciseId}/results/${result.id}`)
-    } catch (error) {
-      console.error("[v0] Failed to submit exercise:", error)
-      setSubmitting(false)
+  const handleStartExercise = async () => {
+    if (!user) {
+      router.push('/auth/login')
+      return
     }
-  }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
+    try {
+      setStarting(true)
+      const submission = await exercisesApi.startExercise(exerciseId)
+      console.log('[Exercise Detail] Started submission:', submission)
+
+      router.push(`/exercises/${exerciseId}/take/${submission.id}`)
+    } catch (error) {
+      console.error('[Exercise Detail] Failed to start:', error)
+      alert('Không thể bắt đầu bài tập. Vui lòng thử lại.')
+    } finally {
+      setStarting(false)
+    }
   }
 
   if (loading) {
@@ -101,157 +72,264 @@ export default function ExercisePlayerPage() {
     )
   }
 
-  if (!exercise) {
+  if (!exerciseData) {
     return (
       <AppLayout>
-        <div className="container mx-auto px-4 py-8 text-center">
-          <p className="text-lg text-muted-foreground">Exercise not found</p>
-          <Button className="mt-4" onClick={() => router.push("/exercises")}>
-            Back to Exercises
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold">Không tìm thấy bài tập</h2>
+          <Button onClick={() => router.back()} className="mt-4">
+            Quay lại
           </Button>
         </div>
       </AppLayout>
     )
   }
 
-  const question = exercise.questions?.[currentQuestion]
-  const progress = ((currentQuestion + 1) / (exercise.questions?.length || 1)) * 100
+  const { exercise, sections } = exerciseData
+  // Backend returns sections as array of {section, questions}
+  const totalQuestions = sections?.reduce((sum, sectionData) => {
+    return sum + (sectionData.section?.total_questions || 0)
+  }, 0) || 0
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold">{exercise.title}</h1>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="secondary">{exercise.skill}</Badge>
-                <Badge>{exercise.difficulty}</Badge>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <Clock className="w-5 h-5" />
-              <span className={timeRemaining < 60 ? "text-destructive" : ""}>{formatTime(timeRemaining)}</span>
-            </div>
+      <div className="container max-w-6xl mx-auto py-8 px-4">
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Badge>{exercise.skill_type}</Badge>
+            <Badge variant="outline">{exercise.difficulty_level}</Badge>
+            {exercise.is_official && (
+              <Badge variant="secondary">
+                <Award className="w-3 h-3 mr-1" />
+                Official
+              </Badge>
+            )}
           </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Question {currentQuestion + 1} of {exercise.questions?.length || 0}
-              </span>
-              <span>{Math.round(progress)}% Complete</span>
-            </div>
-            <Progress value={progress} />
-          </div>
+          
+          <h1 className="text-3xl font-bold mb-2">{exercise.title}</h1>
+          {exercise.description && (
+            <p className="text-muted-foreground text-lg">{exercise.description}</p>
+          )}
         </div>
 
-        {/* Question Card */}
-        {question && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Question {currentQuestion + 1}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-base leading-relaxed">{question.question}</p>
-
-              {/* Multiple Choice */}
-              {question.type === "multiple-choice" && (
-                <RadioGroup
-                  value={answers[question.id]}
-                  onValueChange={(value) => handleAnswerChange(question.id, value)}
-                >
-                  {question.options?.map((option, index) => (
-                    <div key={index} className="flex items-center space-x-2 p-3 rounded-lg hover:bg-muted">
-                      <RadioGroupItem value={option} id={`option-${index}`} />
-                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                        {option}
-                      </Label>
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Thông tin bài tập</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Thời gian</p>
+                      <p className="font-medium">
+                        {exercise.time_limit_minutes ? `${exercise.time_limit_minutes} phút` : 'Không giới hạn'}
+                      </p>
                     </div>
-                  ))}
-                </RadioGroup>
-              )}
-
-              {/* Multiple Select */}
-              {question.type === "multiple-select" && (
-                <div className="space-y-2">
-                  {question.options?.map((option, index) => (
-                    <div key={index} className="flex items-center space-x-2 p-3 rounded-lg hover:bg-muted">
-                      <Checkbox
-                        id={`option-${index}`}
-                        checked={answers[question.id]?.includes(option)}
-                        onCheckedChange={(checked) => {
-                          const current = answers[question.id] || []
-                          const updated = checked ? [...current, option] : current.filter((o: string) => o !== option)
-                          handleAnswerChange(question.id, updated)
-                        }}
-                      />
-                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                        {option}
-                      </Label>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Số câu hỏi</p>
+                      <p className="font-medium">{totalQuestions} câu</p>
                     </div>
-                  ))}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Target className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Điểm tối đa</p>
+                      <p className="font-medium">
+                        {exercise.total_points || exercise.max_score || totalQuestions} điểm
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Số phần</p>
+                      <p className="font-medium">{sections.length} phần</p>
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              {/* Fill in the Blank */}
-              {question.type === "fill-blank" && (
-                <Input
-                  placeholder="Type your answer here..."
-                  value={answers[question.id] || ""}
-                  onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                />
-              )}
-
-              {/* Essay/Long Answer */}
-              {(question.type === "essay" || question.type === "long-answer") && (
-                <Textarea
-                  placeholder="Write your answer here..."
-                  value={answers[question.id] || ""}
-                  onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                  rows={8}
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}
-            disabled={currentQuestion === 0}
-            className="bg-transparent"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-
-          <div className="flex gap-2">
-            {currentQuestion === (exercise.questions?.length || 0) - 1 ? (
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? (
+                {exercise.instructions && (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Flag className="w-4 h-4 mr-2" />
-                    Submit Exercise
+                    <Separator />
+                    <div>
+                      <h4 className="font-semibold mb-2">Hướng dẫn</h4>
+                      <div 
+                        className="prose prose-sm max-w-none text-muted-foreground"
+                        dangerouslySetInnerHTML={{ __html: exercise.instructions }}
+                      />
+                    </div>
                   </>
                 )}
-              </Button>
-            ) : (
-              <Button
-                onClick={() => setCurrentQuestion((prev) => Math.min((exercise.questions?.length || 1) - 1, prev + 1))}
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Cấu trúc bài tập</CardTitle>
+                <CardDescription>
+                  {sections.length} phần với tổng {totalQuestions} câu hỏi
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {sections && sections.length > 0 ? (
+                    sections.map((sectionData, index) => {
+                      const section = sectionData.section
+                      const questionCount = sectionData.questions?.length || section?.total_questions || 0
+                      return (
+                        <div
+                          key={section?.id || `section-${index}`}
+                          className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-primary">
+                                {index + 1}
+                              </span>
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{section?.title}</h4>
+                              {section?.description && (
+                                <p className="text-sm text-muted-foreground">{section.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>{questionCount} câu</span>
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Chưa có phần nào
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Lưu ý khi làm bài</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
+                    <span>Đọc kỹ hướng dẫn của từng phần trước khi bắt đầu</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
+                    <span>Quản lý thời gian hợp lý cho từng phần</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
+                    <span>Kiểm tra lại câu trả lời trước khi nộp bài</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
+                    <span>Bạn có thể lưu nháp và tiếp tục sau</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bắt đầu làm bài</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={handleStartExercise} 
+                  disabled={starting}
+                  className="w-full"
+                  size="lg"
+                >
+                  {starting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang chuẩn bị...
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="w-4 h-4 mr-2" />
+                      Bắt đầu làm bài
+                    </>
+                  )}
+                </Button>
+                
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>• Thời gian: {exercise.time_limit_minutes ? `${exercise.time_limit_minutes} phút` : 'Không giới hạn'}</p>
+                  <p>• Số câu: {totalQuestions} câu hỏi</p>
+                  <p>• Có thể làm lại nhiều lần</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {(exercise.total_attempts || exercise.average_score) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Thống kê</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {exercise.total_attempts !== null && exercise.total_attempts !== undefined && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Số lượt làm</span>
+                      <span className="font-semibold">{exercise.total_attempts}</span>
+                    </div>
+                  )}
+
+                  {exercise.average_score !== null && exercise.average_score !== undefined && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Điểm trung bình</span>
+                      <span className="font-semibold text-primary">
+                        {exercise.average_score.toFixed(1)}/{exercise.total_points || totalQuestions}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Thông tin chi tiết</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Loại kỹ năng:</span>
+                  <span className="font-medium">{exercise.skill_type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Độ khó:</span>
+                  <span className="font-medium">{exercise.difficulty_level}</span>
+                </div>
+                {exercise.target_band_score && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Band điểm:</span>
+                    <span className="font-medium">{exercise.target_band_score}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Trạng thái:</span>
+                  <Badge variant={exercise.is_published ? "default" : "secondary"}>
+                    {exercise.is_published ? "Đã xuất bản" : "Nháp"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

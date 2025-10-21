@@ -10,12 +10,21 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
+  // Support both snake_case (backend) and camelCase (legacy)
+  const skillType = exercise.skill_type || exercise.skillType || 'reading'
+  const difficulty = exercise.difficulty || 'medium'
+  const questionCount = exercise.total_questions || exercise.questionCount || 0
+  const timeLimit = exercise.time_limit_minutes || exercise.timeLimit || 0
+  
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
+      case "easy":
       case "beginner":
         return "bg-green-500/10 text-green-700 dark:text-green-400"
+      case "medium":
       case "intermediate":
         return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+      case "hard":
       case "advanced":
         return "bg-red-500/10 text-red-700 dark:text-red-400"
       default:
@@ -43,9 +52,9 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
       <CardHeader>
         <div className="flex items-start justify-between gap-2 mb-2">
           <Badge variant="secondary" className="text-xs">
-            {getSkillIcon(exercise.skill)} {exercise.skill}
+            {getSkillIcon(skillType)} {skillType}
           </Badge>
-          <Badge className={getDifficultyColor(exercise.difficulty)}>{exercise.difficulty}</Badge>
+          <Badge className={getDifficultyColor(difficulty)}>{difficulty}</Badge>
         </div>
         <h3 className="font-semibold text-lg line-clamp-2">{exercise.title}</h3>
       </CardHeader>
@@ -54,18 +63,22 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{exercise.description}</p>
 
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            <span>{exercise.duration} mins</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Target className="w-4 h-4" />
-            <span>{exercise.questions?.length || 0} questions</span>
-          </div>
-          {exercise.completionRate && (
+          {timeLimit > 0 && (
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{timeLimit} mins</span>
+            </div>
+          )}
+          {questionCount > 0 && (
+            <div className="flex items-center gap-1">
+              <Target className="w-4 h-4" />
+              <span>{questionCount} questions</span>
+            </div>
+          )}
+          {exercise.average_score && exercise.total_attempts && exercise.total_attempts > 0 && (
             <div className="flex items-center gap-1">
               <TrendingUp className="w-4 h-4" />
-              <span>{exercise.completionRate}% completed</span>
+              <span>{Math.round(exercise.average_score)}% avg score</span>
             </div>
           )}
         </div>
