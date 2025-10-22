@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/bisosad1501/DATN/services/user-service/internal/models"
 	"github.com/bisosad1501/DATN/services/user-service/internal/service"
@@ -145,6 +146,54 @@ func (h *InternalHandler) UpdateProgressInternal(c *gin.Context) {
 			},
 		})
 		return
+	}
+
+	// Create study session record if session info provided
+	// Note: We create session even if StudyMinutes = 0 (e.g., quick completion or tests)
+	if req.SessionType != "" {
+		var resourceIDPtr *uuid.UUID
+		if req.ResourceID != "" {
+			if resID, err := uuid.Parse(req.ResourceID); err == nil {
+				resourceIDPtr = &resID
+			}
+		}
+
+		var skillTypePtr *string
+		if req.SkillType != "" {
+			skillTypePtr = &req.SkillType
+		}
+
+		now := time.Now()
+
+		// Use at least 1 minute if StudyMinutes is 0 (for quick completions)
+		durationMinutes := req.StudyMinutes
+		if durationMinutes == 0 {
+			durationMinutes = 1
+		}
+
+		session := &models.StudySession{
+			ID:              uuid.New(),
+			UserID:          userID,
+			SessionType:     req.SessionType,
+			SkillType:       skillTypePtr,
+			ResourceID:      resourceIDPtr,
+			StartedAt:       now,
+			EndedAt:         &now,
+			DurationMinutes: &durationMinutes,
+			IsCompleted:     true,
+		}
+
+		if req.Score > 0 {
+			session.Score = &req.Score
+		}
+
+		if err := h.userService.RecordCompletedSession(session); err != nil {
+			log.Printf("⚠️ Failed to create study session for user %s: %v", req.UserID, err)
+			// Don't fail the request, just log the error
+		} else {
+			log.Printf("✅ Study session created for user %s: type=%s, skill=%s, duration=%d min, score=%.2f",
+				req.UserID, req.SessionType, req.SkillType, durationMinutes, req.Score)
+		}
 	}
 
 	log.Printf("✅ Progress updated for user %s: lessons=%d, exercises=%d, minutes=%d",

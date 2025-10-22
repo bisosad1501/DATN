@@ -73,10 +73,27 @@ type CourseDetailResponse struct {
 	EnrollmentDetails *CourseEnrollment   `json:"enrollment_details,omitempty"`
 }
 
-// ModuleWithLessons represents a module with its lessons (including videos)
+// ModuleWithLessons represents a module with its lessons and exercises
 type ModuleWithLessons struct {
-	Module  Module             `json:"module"`
-	Lessons []LessonWithVideos `json:"lessons"`
+	Module    Module             `json:"module"`
+	Lessons   []LessonWithVideos `json:"lessons"`
+	Exercises []ExerciseSummary  `json:"exercises"`
+}
+
+// ExerciseSummary represents a summary of an exercise (from Exercise Service)
+type ExerciseSummary struct {
+	ID             uuid.UUID `json:"id"`
+	Title          string    `json:"title"`
+	Slug           string    `json:"slug"`
+	Description    *string   `json:"description,omitempty"`
+	ExerciseType   string    `json:"exercise_type"`
+	SkillType      string    `json:"skill_type"`
+	Difficulty     string    `json:"difficulty"`
+	TotalQuestions int       `json:"total_questions"`
+	TotalSections  int       `json:"total_sections"`
+	TimeLimitMins  *int      `json:"time_limit_minutes,omitempty"`
+	PassingScore   *float64  `json:"passing_score,omitempty"`
+	DisplayOrder   int       `json:"display_order"`
 }
 
 // LessonWithVideos represents a lesson with its video information

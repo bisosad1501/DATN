@@ -53,9 +53,9 @@ func (h *ExerciseHandler) GetExercises(c *gin.Context) {
 		}
 	}
 
-	if lessonID := c.Query("lesson_id"); lessonID != "" {
-		if id, err := uuid.Parse(lessonID); err == nil {
-			query.LessonID = &id
+	if moduleID := c.Query("module_id"); moduleID != "" {
+		if id, err := uuid.Parse(moduleID); err == nil {
+			query.ModuleID = &id
 		}
 	}
 

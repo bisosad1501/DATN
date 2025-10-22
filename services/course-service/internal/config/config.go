@@ -17,6 +17,7 @@ type Config struct {
 	// Service-to-Service Communication
 	UserServiceURL         string
 	NotificationServiceURL string
+	ExerciseServiceURL     string
 	InternalAPIKey         string
 }
 
@@ -33,6 +34,7 @@ func LoadConfig() *Config {
 		// Service URLs for internal communication
 		UserServiceURL:         getEnv("USER_SERVICE_URL", "http://user-service:8082"),
 		NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://notification-service:8085"),
+		ExerciseServiceURL:     getEnv("EXERCISE_SERVICE_URL", "http://exercise-service:8084"),
 		InternalAPIKey:         getEnv("INTERNAL_API_KEY", "internal_secret_key_ielts_2025_change_in_production"),
 	}
 

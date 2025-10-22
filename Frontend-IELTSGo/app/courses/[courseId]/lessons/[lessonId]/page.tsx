@@ -19,6 +19,8 @@ import {
   Maximize,
   FileText,
   Loader2,
+  PenTool,
+  Target,
 } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
 import type { Lesson, Module } from "@/types"
@@ -39,6 +41,9 @@ export default function LessonPlayerPage() {
   const [duration, setDuration] = useState(0)
   const [note, setNote] = useState("")
   const [notes, setNotes] = useState<Array<{ id: string; content: string; timestamp?: number; createdAt: string }>>([])
+  const [watchStartTime, setWatchStartTime] = useState<number>(Date.now())
+  const [totalWatchedSeconds, setTotalWatchedSeconds] = useState<number>(0)
+  const [lastProgressUpdate, setLastProgressUpdate] = useState<number>(0)
 
   useEffect(() => {
     const fetchLessonData = async () => {
@@ -53,16 +58,19 @@ export default function LessonPlayerPage() {
         const courseDetail = await coursesApi.getCourseById(params.courseId as string)
         
         // Transform the modules data to match our Module type
+        // UPDATED: Include exercises from API
         const transformedModules: Module[] = courseDetail.modules.map((moduleData: any, index: number) => ({
           id: moduleData.module.id,
           course_id: params.courseId as string,
           title: moduleData.module.title || `Module ${index + 1}`,
           display_order: moduleData.module.display_order || index + 1,
           total_lessons: moduleData.lessons?.length || 0,
+          total_exercises: moduleData.exercises?.length || 0,  // NEW
           is_published: true,
           created_at: moduleData.module.created_at || new Date().toISOString(),
           updated_at: moduleData.module.updated_at || new Date().toISOString(),
           lessons: moduleData.lessons || [],
+          exercises: moduleData.exercises || [],  // NEW
         }))
         
         setModules(transformedModules)
@@ -80,13 +88,46 @@ export default function LessonPlayerPage() {
     fetchLessonData()
   }, [params.courseId, params.lessonId])
 
+  // Track video progress and update backend
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime)
+    const handleTimeUpdate = async () => {
+      const currentTime = video.currentTime
+      setCurrentTime(currentTime)
+
+      // Update progress every 30 seconds
+      const now = Date.now()
+      if (now - lastProgressUpdate > 30000 && duration > 0) {
+        const progressPercentage = (currentTime / duration) * 100
+        const timeSpentMinutes = Math.floor((now - watchStartTime) / 60000)
+
+        try {
+          await coursesApi.updateLessonProgress(params.lessonId as string, {
+            progress_percentage: Math.min(progressPercentage, 100),
+            video_watched_seconds: Math.floor(currentTime),
+            video_total_seconds: Math.floor(duration),
+            time_spent_minutes: timeSpentMinutes
+          })
+          setLastProgressUpdate(now)
+          console.log('[Lesson Player] Progress updated:', {
+            progress: progressPercentage.toFixed(1),
+            watched: Math.floor(currentTime),
+            total: Math.floor(duration),
+            timeSpent: timeSpentMinutes
+          })
+        } catch (error) {
+          console.error('[Lesson Player] Failed to update progress:', error)
+        }
+      }
+    }
+
     const handleLoadedMetadata = () => setDuration(video.duration)
-    const handlePlay = () => setIsPlaying(true)
+    const handlePlay = () => {
+      setIsPlaying(true)
+      setWatchStartTime(Date.now())
+    }
     const handlePause = () => setIsPlaying(false)
 
     video.addEventListener("timeupdate", handleTimeUpdate)
@@ -100,7 +141,7 @@ export default function LessonPlayerPage() {
       video.removeEventListener("play", handlePlay)
       video.removeEventListener("pause", handlePause)
     }
-  }, [])
+  }, [duration, lastProgressUpdate, watchStartTime, params.lessonId])
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -391,36 +432,42 @@ export default function LessonPlayerPage() {
                         <h4 className="font-semibold text-sm">{module.title}</h4>
                         <p className="text-xs text-muted-foreground mt-1">
                           {module.lessons?.length || 0} bài học
+                          {(module.exercises?.length || 0) > 0 && (
+                            <span className="text-pink-600 dark:text-pink-400"> • {module.exercises?.length || 0} bài tập</span>
+                          )}
                         </p>
                       </div>
                       <div className="divide-y">
+                        {/* Lessons */}
                         {module.lessons?.map((l, index) => {
                           const contentType = (l.content_type || l.contentType || 'video').toLowerCase()
-                          
+
                           // Prioritize video duration_seconds for accurate display
                           const videoDurationSeconds = (l as any).videos?.[0]?.duration_seconds || 0
                           const durationMinutes = l.duration_minutes || l.duration || 0
                           const durationSeconds = videoDurationSeconds > 0 ? videoDurationSeconds : durationMinutes * 60
-                          
+
                           const isActive = l.id === params.lessonId
-                          
+
                           return (
                             <button
                               key={l.id}
                               onClick={() => router.push(`/courses/${params.courseId}/lessons/${l.id}`)}
                               className={`w-full text-left p-3 transition-all ${
-                                isActive 
-                                  ? "bg-primary/10 border-l-4 border-primary" 
+                                isActive
+                                  ? "bg-primary/10 border-l-4 border-primary"
                                   : "hover:bg-muted/50 border-l-4 border-transparent"
                               }`}
                             >
                               <div className="flex items-start gap-3">
                                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                  isActive
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground"
                                 }`}>
                                   {index + 1}
                                 </div>
-                                
+
                                 <div className="flex-1 min-w-0">
                                   <p className={`text-sm font-medium truncate ${
                                     isActive ? "text-primary" : ""
@@ -429,10 +476,17 @@ export default function LessonPlayerPage() {
                                   </p>
                                   <div className="flex items-center gap-2 mt-1">
                                     {contentType === "video" && (
-                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <PlayCircle className="w-3 h-3" />
-                                        Video
-                                      </span>
+                                      <>
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <PlayCircle className="w-3 h-3" />
+                                          Video
+                                        </span>
+                                        {durationSeconds > 0 && (
+                                          <span className="text-xs text-muted-foreground">
+                                            • {formatDuration(durationSeconds)}
+                                          </span>
+                                        )}
+                                      </>
                                     )}
                                     {contentType === "article" && (
                                       <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -440,9 +494,38 @@ export default function LessonPlayerPage() {
                                         Bài đọc
                                       </span>
                                     )}
-                                    {durationSeconds > 0 && (
-                                      <span className="text-xs text-muted-foreground">
-                                        • {formatDuration(durationSeconds)}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
+
+                        {/* Exercises - NEW */}
+                        {module.exercises?.map((ex, index) => {
+                          return (
+                            <button
+                              key={ex.id}
+                              onClick={() => router.push(`/exercises/${ex.id}`)}
+                              className="w-full text-left p-3 transition-all bg-pink-50/50 dark:bg-pink-950/10 hover:bg-pink-100 dark:hover:bg-pink-950/20 border-l-4 border-transparent hover:border-pink-500"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-pink-200 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
+                                  <Target className="w-3 h-3" />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate text-pink-700 dark:text-pink-300">
+                                    {ex.title}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-pink-600 dark:text-pink-400 flex items-center gap-1 font-medium">
+                                      <PenTool className="w-3 h-3" />
+                                      {ex.total_questions} câu hỏi
+                                    </span>
+                                    {ex.time_limit_minutes && (
+                                      <span className="text-xs text-pink-600 dark:text-pink-400">
+                                        • {ex.time_limit_minutes}m
                                       </span>
                                     )}
                                   </div>

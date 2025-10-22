@@ -16,14 +16,16 @@ type CourseService struct {
 	repo               *repository.CourseRepository
 	userServiceClient  *client.UserServiceClient
 	notificationClient *client.NotificationServiceClient
+	exerciseClient     *client.ExerciseServiceClient
 	youtubeService     *YouTubeService
 }
 
-func NewCourseService(repo *repository.CourseRepository, userServiceClient *client.UserServiceClient, notificationClient *client.NotificationServiceClient, youtubeService *YouTubeService) *CourseService {
+func NewCourseService(repo *repository.CourseRepository, userServiceClient *client.UserServiceClient, notificationClient *client.NotificationServiceClient, exerciseClient *client.ExerciseServiceClient, youtubeService *YouTubeService) *CourseService {
 	return &CourseService{
 		repo:               repo,
 		userServiceClient:  userServiceClient,
 		notificationClient: notificationClient,
+		exerciseClient:     exerciseClient,
 		youtubeService:     youtubeService,
 	}
 }
@@ -58,9 +60,10 @@ func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (
 		return nil, fmt.Errorf("failed to get modules: %w", err)
 	}
 
-	// Get lessons for each module
+	// Get lessons and exercises for each module
 	var modulesWithLessons []models.ModuleWithLessons
 	for _, module := range modules {
+		// Get lessons
 		lessons, err := s.repo.GetLessonsByModuleID(module.ID)
 		if err != nil {
 			log.Printf("Warning: failed to get lessons for module %s: %v", module.ID, err)
@@ -85,9 +88,37 @@ func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (
 			lessonsWithVideos = append(lessonsWithVideos, lessonWithVideo)
 		}
 
+		// Get exercises for this module from Exercise Service
+		var exercises []models.ExerciseSummary
+		if s.exerciseClient != nil {
+			exercisesData, err := s.exerciseClient.GetExercisesByModuleID(module.ID.String())
+			if err != nil {
+				log.Printf("Warning: failed to get exercises for module %s: %v", module.ID, err)
+			} else {
+				// Convert client.ExerciseSummary to models.ExerciseSummary
+				for _, ex := range exercisesData {
+					exercises = append(exercises, models.ExerciseSummary{
+						ID:             uuid.MustParse(ex.ID),
+						Title:          ex.Title,
+						Slug:           ex.Slug,
+						Description:    ex.Description,
+						ExerciseType:   ex.ExerciseType,
+						SkillType:      ex.SkillType,
+						Difficulty:     ex.Difficulty,
+						TotalQuestions: ex.TotalQuestions,
+						TotalSections:  ex.TotalSections,
+						TimeLimitMins:  ex.TimeLimitMins,
+						PassingScore:   ex.PassingScore,
+						DisplayOrder:   ex.DisplayOrder,
+					})
+				}
+			}
+		}
+
 		modulesWithLessons = append(modulesWithLessons, models.ModuleWithLessons{
-			Module:  module,
-			Lessons: lessonsWithVideos,
+			Module:    module,
+			Lessons:   lessonsWithVideos,
+			Exercises: exercises,
 		})
 	}
 

@@ -177,9 +177,9 @@ func (r *userRepository) FindOrCreateByGoogleID(googleID, email, name string) (*
 	// Create new user
 	log.Printf("[FindOrCreateByGoogleID] Creating new user with email: %s, Google ID: %s", email, googleID)
 	query := `
-		INSERT INTO users (id, email, google_id, oauth_provider, is_active, is_verified, 
+		INSERT INTO users (id, email, google_id, oauth_provider, is_active, is_verified,
 		                   email_verified_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
 		RETURNING id, email, password_hash, phone, google_id, oauth_provider,
 		          is_active, is_verified, email_verified_at,
 		          failed_login_attempts, locked_until, last_login_at, last_login_ip,
@@ -187,17 +187,17 @@ func (r *userRepository) FindOrCreateByGoogleID(googleID, email, name string) (*
 	`
 
 	now := time.Now()
+	newUserID := uuid.New()
 	newUser := &models.User{}
 	err = r.db.Get(newUser, query,
-		uuid.New(),
-		email,
-		googleID,
-		"google",
-		true,
-		true,
-		now,
-		now,
-		now,
+		newUserID, // $1 - id
+		email,     // $2 - email
+		googleID,  // $3 - google_id
+		"google",  // $4 - oauth_provider
+		true,      // $5 - is_active
+		true,      // $6 - is_verified
+		now,       // $7 - email_verified_at
+		now,       // $8 - created_at AND updated_at (reused)
 	)
 
 	if err != nil {

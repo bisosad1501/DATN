@@ -30,19 +30,16 @@ function DashboardContent() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
-        
-        // TODO: Uncomment when backend progress API is implemented
-        // const [summaryData, analyticsData, historyData] = await Promise.all([
-        //   progressApi.getProgressSummary(),
-        //   progressApi.getProgressAnalytics("30d"),
-        //   progressApi.getStudyHistory(1, 10),
-        // ])
-        // setSummary(summaryData)
-        // setAnalytics(analyticsData)
-        // setHistory(historyData.data || [])
-        
-        // Using mock data until backend is ready
-        throw new Error("Using mock data")
+
+        // Fetch real data from backend
+        const [summaryData, analyticsData, historyData] = await Promise.all([
+          progressApi.getProgressSummary(),
+          progressApi.getProgressAnalytics("30d"),
+          progressApi.getStudyHistory(1, 10),
+        ])
+        setSummary(summaryData)
+        setAnalytics(analyticsData)
+        setHistory(historyData.data || [])
       } catch (error) {
         // Use mock data for demo purposes
         // Set mock data for demo purposes

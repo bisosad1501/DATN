@@ -157,7 +157,7 @@ func (r *CourseRepository) GetCourseByID(courseID uuid.UUID) (*models.Course, er
 // GetModulesByCourseID retrieves modules for a course
 func (r *CourseRepository) GetModulesByCourseID(courseID uuid.UUID) ([]models.Module, error) {
 	query := `
-		SELECT id, course_id, title, description, duration_hours, total_lessons,
+		SELECT id, course_id, title, description, duration_hours, total_lessons, total_exercises,
 			   display_order, is_published, created_at, updated_at
 		FROM modules
 		WHERE course_id = $1 AND is_published = true
@@ -175,7 +175,7 @@ func (r *CourseRepository) GetModulesByCourseID(courseID uuid.UUID) ([]models.Mo
 		var module models.Module
 		err := rows.Scan(
 			&module.ID, &module.CourseID, &module.Title, &module.Description,
-			&module.DurationHours, &module.TotalLessons, &module.DisplayOrder,
+			&module.DurationHours, &module.TotalLessons, &module.TotalExercises, &module.DisplayOrder,
 			&module.IsPublished, &module.CreatedAt, &module.UpdatedAt,
 		)
 		if err != nil {
@@ -190,16 +190,16 @@ func (r *CourseRepository) GetModulesByCourseID(courseID uuid.UUID) ([]models.Mo
 // GetLessonsByModuleID retrieves lessons for a module
 func (r *CourseRepository) GetLessonsByModuleID(moduleID uuid.UUID) ([]models.Lesson, error) {
 	query := `
-		SELECT 
+		SELECT
 			l.id, l.module_id, l.course_id, l.title, l.description, l.content_type,
 			-- Use video duration if available, fallback to lesson duration_minutes
-			CASE 
-				WHEN l.content_type = 'video' THEN 
+			CASE
+				WHEN l.content_type = 'video' THEN
 					COALESCE(
-						(SELECT CEIL(v.duration_seconds / 60.0) 
-						 FROM lesson_videos v 
-						 WHERE v.lesson_id = l.id 
-						 ORDER BY v.display_order 
+						(SELECT CEIL(v.duration_seconds / 60.0)
+						 FROM lesson_videos v
+						 WHERE v.lesson_id = l.id
+						 ORDER BY v.display_order
 						 LIMIT 1),
 						l.duration_minutes
 					)
@@ -240,16 +240,16 @@ func (r *CourseRepository) GetLessonsByModuleID(moduleID uuid.UUID) ([]models.Le
 // GetLessonByID retrieves a lesson by ID
 func (r *CourseRepository) GetLessonByID(lessonID uuid.UUID) (*models.Lesson, error) {
 	query := `
-		SELECT 
+		SELECT
 			l.id, l.module_id, l.course_id, l.title, l.description, l.content_type,
 			-- Use video duration if available, fallback to lesson duration_minutes
-			CASE 
-				WHEN l.content_type = 'video' THEN 
+			CASE
+				WHEN l.content_type = 'video' THEN
 					COALESCE(
-						(SELECT CEIL(v.duration_seconds / 60.0) 
-						 FROM lesson_videos v 
-						 WHERE v.lesson_id = l.id 
-						 ORDER BY v.display_order 
+						(SELECT CEIL(v.duration_seconds / 60.0)
+						 FROM lesson_videos v
+						 WHERE v.lesson_id = l.id
+						 ORDER BY v.display_order
 						 LIMIT 1),
 						l.duration_minutes
 					)

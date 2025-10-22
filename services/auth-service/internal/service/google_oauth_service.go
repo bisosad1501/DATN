@@ -13,6 +13,7 @@ import (
 	"github.com/bisosad1501/DATN/services/auth-service/internal/config"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/models"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/repository"
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -27,13 +28,14 @@ type GoogleOAuthService interface {
 }
 
 type googleOAuthService struct {
-	config      *oauth2.Config
-	userRepo    repository.UserRepository
-	roleRepo    repository.RoleRepository
-	tokenRepo   repository.TokenRepository
-	auditRepo   repository.AuditLogRepository
-	authService AuthService
-	appConfig   *config.Config
+	config            *oauth2.Config
+	userRepo          repository.UserRepository
+	roleRepo          repository.RoleRepository
+	tokenRepo         repository.TokenRepository
+	auditRepo         repository.AuditLogRepository
+	authService       AuthService
+	appConfig         *config.Config
+	userServiceClient *client.UserServiceClient
 }
 
 type GoogleUserInfo struct {
@@ -54,6 +56,7 @@ func NewGoogleOAuthService(
 	tokenRepo repository.TokenRepository,
 	auditRepo repository.AuditLogRepository,
 	authService AuthService,
+	userServiceClient *client.UserServiceClient,
 ) GoogleOAuthService {
 	oauthConfig := &oauth2.Config{
 		ClientID:     cfg.GoogleClientID,
@@ -67,13 +70,14 @@ func NewGoogleOAuthService(
 	}
 
 	return &googleOAuthService{
-		config:      oauthConfig,
-		userRepo:    userRepo,
-		roleRepo:    roleRepo,
-		tokenRepo:   tokenRepo,
-		auditRepo:   auditRepo,
-		authService: authService,
-		appConfig:   cfg,
+		config:            oauthConfig,
+		userRepo:          userRepo,
+		roleRepo:          roleRepo,
+		tokenRepo:         tokenRepo,
+		auditRepo:         auditRepo,
+		authService:       authService,
+		appConfig:         cfg,
+		userServiceClient: userServiceClient,
 	}
 }
 
@@ -113,6 +117,11 @@ func (s *googleOAuthService) GetUserInfo(token *oauth2.Token) (*GoogleUserInfo, 
 func (s *googleOAuthService) AuthenticateUser(googleUser *GoogleUserInfo, ip, userAgent string) (*models.AuthResponse, error) {
 	// Find or create user by Google ID
 	log.Printf("[AuthenticateUser] Finding/creating user for Google ID: %s, Email: %s", googleUser.ID, googleUser.Email)
+
+	// Check if user exists before creation
+	existingUser, _ := s.userRepo.FindByGoogleID(googleUser.ID)
+	isNewUser := (existingUser == nil)
+
 	user, err := s.userRepo.FindOrCreateByGoogleID(googleUser.ID, googleUser.Email, googleUser.Name)
 	if err != nil {
 		log.Printf("[AuthenticateUser] ❌ Failed to find/create user: %v", err)
@@ -134,7 +143,24 @@ func (s *googleOAuthService) AuthenticateUser(googleUser *GoogleUserInfo, ip, us
 			},
 		}, nil
 	}
-	log.Printf("[AuthenticateUser] ✅ Found/created user: ID=%s, Email=%s, IsActive=%v", user.ID, user.Email, user.IsActive)
+	log.Printf("[AuthenticateUser] ✅ Found/created user: ID=%s, Email=%s, IsActive=%v, IsNew=%v", user.ID, user.Email, user.IsActive, isNewUser)
+
+	// If this is a new user, create profile in User Service
+	if isNewUser && s.userServiceClient != nil {
+		log.Printf("[AuthenticateUser] Creating profile for new OAuth user %s", user.ID)
+		profileReq := client.CreateProfileRequest{
+			UserID:   user.ID.String(),
+			Email:    user.Email,
+			Role:     "student", // Default role for OAuth users
+			FullName: googleUser.Name,
+		}
+		if err := s.userServiceClient.CreateProfile(profileReq); err != nil {
+			log.Printf("[AuthenticateUser] ⚠️ Failed to create user profile for %s: %v", user.Email, err)
+			// Don't fail login, but log the error
+		} else {
+			log.Printf("[AuthenticateUser] ✅ Created profile for OAuth user %s", user.ID)
+		}
+	}
 
 	// Check if account is active
 	if !user.IsActive {

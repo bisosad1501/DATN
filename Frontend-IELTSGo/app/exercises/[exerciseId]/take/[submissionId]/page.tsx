@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Loader2, Clock, ChevronLeft, ChevronRight, Flag } from "lucide-react"
+import { Loader2, Clock, ChevronLeft, ChevronRight, Flag, Eye, EyeOff } from "lucide-react"
 import { exercisesApi } from "@/lib/api/exercises"
 import type { ExerciseSection, QuestionWithOptions } from "@/types"
 
@@ -32,6 +32,7 @@ export default function TakeExercisePage() {
   const [answers, setAnswers] = useState<Map<string, any>>(new Map())
   const [timeSpent, setTimeSpent] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [showSectionContent, setShowSectionContent] = useState(true) // Show passage/audio
 
   // Timer
   useEffect(() => {
@@ -56,9 +57,29 @@ export default function TakeExercisePage() {
     fetchExercise()
   }, [exerciseId])
 
-  // Get all questions flattened
-  const allQuestions: QuestionWithOptions[] = exerciseData?.sections.flatMap((s) => s.questions) || []
+  // Get all questions flattened with section info
+  const allQuestions: (QuestionWithOptions & { sectionId: string; sectionData: any })[] =
+    exerciseData?.sections.flatMap((sectionData) =>
+      (sectionData.questions || []).map((q) => ({
+        ...q,
+        sectionId: sectionData.section?.id || '',
+        sectionData: sectionData.section
+      }))
+    ) || []
   const currentQuestion = allQuestions[currentQuestionIndex]
+
+  // Get current section
+  const currentSection = currentQuestion?.sectionData
+
+  // Debug logging
+  useEffect(() => {
+    if (currentSection) {
+      console.log('[Take Exercise] Current Section:', currentSection)
+      console.log('[Take Exercise] Has audio_url:', !!currentSection.audio_url)
+      console.log('[Take Exercise] Has passage_content:', !!currentSection.passage_content)
+      console.log('[Take Exercise] Has instructions:', !!currentSection.instructions)
+    }
+  }, [currentSection])
 
   const handleAnswerChange = (questionId: string, answer: any) => {
     setAnswers(new Map(answers.set(questionId, answer)))
@@ -66,12 +87,30 @@ export default function TakeExercisePage() {
 
   const handleNext = () => {
     if (currentQuestionIndex < allQuestions.length - 1) {
+      const nextQuestion = allQuestions[currentQuestionIndex + 1]
+      const currentSectionId = currentQuestion?.sectionId
+      const nextSectionId = nextQuestion?.sectionId
+
+      // Show section content if moving to a new section
+      if (currentSectionId !== nextSectionId) {
+        setShowSectionContent(true)
+      }
+
       setCurrentQuestionIndex((prev) => prev + 1)
     }
   }
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
+      const prevQuestion = allQuestions[currentQuestionIndex - 1]
+      const currentSectionId = currentQuestion?.sectionId
+      const prevSectionId = prevQuestion?.sectionId
+
+      // Show section content if moving to a new section
+      if (currentSectionId !== prevSectionId) {
+        setShowSectionContent(true)
+      }
+
       setCurrentQuestionIndex((prev) => prev - 1)
     }
   }
@@ -165,6 +204,105 @@ export default function TakeExercisePage() {
             <Progress value={progress} className="mt-3 h-2" />
           </CardContent>
         </Card>
+
+        {/* Section Content (Passage for Reading, Audio for Listening) */}
+        {currentSection && (currentSection.passage_content || currentSection.audio_url || currentSection.instructions) && (
+          <div className="mb-4">
+            {/* Toggle Button */}
+            <div className="flex justify-end mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSectionContent(!showSectionContent)}
+              >
+                {showSectionContent ? (
+                  <>
+                    <EyeOff className="w-4 h-4 mr-2" />
+                    Hide Section Content
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Show Section Content
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {showSectionContent && (
+              <>
+                {/* Section Instructions */}
+                {currentSection.instructions && (
+                  <Card className="mb-4 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        📋 Instructions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div
+                        className="prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: currentSection.instructions }}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Reading Passage */}
+                {currentSection.passage_content && (
+                  <Card className="mb-4">
+                    <CardHeader>
+                      <CardTitle className="text-lg">
+                        📖 {currentSection.passage_title || 'Reading Passage'}
+                      </CardTitle>
+                      {currentSection.passage_word_count && (
+                        <p className="text-sm text-muted-foreground">
+                          Word count: {currentSection.passage_word_count}
+                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div
+                        className="prose prose-sm max-w-none leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: currentSection.passage_content }}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Listening Audio */}
+                {currentSection.audio_url && (
+                  <Card className="mb-4 border-purple-200 bg-purple-50/50 dark:bg-purple-950/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        🎧 Audio
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <audio
+                        controls
+                        className="w-full"
+                        src={currentSection.audio_url}
+                      >
+                        Your browser does not support the audio element.
+                      </audio>
+                      {currentSection.transcript && (
+                        <details className="mt-4">
+                          <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+                            View Transcript
+                          </summary>
+                          <div className="mt-2 p-3 bg-muted rounded-lg text-sm">
+                            {currentSection.transcript}
+                          </div>
+                        </details>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Question */}
         <Card className="mb-4">

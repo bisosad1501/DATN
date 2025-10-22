@@ -40,16 +40,17 @@ type Course struct {
 
 // Module represents a course module/section
 type Module struct {
-	ID            uuid.UUID `json:"id"`
-	CourseID      uuid.UUID `json:"course_id"`
-	Title         string    `json:"title"`
-	Description   *string   `json:"description,omitempty"`
-	DurationHours *float64  `json:"duration_hours,omitempty"`
-	TotalLessons  int       `json:"total_lessons"`
-	DisplayOrder  int       `json:"display_order"`
-	IsPublished   bool      `json:"is_published"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	CourseID       uuid.UUID `json:"course_id"`
+	Title          string    `json:"title"`
+	Description    *string   `json:"description,omitempty"`
+	DurationHours  *float64  `json:"duration_hours,omitempty"`
+	TotalLessons   int       `json:"total_lessons"`
+	TotalExercises int       `json:"total_exercises"`
+	DisplayOrder   int       `json:"display_order"`
+	IsPublished    bool      `json:"is_published"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Lesson represents a lesson within a module
@@ -59,7 +60,7 @@ type Lesson struct {
 	CourseID         uuid.UUID `json:"course_id"`
 	Title            string    `json:"title"`
 	Description      *string   `json:"description,omitempty"`
-	ContentType      string    `json:"content_type"` // video, article, quiz, exercise
+	ContentType      string    `json:"content_type"` // video, article, quiz
 	DurationMinutes  *int      `json:"duration_minutes,omitempty"`
 	DisplayOrder     int       `json:"display_order"`
 	IsFree           bool      `json:"is_free"`

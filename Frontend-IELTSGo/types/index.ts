@@ -113,11 +113,13 @@ export interface Module {
   description?: string
   duration_hours?: number
   total_lessons: number
+  total_exercises: number  // NEW: Separate count for exercises
   display_order: number
   is_published: boolean
   created_at: string
   updated_at: string
   lessons?: Lesson[]
+  exercises?: ExerciseSummary[]  // NEW: Exercises array
 }
 
 export interface Lesson {
@@ -126,16 +128,17 @@ export interface Lesson {
   course_id: string
   title: string
   description?: string
-  content_type: string // video, article, quiz, exercise
+  content_type: 'video' | 'article' | 'quiz'  // UPDATED: Removed 'exercise'
   duration_minutes?: number
   display_order: number
   is_free: boolean
   is_published: boolean
+  // completion_criteria removed - no longer needed
   total_completions: number
   average_time_spent?: number
   created_at: string
   updated_at: string
-  
+
   // Legacy support
   moduleId?: string
   contentType?: "VIDEO" | "ARTICLE" | "QUIZ"
@@ -143,6 +146,22 @@ export interface Lesson {
   duration?: number
   order?: number
   isPreview?: boolean
+}
+
+// NEW: Exercise summary for course detail response
+export interface ExerciseSummary {
+  id: string
+  title: string
+  slug: string
+  description?: string
+  exercise_type: string  // practice, mock_test
+  skill_type: string
+  difficulty: string
+  total_questions: number
+  total_sections: number
+  time_limit_minutes?: number
+  passing_score?: number
+  display_order: number
 }
 
 // Exercise Types
@@ -165,8 +184,9 @@ export interface Exercise {
   audio_duration_seconds?: number
   audio_transcript?: string
   passage_count?: number
-  course_id?: string
-  lesson_id?: string
+  course_id?: string      // NEW: Link to course (not lesson)
+  module_id?: string      // NEW: Link to module (not lesson)
+  // lesson_id removed - exercises no longer linked to lessons
   passing_score?: number
   max_score?: number
   total_points?: number
@@ -183,7 +203,7 @@ export interface Exercise {
   published_at?: string
   created_at?: string
   updated_at?: string
-  
+
   // Legacy camelCase support (for backward compatibility)
   skillType?: SkillType
   type?: "PRACTICE" | "MOCK_TEST" | "QUESTION_BANK"
@@ -420,20 +440,73 @@ export interface CourseProgress {
   completedAt?: string
 }
 
+// Lesson Progress - matches Backend schema
 export interface LessonProgress {
-  lessonId: string
-  userId: string
-  courseId: string
-  isCompleted: boolean
-  timeSpent: number
-  lastPosition?: number
-  notes?: Array<{
-    id: string
-    content: string
-    timestamp?: number
-    createdAt: string
-  }>
-  completedAt?: string
+  id: string
+  user_id: string
+  lesson_id: string
+  course_id: string
+  status: 'not_started' | 'in_progress' | 'completed'
+  progress_percentage: number
+  video_watched_seconds: number
+  video_total_seconds?: number
+  video_watch_percentage: number
+  time_spent_minutes: number
+  completed_at?: string
+  first_accessed_at: string
+  last_accessed_at: string
+}
+
+// Update Lesson Progress Request
+export interface UpdateLessonProgressRequest {
+  progress_percentage?: number
+  video_watched_seconds?: number
+  video_total_seconds?: number
+  time_spent_minutes?: number
+  is_completed?: boolean
+}
+
+// Enrollment Progress Response
+export interface EnrollmentProgressResponse {
+  enrollment: CourseEnrollment
+  course: Course
+  modules_progress: ModuleProgress[]
+  recent_lessons: LessonWithProgress[]
+}
+
+export interface ModuleProgress {
+  module: Module
+  total_lessons: number
+  completed_lessons: number
+  progress_percentage: number
+}
+
+export interface LessonWithProgress {
+  lesson: Lesson
+  progress: LessonProgress
+}
+
+// Course Enrollment - matches Backend schema
+export interface CourseEnrollment {
+  id: string
+  user_id: string
+  course_id: string
+  enrollment_date: string
+  enrollment_type: 'free' | 'purchased' | 'subscription'
+  payment_id?: string
+  amount_paid?: number
+  currency?: string
+  progress_percentage: number
+  lessons_completed: number
+  total_time_spent_minutes: number
+  status: 'active' | 'completed' | 'expired' | 'cancelled'
+  completed_at?: string
+  certificate_issued: boolean
+  certificate_url?: string
+  expires_at?: string
+  last_accessed_at?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Statistics {

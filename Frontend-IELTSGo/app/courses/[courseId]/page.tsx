@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Star, BookOpen, PlayCircle, FileText, CheckCircle, Loader2 } from "lucide-react"
+import { Users, Star, BookOpen, PlayCircle, FileText, CheckCircle, Loader2, Target } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
 import { useAuth } from "@/lib/contexts/auth-context"
 import type { Course, Module } from "@/types"
@@ -36,10 +36,12 @@ export default function CourseDetailPage() {
         setIsEnrolled(courseDetail.is_enrolled || false)
         
         // Use modules from backend response
+        // UPDATED: Include exercises array from API
         if (courseDetail.modules && Array.isArray(courseDetail.modules)) {
           const formattedModules = courseDetail.modules.map((moduleData) => ({
             ...moduleData.module,
-            lessons: moduleData.lessons || []
+            lessons: moduleData.lessons || [],
+            exercises: moduleData.exercises || []  // NEW: Include exercises
           }))
           setModules(formattedModules)
           console.log('[DEBUG] Loaded modules:', formattedModules)
@@ -317,50 +319,122 @@ export default function CourseDetailPage() {
                         <AccordionTrigger className="hover:no-underline">
                           <div className="flex items-center justify-between w-full pr-4">
                             <span className="font-semibold">{module.title}</span>
-                            <span className="text-sm text-muted-foreground">{module.lessons?.length || 0} bài học</span>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span>{module.lessons?.length || 0} bài học</span>
+                              {(module.exercises?.length || 0) > 0 && (
+                                <span className="text-pink-600 dark:text-pink-400">
+                                  • {module.exercises?.length || 0} bài tập
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </AccordionTrigger>
                       <AccordionContent>
-                        <div className="space-y-2 pt-2">
-                          {module.lessons?.map((lesson) => {
-                            const contentType = (lesson.content_type || lesson.contentType || 'video').toUpperCase()
-                            const Icon = contentTypeIcons[contentType] || PlayCircle
-                            const isPreview = lesson.is_free || lesson.isPreview || false
-                            
-                            // Prioritize video duration_seconds for accurate display
-                            const videoDurationSeconds = (lesson as any).videos?.[0]?.duration_seconds || 0
-                            const durationMinutes = lesson.duration_minutes || lesson.duration || 0
-                            const durationSeconds = videoDurationSeconds > 0 ? videoDurationSeconds : durationMinutes * 60
-                            
-                            const handleLessonClick = () => {
-                              // Check if user is enrolled or if lesson is free/preview
-                              if (isEnrolled || isPreview) {
-                                router.push(`/courses/${params.courseId}/lessons/${lesson.id}`)
-                              } else {
-                                // Show enroll prompt or error
-                                alert('Vui lòng đăng ký khóa học để xem bài học này')
-                              }
-                            }
-                            
-                            return (
-                              <button
-                                key={lesson.id}
-                                onClick={handleLessonClick}
-                                className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-left"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Icon className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-sm">{lesson.title}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs text-muted-foreground">
-                                    {durationSeconds > 0 ? formatDuration(durationSeconds) : ''}
-                                  </span>
-                                  {isPreview && <Badge variant="outline">Preview</Badge>}
-                                </div>
-                              </button>
-                            )
-                          })}
+                        <div className="space-y-4 pt-2">
+                          {/* Lessons Section */}
+                          {module.lessons && module.lessons.length > 0 && (
+                            <div className="space-y-2">
+                              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3">
+                                📚 Lessons
+                              </h4>
+                              {module.lessons.map((lesson) => {
+                                const contentType = (lesson.content_type || lesson.contentType || 'video').toUpperCase()
+                                const Icon = contentTypeIcons[contentType] || PlayCircle
+                                const isPreview = lesson.is_free || lesson.isPreview || false
+
+                                // Prioritize video duration_seconds for accurate display
+                                const videoDurationSeconds = (lesson as any).videos?.[0]?.duration_seconds || 0
+                                const durationMinutes = lesson.duration_minutes || lesson.duration || 0
+                                const durationSeconds = videoDurationSeconds > 0 ? videoDurationSeconds : durationMinutes * 60
+
+                                const handleLessonClick = () => {
+                                  // Check if user is enrolled or if lesson is free/preview
+                                  if (isEnrolled || isPreview) {
+                                    router.push(`/courses/${params.courseId}/lessons/${lesson.id}`)
+                                  } else {
+                                    alert('Vui lòng đăng ký khóa học để xem bài học này')
+                                  }
+                                }
+
+                                return (
+                                  <button
+                                    key={lesson.id}
+                                    onClick={handleLessonClick}
+                                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                                  >
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <Icon className="w-4 h-4 text-muted-foreground" />
+                                      <div className="flex-1">
+                                        <span className="text-sm font-medium">{lesson.title}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      {durationSeconds > 0 && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDuration(durationSeconds)}
+                                        </span>
+                                      )}
+                                      {isPreview && <Badge variant="outline">Preview</Badge>}
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {/* Exercises Section - NEW */}
+                          {module.exercises && module.exercises.length > 0 && (
+                            <div className="space-y-2">
+                              <h4 className="text-xs font-semibold text-pink-600 dark:text-pink-400 uppercase tracking-wide px-3">
+                                ✍️ Practice Exercises
+                              </h4>
+                              {module.exercises.map((exercise) => {
+                                const handleExerciseClick = () => {
+                                  if (isEnrolled || exercise.is_free) {
+                                    router.push(`/exercises/${exercise.id}`)
+                                  } else {
+                                    alert('Vui lòng đăng ký khóa học để làm bài tập này')
+                                  }
+                                }
+
+                                return (
+                                  <button
+                                    key={exercise.id}
+                                    onClick={handleExerciseClick}
+                                    className="w-full flex items-center justify-between p-3 rounded-lg bg-pink-50/50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 hover:bg-pink-100/50 dark:hover:bg-pink-950/30 transition-colors cursor-pointer text-left"
+                                  >
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <Target className="w-4 h-4 text-pink-500" />
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium">{exercise.title}</span>
+                                          <Badge variant="outline" className="bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-950 dark:text-pink-300 text-xs capitalize">
+                                            {exercise.exercise_type?.replace('_', ' ') || 'Practice'}
+                                          </Badge>
+                                        </div>
+                                        {exercise.description && (
+                                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                            {exercise.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-xs text-pink-600 dark:text-pink-400 font-medium flex items-center gap-2">
+                                        <span>{exercise.total_questions} Qs</span>
+                                        {exercise.time_limit_minutes && (
+                                          <>
+                                            <span>•</span>
+                                            <span>{exercise.time_limit_minutes}m</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>

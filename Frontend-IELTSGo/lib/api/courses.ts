@@ -1,5 +1,13 @@
 import { apiClient } from "./apiClient"
-import type { Course, Lesson, CourseProgress, LessonProgress } from "@/types"
+import type {
+  Course,
+  Lesson,
+  CourseProgress,
+  LessonProgress,
+  UpdateLessonProgressRequest,
+  EnrollmentProgressResponse,
+  CourseEnrollment
+} from "@/types"
 
 export interface CourseFilters {
   level?: string
@@ -69,6 +77,11 @@ export const coursesApi = {
     return response.data.data
   },
 
+  // Alias for getCourseById (for consistency)
+  getCourseDetail: async (id: string) => {
+    return coursesApi.getCourseById(id)
+  },
+
   // Get course curriculum (lessons) - using course detail endpoint
   getCourseLessons: async (courseId: string): Promise<Lesson[]> => {
     const courseDetail = await coursesApi.getCourseById(courseId)
@@ -135,7 +148,13 @@ export const coursesApi = {
     return response.data.data.enrollments.map((item: any) => item.course)
   },
 
-  // Get course progress (enrollment progress)
+  // Get enrollment progress (detailed progress with modules)
+  getEnrollmentProgress: async (enrollmentId: string): Promise<EnrollmentProgressResponse> => {
+    const response = await apiClient.get<ApiResponse<EnrollmentProgressResponse>>(`/enrollments/${enrollmentId}/progress`)
+    return response.data.data
+  },
+
+  // Get course progress (simple progress percentage)
   getCourseProgress: async (enrollmentId: string): Promise<CourseProgress> => {
     const response = await apiClient.get<ApiResponse<CourseProgress>>(`/enrollments/${enrollmentId}/progress`)
     return response.data.data
@@ -144,18 +163,18 @@ export const coursesApi = {
   // Update lesson progress
   updateLessonProgress: async (
     lessonId: string,
-    progress: Partial<LessonProgress>,
+    progress: UpdateLessonProgressRequest,
   ): Promise<LessonProgress> => {
     const response = await apiClient.put<ApiResponse<LessonProgress>>(`/progress/lessons/${lessonId}`, progress)
     return response.data.data
   },
 
   // Mark lesson as completed
-  completLesson: async (lessonId: string): Promise<void> => {
-    await apiClient.put(`/progress/lessons/${lessonId}`, { 
-      is_completed: true,
-      completed_at: new Date().toISOString()
+  completeLesson: async (lessonId: string): Promise<LessonProgress> => {
+    const response = await apiClient.put<ApiResponse<LessonProgress>>(`/progress/lessons/${lessonId}`, {
+      is_completed: true
     })
+    return response.data.data
   },
 
   // Add lesson note

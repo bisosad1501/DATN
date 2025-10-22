@@ -10,6 +10,7 @@ import (
 	"github.com/bisosad1501/DATN/services/auth-service/internal/repository"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/routes"
 	"github.com/bisosad1501/DATN/services/auth-service/internal/service"
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -55,9 +56,12 @@ func main() {
 		cfg.SMTPFromName,
 	)
 
+	// Initialize service clients
+	userServiceClient := client.NewUserServiceClient(cfg.UserServiceURL, cfg.InternalAPIKey)
+
 	// Initialize services
 	authService := service.NewAuthService(userRepo, roleRepo, tokenRepo, auditRepo, passwordResetRepo, emailVerificationRepo, emailService, redisClient, cfg)
-	googleOAuthService := service.NewGoogleOAuthService(cfg, userRepo, roleRepo, tokenRepo, auditRepo, authService)
+	googleOAuthService := service.NewGoogleOAuthService(cfg, userRepo, roleRepo, tokenRepo, auditRepo, authService, userServiceClient)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService, googleOAuthService)

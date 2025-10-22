@@ -34,6 +34,7 @@ func main() {
 	// Initialize service clients for service-to-service communication
 	userServiceClient := client.NewUserServiceClient(cfg.UserServiceURL, cfg.InternalAPIKey)
 	notificationClient := client.NewNotificationServiceClient(cfg.NotificationServiceURL, cfg.InternalAPIKey)
+	exerciseClient := client.NewExerciseServiceClient(cfg.ExerciseServiceURL, cfg.InternalAPIKey)
 	log.Println("✅ Service clients initialized")
 
 	// Initialize YouTube service
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	// Initialize service
-	svc := service.NewCourseService(repo, userServiceClient, notificationClient, youtubeService)
+	svc := service.NewCourseService(repo, userServiceClient, notificationClient, exerciseClient, youtubeService)
 	log.Println("✅ Service initialized")
 
 	// Initialize and start video sync service

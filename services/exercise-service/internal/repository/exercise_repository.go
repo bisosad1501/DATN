@@ -57,10 +57,10 @@ func (r *ExerciseRepository) GetExercises(query *models.ExerciseListQuery) ([]mo
 		args = append(args, *query.CourseID)
 	}
 
-	if query.LessonID != nil {
+	if query.ModuleID != nil {
 		argCount++
-		where = append(where, fmt.Sprintf("lesson_id = $%d", argCount))
-		args = append(args, *query.LessonID)
+		where = append(where, fmt.Sprintf("module_id = $%d", argCount))
+		args = append(args, *query.ModuleID)
 	}
 
 	if query.Search != "" {
@@ -90,7 +90,7 @@ func (r *ExerciseRepository) GetExercises(query *models.ExerciseListQuery) ([]mo
 		SELECT id, title, slug, description, exercise_type, skill_type, difficulty,
 			ielts_level, total_questions, total_sections, time_limit_minutes,
 			thumbnail_url, audio_url, audio_duration_seconds, audio_transcript,
-			passage_count, course_id, lesson_id, passing_score, total_points,
+			passage_count, course_id, module_id, passing_score, total_points,
 			is_free, is_published, total_attempts, average_score,
 			average_completion_time, display_order, created_by, published_at,
 			created_at, updated_at
@@ -115,7 +115,7 @@ func (r *ExerciseRepository) GetExercises(query *models.ExerciseListQuery) ([]mo
 			&e.ID, &e.Title, &e.Slug, &e.Description, &e.ExerciseType, &e.SkillType,
 			&e.Difficulty, &e.IELTSLevel, &e.TotalQuestions, &e.TotalSections,
 			&e.TimeLimitMinutes, &e.ThumbnailURL, &e.AudioURL, &e.AudioDurationSeconds,
-			&e.AudioTranscript, &e.PassageCount, &e.CourseID, &e.LessonID,
+			&e.AudioTranscript, &e.PassageCount, &e.CourseID, &e.ModuleID,
 			&e.PassingScore, &e.TotalPoints, &e.IsFree, &e.IsPublished,
 			&e.TotalAttempts, &e.AverageScore, &e.AverageCompletionTime,
 			&e.DisplayOrder, &e.CreatedBy, &e.PublishedAt, &e.CreatedAt, &e.UpdatedAt,
@@ -137,7 +137,7 @@ func (r *ExerciseRepository) GetExerciseByID(id uuid.UUID) (*models.ExerciseDeta
 		SELECT id, title, slug, description, exercise_type, skill_type, difficulty,
 			ielts_level, total_questions, total_sections, time_limit_minutes,
 			thumbnail_url, audio_url, audio_duration_seconds, audio_transcript,
-			passage_count, course_id, lesson_id, passing_score, total_points,
+			passage_count, course_id, module_id, passing_score, total_points,
 			is_free, is_published, total_attempts, average_score,
 			average_completion_time, display_order, created_by, published_at,
 			created_at, updated_at
@@ -148,7 +148,7 @@ func (r *ExerciseRepository) GetExerciseByID(id uuid.UUID) (*models.ExerciseDeta
 		&exercise.IELTSLevel, &exercise.TotalQuestions, &exercise.TotalSections,
 		&exercise.TimeLimitMinutes, &exercise.ThumbnailURL, &exercise.AudioURL,
 		&exercise.AudioDurationSeconds, &exercise.AudioTranscript, &exercise.PassageCount,
-		&exercise.CourseID, &exercise.LessonID, &exercise.PassingScore,
+		&exercise.CourseID, &exercise.ModuleID, &exercise.PassingScore,
 		&exercise.TotalPoints, &exercise.IsFree, &exercise.IsPublished,
 		&exercise.TotalAttempts, &exercise.AverageScore, &exercise.AverageCompletionTime,
 		&exercise.DisplayOrder, &exercise.CreatedBy, &exercise.PublishedAt,
@@ -616,7 +616,7 @@ func (r *ExerciseRepository) GetSubmissionResult(submissionID uuid.UUID) (*model
 		SELECT id, title, slug, description, exercise_type, skill_type, difficulty,
 			ielts_level, total_questions, total_sections, time_limit_minutes,
 			thumbnail_url, audio_url, audio_duration_seconds, audio_transcript,
-			passage_count, course_id, lesson_id, passing_score, total_points,
+			passage_count, course_id, module_id, passing_score, total_points,
 			is_free, is_published, total_attempts, average_score,
 			average_completion_time, display_order, created_by, published_at,
 			created_at, updated_at
@@ -627,7 +627,7 @@ func (r *ExerciseRepository) GetSubmissionResult(submissionID uuid.UUID) (*model
 		&exercise.IELTSLevel, &exercise.TotalQuestions, &exercise.TotalSections,
 		&exercise.TimeLimitMinutes, &exercise.ThumbnailURL, &exercise.AudioURL,
 		&exercise.AudioDurationSeconds, &exercise.AudioTranscript, &exercise.PassageCount,
-		&exercise.CourseID, &exercise.LessonID, &exercise.PassingScore,
+		&exercise.CourseID, &exercise.ModuleID, &exercise.PassingScore,
 		&exercise.TotalPoints, &exercise.IsFree, &exercise.IsPublished,
 		&exercise.TotalAttempts, &exercise.AverageScore, &exercise.AverageCompletionTime,
 		&exercise.DisplayOrder, &exercise.CreatedBy, &exercise.PublishedAt,
@@ -778,7 +778,7 @@ func (r *ExerciseRepository) GetUserSubmissions(userID uuid.UUID, page, limit in
 			e.id, e.title, e.slug, e.description, e.exercise_type, e.skill_type, e.difficulty,
 			e.ielts_level, e.total_questions, e.total_sections, e.time_limit_minutes,
 			e.thumbnail_url, e.audio_url, e.audio_duration_seconds, e.audio_transcript,
-			e.passage_count, e.course_id, e.lesson_id, e.passing_score, e.total_points,
+			e.passage_count, e.course_id, e.module_id, e.passing_score, e.total_points,
 			e.is_free, e.is_published, e.total_attempts, e.average_score,
 			e.average_completion_time, e.display_order, e.created_by, e.published_at,
 			e.created_at, e.updated_at
@@ -808,7 +808,7 @@ func (r *ExerciseRepository) GetUserSubmissions(userID uuid.UUID, page, limit in
 			&exercise.IELTSLevel, &exercise.TotalQuestions, &exercise.TotalSections,
 			&exercise.TimeLimitMinutes, &exercise.ThumbnailURL, &exercise.AudioURL,
 			&exercise.AudioDurationSeconds, &exercise.AudioTranscript, &exercise.PassageCount,
-			&exercise.CourseID, &exercise.LessonID, &exercise.PassingScore,
+			&exercise.CourseID, &exercise.ModuleID, &exercise.PassingScore,
 			&exercise.TotalPoints, &exercise.IsFree, &exercise.IsPublished,
 			&exercise.TotalAttempts, &exercise.AverageScore, &exercise.AverageCompletionTime,
 			&exercise.DisplayOrder, &exercise.CreatedBy, &exercise.PublishedAt,
@@ -853,7 +853,7 @@ func (r *ExerciseRepository) CreateExercise(req *models.CreateExerciseRequest, c
 		AudioDurationSeconds: req.AudioDurationSeconds,
 		PassageCount:         req.PassageCount,
 		CourseID:             req.CourseID,
-		LessonID:             req.LessonID,
+		ModuleID:             req.ModuleID,
 		PassingScore:         req.PassingScore,
 		IsFree:               isFree,
 		IsPublished:          false, // Default unpublished
@@ -868,7 +868,7 @@ func (r *ExerciseRepository) CreateExercise(req *models.CreateExerciseRequest, c
 			id, title, slug, description, exercise_type, skill_type, difficulty,
 			ielts_level, total_questions, total_sections, time_limit_minutes,
 			thumbnail_url, audio_url, audio_duration_seconds, audio_transcript,
-			passage_count, course_id, lesson_id, passing_score, total_points,
+			passage_count, course_id, module_id, passing_score, total_points,
 			is_free, is_published, display_order, created_by, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
 	`, exercise.ID, exercise.Title, exercise.Slug, exercise.Description,
@@ -876,7 +876,7 @@ func (r *ExerciseRepository) CreateExercise(req *models.CreateExerciseRequest, c
 		exercise.IELTSLevel, exercise.TotalQuestions, exercise.TotalSections,
 		exercise.TimeLimitMinutes, exercise.ThumbnailURL, exercise.AudioURL,
 		exercise.AudioDurationSeconds, exercise.AudioTranscript, exercise.PassageCount,
-		exercise.CourseID, exercise.LessonID, exercise.PassingScore,
+		exercise.CourseID, exercise.ModuleID, exercise.PassingScore,
 		exercise.TotalPoints, exercise.IsFree, exercise.IsPublished,
 		exercise.DisplayOrder, exercise.CreatedBy, exercise.CreatedAt, exercise.UpdatedAt)
 

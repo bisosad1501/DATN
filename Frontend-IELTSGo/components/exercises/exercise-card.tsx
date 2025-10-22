@@ -2,19 +2,21 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Target, TrendingUp } from "lucide-react"
+import { Clock, Target, TrendingUp, GraduationCap, Zap } from "lucide-react"
 import type { Exercise } from "@/types"
 
 interface ExerciseCardProps {
   exercise: Exercise
+  showCourseLink?: boolean  // NEW: Option to show course link
 }
 
-export function ExerciseCard({ exercise }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, showCourseLink = true }: ExerciseCardProps) {
   // Support both snake_case (backend) and camelCase (legacy)
   const skillType = exercise.skill_type || exercise.skillType || 'reading'
   const difficulty = exercise.difficulty || 'medium'
   const questionCount = exercise.total_questions || exercise.questionCount || 0
   const timeLimit = exercise.time_limit_minutes || exercise.timeLimit || 0
+  const isFromCourse = !!(exercise.module_id && exercise.course_id)  // NEW: Check if from course
   
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
@@ -54,7 +56,21 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
           <Badge variant="secondary" className="text-xs">
             {getSkillIcon(skillType)} {skillType}
           </Badge>
-          <Badge className={getDifficultyColor(difficulty)}>{difficulty}</Badge>
+          <div className="flex flex-col gap-1 items-end">
+            <Badge className={getDifficultyColor(difficulty)}>{difficulty}</Badge>
+            {/* NEW: Source badge */}
+            {isFromCourse ? (
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300">
+                <GraduationCap className="w-3 h-3 mr-1" />
+                Course
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300">
+                <Zap className="w-3 h-3 mr-1" />
+                Practice
+              </Badge>
+            )}
+          </div>
         </div>
         <h3 className="font-semibold text-lg line-clamp-2">{exercise.title}</h3>
       </CardHeader>

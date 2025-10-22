@@ -15,23 +15,43 @@ export default function GoogleCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check if coming from backend redirect (with tokens in URL)
+        // First, try to read tokens from query params (backend redirect)
         const success = searchParams.get("success")
-        const accessToken = searchParams.get("access_token")
-        const refreshToken = searchParams.get("refresh_token")
-        const userId = searchParams.get("user_id")
-        const email = searchParams.get("email")
-        const role = searchParams.get("role")
-        const error = searchParams.get("error")
+        let accessToken = searchParams.get("access_token")
+        let refreshToken = searchParams.get("refresh_token")
+        let userId = searchParams.get("user_id")
+        let email = searchParams.get("email")
+        let role = searchParams.get("role")
+        let error = searchParams.get("error")
 
-        console.log("[GoogleCallback] URL params:", {
+        // Fallback: some OAuth flows (or proxies) may return tokens in URL fragment (#)
+        // Parse window.location.hash if tokens are not present in query params
+        if ((!accessToken || !refreshToken) && typeof window !== "undefined") {
+          try {
+            const hash = window.location.hash || ""
+            if (hash.startsWith("#")) {
+              const params = new URLSearchParams(hash.slice(1))
+              accessToken = accessToken || params.get("access_token")
+              refreshToken = refreshToken || params.get("refresh_token")
+              userId = userId || params.get("user_id")
+              email = email || params.get("email")
+              role = role || params.get("role")
+              error = error || params.get("error")
+            }
+          } catch (hashErr) {
+            console.warn("Failed to parse URL fragment for tokens:", hashErr)
+          }
+        }
+
+        console.log("[GoogleCallback] Parsed params/fragment:", {
           success,
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken,
           userId,
           email,
           role,
-          error
+          error,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
         })
 
         // Handle error from backend

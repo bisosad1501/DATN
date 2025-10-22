@@ -717,3 +717,8 @@ func (s *UserService) EndSession(sessionID uuid.UUID, isCompleted bool, score fl
 	// TODO: Implement when repository methods are ready
 	return nil
 }
+
+// RecordCompletedSession creates a completed study session record
+func (s *UserService) RecordCompletedSession(session *models.StudySession) error {
+	return s.repo.CreateStudySession(session)
+}

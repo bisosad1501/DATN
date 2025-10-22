@@ -27,9 +27,12 @@ function ProgressContent() {
       try {
         setLoading(true)
         const data = await progressApi.getProgressAnalytics(timeRange)
+        console.log('[Progress Page] Analytics data received:', data)
+        console.log('[Progress Page] Study time by day:', data.studyTimeByDay)
         setAnalytics(data)
       } catch (error) {
         console.error("Failed to fetch analytics:", error)
+        console.error("Error details:", error.response?.data || error.message)
         // Mock data for demo
         setAnalytics({
           studyTimeByDay: Array.from({ length: 30 }, (_, i) => ({

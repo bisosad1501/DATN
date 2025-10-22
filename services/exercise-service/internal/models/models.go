@@ -25,7 +25,7 @@ type Exercise struct {
 	AudioTranscript       *string    `json:"audio_transcript,omitempty"`
 	PassageCount          *int       `json:"passage_count,omitempty"`
 	CourseID              *uuid.UUID `json:"course_id,omitempty"`
-	LessonID              *uuid.UUID `json:"lesson_id,omitempty"`
+	ModuleID              *uuid.UUID `json:"module_id,omitempty"`
 	PassingScore          *float64   `json:"passing_score,omitempty"`
 	TotalPoints           *float64   `json:"total_points,omitempty"`
 	IsFree                bool       `json:"is_free"`

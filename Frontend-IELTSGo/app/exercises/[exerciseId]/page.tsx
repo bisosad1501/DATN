@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Clock, BookOpen, FileText, PlayCircle, Award, Target, CheckCircle } from "lucide-react"
+import { Loader2, Clock, BookOpen, FileText, PlayCircle, Award, Target, CheckCircle, ChevronLeft } from "lucide-react"
 import { exercisesApi } from "@/lib/api/exercises"
 import type { ExerciseDetailResponse } from "@/types"
 import { useAuth } from "@/lib/contexts/auth-context"
@@ -15,10 +15,14 @@ import { useAuth } from "@/lib/contexts/auth-context"
 export default function ExerciseDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
-  
+
   const exerciseId = params.exerciseId as string
-  
+
+  // Get lesson context from URL params (optional, fallback to API data)
+  const lessonId = searchParams.get('lessonId')
+
   const [exerciseData, setExerciseData] = useState<ExerciseDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
@@ -44,19 +48,36 @@ export default function ExerciseDetailPage() {
 
   const handleStartExercise = async () => {
     if (!user) {
-      router.push('/auth/login')
+      console.log('[Exercise Detail] User not logged in, redirecting to login')
+      router.push('/login')
       return
     }
 
     try {
       setStarting(true)
+      console.log('[Exercise Detail] Starting exercise:', exerciseId)
+      console.log('[Exercise Detail] User:', user)
+      console.log('[Exercise Detail] Token:', localStorage.getItem('access_token') ? 'exists' : 'missing')
+
       const submission = await exercisesApi.startExercise(exerciseId)
       console.log('[Exercise Detail] Started submission:', submission)
 
       router.push(`/exercises/${exerciseId}/take/${submission.id}`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Exercise Detail] Failed to start:', error)
-      alert('Không thể bắt đầu bài tập. Vui lòng thử lại.')
+      console.error('[Exercise Detail] Error response:', error.response?.data)
+      console.error('[Exercise Detail] Error status:', error.response?.status)
+
+      // Better error messages
+      if (error.response?.status === 401) {
+        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        router.push('/login')
+      } else if (error.response?.status === 404) {
+        alert('Không tìm thấy bài tập. Vui lòng thử lại.')
+      } else {
+        const errorMsg = error.response?.data?.error?.message || error.message || 'Không thể bắt đầu bài tập'
+        alert(errorMsg + '. Vui lòng thử lại.')
+      }
     } finally {
       setStarting(false)
     }
@@ -94,10 +115,27 @@ export default function ExerciseDetailPage() {
   return (
     <AppLayout>
       <div className="container max-w-6xl mx-auto py-8 px-4">
+        {/* Back to Lesson Button - Only show if exercise is linked to a lesson */}
+        {exercise.lesson_id && (
+          <Button
+            variant="ghost"
+            onClick={() => router.push(`/lessons/${lessonId || exercise.lesson_id}`)}
+            className="mb-4"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Quay lại bài học
+          </Button>
+        )}
+
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Badge>{exercise.skill_type}</Badge>
-            <Badge variant="outline">{exercise.difficulty_level}</Badge>
+          <div className="flex items-center gap-2 mb-3">
+            <Badge className="capitalize">
+              {exercise.skill_type === 'listening' && '🎧 Listening'}
+              {exercise.skill_type === 'reading' && '📖 Reading'}
+              {exercise.skill_type === 'writing' && '✍️ Writing'}
+              {exercise.skill_type === 'speaking' && '🗣️ Speaking'}
+            </Badge>
+            <Badge variant="outline" className="capitalize">{exercise.difficulty_level}</Badge>
             {exercise.is_official && (
               <Badge variant="secondary">
                 <Award className="w-3 h-3 mr-1" />
@@ -105,7 +143,7 @@ export default function ExerciseDetailPage() {
               </Badge>
             )}
           </div>
-          
+
           <h1 className="text-3xl font-bold mb-2">{exercise.title}</h1>
           {exercise.description && (
             <p className="text-muted-foreground text-lg">{exercise.description}</p>

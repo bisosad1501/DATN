@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookOpen, Clock, Target, TrendingUp, Search, Loader2 } from "lucide-react"
+import { BookOpen, Clock, Target, TrendingUp, Search, Loader2, GraduationCap, Link2 } from "lucide-react"
 import { exercisesApi, type ExerciseFilters } from "@/lib/api/exercises"
 import type { Exercise } from "@/types"
+
+type ExerciseSource = "all" | "course" | "standalone"
 
 export default function ExercisesListPage() {
   const router = useRouter()
@@ -22,21 +24,39 @@ export default function ExercisesListPage() {
     difficulty: [],
     search: "",
   })
+  const [sourceFilter, setSourceFilter] = useState<ExerciseSource>("all")  // Default: show all exercises
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
 
   useEffect(() => {
     fetchExercises()
-  }, [filters, page])
+  }, [filters, page, sourceFilter])
 
   const fetchExercises = async () => {
     try {
       setLoading(true)
       const response = await exercisesApi.getExercises(filters, page, 12)
-      setExercises(response.data)
-      setTotal(response.total)
-      setTotalPages(response.totalPages)
+
+      console.log('[DEBUG] API returned exercises:', response.data.length)
+      console.log('[DEBUG] Source filter:', sourceFilter)
+
+      // Filter by source (course-linked vs standalone)
+      // UPDATED: Use module_id instead of lesson_id
+      let filteredExercises = response.data
+      if (sourceFilter === "course") {
+        filteredExercises = response.data.filter(ex => ex.module_id !== null && ex.module_id !== undefined)
+        console.log('[DEBUG] Filtered to course exercises:', filteredExercises.length)
+      } else if (sourceFilter === "standalone") {
+        filteredExercises = response.data.filter(ex => ex.module_id === null || ex.module_id === undefined)
+        console.log('[DEBUG] Filtered to standalone exercises:', filteredExercises.length)
+      } else {
+        console.log('[DEBUG] Showing all exercises:', filteredExercises.length)
+      }
+
+      setExercises(filteredExercises)
+      setTotal(filteredExercises.length)
+      setTotalPages(Math.ceil(filteredExercises.length / 12))
     } catch (error) {
       console.error("Failed to fetch exercises:", error)
     } finally {
@@ -102,7 +122,7 @@ export default function ExercisesListPage() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Search */}
               <div className="md:col-span-2">
                 <div className="relative">
@@ -115,6 +135,34 @@ export default function ExercisesListPage() {
                   />
                 </div>
               </div>
+
+              {/* Source Filter - NEW */}
+              <Select
+                value={sourceFilter}
+                onValueChange={(value) => {
+                  setSourceFilter(value as ExerciseSource)
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">📚 All Exercises</SelectItem>
+                  <SelectItem value="course">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4" />
+                      <span>From Courses</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="standalone">
+                    <div className="flex items-center gap-2">
+                      <Link2 className="w-4 h-4" />
+                      <span>Standalone</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Skill Filter */}
               <Select
@@ -179,9 +227,23 @@ export default function ExercisesListPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-2xl">{getSkillIcon(exercise.skill_type)}</span>
-                    <Badge className={getDifficultyColor(exercise.difficulty)}>
-                      {exercise.difficulty || "N/A"}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-end">
+                      <Badge className={getDifficultyColor(exercise.difficulty)}>
+                        {exercise.difficulty || "N/A"}
+                      </Badge>
+                      {/* Source Badge - UPDATED: Use module_id instead of lesson_id */}
+                      {exercise.module_id && exercise.course_id ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300">
+                          <GraduationCap className="w-3 h-3 mr-1" />
+                          From Course
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300">
+                          <Link2 className="w-3 h-3 mr-1" />
+                          Standalone
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <CardTitle className="text-lg line-clamp-2">{exercise.title}</CardTitle>
                   <CardDescription className="line-clamp-2">

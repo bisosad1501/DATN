@@ -11,7 +11,7 @@ type ExerciseListQuery struct {
 	ExerciseType string     `form:"exercise_type"` // practice, mock_test, full_test
 	IsFree       *bool      `form:"is_free"`
 	CourseID     *uuid.UUID `form:"course_id"`
-	LessonID     *uuid.UUID `form:"lesson_id"`
+	ModuleID     *uuid.UUID `form:"module_id"`
 	Search       string     `form:"search"`
 }
 
@@ -91,7 +91,7 @@ type CreateExerciseRequest struct {
 	AudioDurationSeconds *int       `json:"audio_duration_seconds"`
 	PassageCount         *int       `json:"passage_count"`
 	CourseID             *uuid.UUID `json:"course_id"`
-	LessonID             *uuid.UUID `json:"lesson_id"`
+	ModuleID             *uuid.UUID `json:"module_id"`
 	PassingScore         *float64   `json:"passing_score"`
 	IsFree               *bool      `json:"is_free"`
 }
