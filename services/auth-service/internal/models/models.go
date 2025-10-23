@@ -10,7 +10,7 @@ import (
 type User struct {
 	ID       uuid.UUID `db:"id" json:"id"`
 	Email    string    `db:"email" json:"email"`
-	Password string    `db:"password_hash" json:"-"`
+    Password *string   `db:"password_hash" json:"-"`
 	Phone    *string   `db:"phone" json:"phone,omitempty"`
 
 	// OAuth fields

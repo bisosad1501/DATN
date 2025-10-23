@@ -429,9 +429,33 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 // @Failure 400 {object} models.ErrorResponse
 // @Router /auth/google/callback [get]
 func (h *AuthHandler) GoogleCallback(c *gin.Context) {
-	// Verify state for CSRF protection (skip in development if cookie not found)
-	state := c.Query("state")
-	storedState, err := c.Cookie("oauth_state")
+    // If Google returned an error (e.g., user not in Test Users or access denied), handle gracefully
+    if errParam := c.Query("error"); errParam != "" {
+        frontendURL := os.Getenv("FRONTEND_URL")
+        if frontendURL == "" {
+            frontendURL = "http://localhost:3000"
+        }
+
+        // Prefer Google's description if present
+        errorDesc := c.Query("error_description")
+        message := errorDesc
+        if message == "" {
+            // Common case: access_denied for users not in Test Users when app is in Testing/Internal
+            switch errParam {
+            case "access_denied":
+                message = "Google denied access. If the app is in Testing/Internal, add this email to Test Users or publish the app."
+            default:
+                message = "Google OAuth error: " + errParam
+            }
+        }
+
+        redirectURL := fmt.Sprintf("%s/login?error=%s", frontendURL, message)
+        c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+        return
+    }
+    // Verify state for CSRF protection (skip in development if cookie not found)
+    state := c.Query("state")
+    storedState, err := c.Cookie("oauth_state")
 
 	// Only verify state if cookie exists (for proper OAuth flow from /auth/google)
 	// Skip verification if cookie doesn't exist (for direct URL access in testing)

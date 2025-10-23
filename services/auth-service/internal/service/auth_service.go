@@ -141,11 +141,12 @@ func (s *authService) Register(req *models.RegisterRequest, ip, userAgent string
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// Create user
-	user := &models.User{
-		Email:    req.Email,
-		Password: string(hashedPassword),
-	}
+    // Create user
+    pw := string(hashedPassword)
+    user := &models.User{
+        Email:    req.Email,
+        Password: &pw,
+    }
 
 	if req.Phone != "" {
 		user.Phone = &req.Phone
@@ -285,8 +286,8 @@ func (s *authService) Login(req *models.LoginRequest, ip, userAgent string) (*mo
 		}, nil
 	}
 
-	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+    // Verify password (handle OAuth users where password may be nil)
+    if user.Password == nil || bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.Password)) != nil {
 		// Increment failed attempts
 		s.userRepo.IncrementFailedAttempts(user.ID)
 
@@ -436,8 +437,8 @@ func (s *authService) ChangePassword(userID uuid.UUID, req *models.ChangePasswor
 		return fmt.Errorf("user not found")
 	}
 
-	// Verify old password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
+    // Verify old password
+    if user.Password == nil || bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.OldPassword)) != nil {
 		return fmt.Errorf("invalid old password")
 	}
 
@@ -447,7 +448,8 @@ func (s *authService) ChangePassword(userID uuid.UUID, req *models.ChangePasswor
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user.Password = string(hashedPassword)
+    newPw := string(hashedPassword)
+    user.Password = &newPw
 
 	if err := s.userRepo.Update(user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
@@ -635,7 +637,8 @@ func (s *authService) ResetPassword(req *models.ResetPasswordRequest, ip string)
 		return fmt.Errorf("user not found: %w", err)
 	}
 
-	user.Password = string(hashedPassword)
+    newPw := string(hashedPassword)
+    user.Password = &newPw
 	if err := s.userRepo.Update(user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
@@ -790,7 +793,8 @@ func (s *authService) ResetPasswordByCode(code, newPassword, ip string) error {
 		return fmt.Errorf("user not found: %w", err)
 	}
 
-	user.Password = string(hashedPassword)
+    newPw := string(hashedPassword)
+    user.Password = &newPw
 	if err := s.userRepo.Update(user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
