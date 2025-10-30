@@ -24,6 +24,7 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
   }, [data])
 
   const chartHeight = 200
+  const minBarHeight = 16 // Minimum 16px for visibility
   
   // Ensure data is valid
   const validData = data?.filter(d => d && typeof d.value === 'number' && !isNaN(d.value)) || []
@@ -43,21 +44,26 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
           </div>
 
           {/* Chart area */}
-          <div className="ml-8 h-full flex items-end justify-between gap-1">
+          <div className="ml-8 flex items-end justify-between gap-1" style={{ height: chartHeight }}>
             {validData.map((point, index) => {
-              const height = (point.value / maxValue) * 100
+              // Calculate height in PIXELS (not percentage) to avoid flexbox issues
+              const heightPx = (point.value / maxValue) * chartHeight
+              // Ensure minimum visible height for small values
+              const displayHeightPx = point.value > 0 ? Math.max(heightPx, minBarHeight) : 0
+              const isSmallValue = heightPx < minBarHeight && point.value > 0
+              
               return (
-                <div key={index} className="flex-1 flex flex-col items-center group">
+                <div key={index} className="flex-1 flex items-end justify-center group relative">
+                  {/* Bar */}
                   <div
                     className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer relative"
                     style={{
-                      height: `${height}%`,
+                      height: `${displayHeightPx}px`,
                       backgroundColor: color,
-                      minHeight: point.value > 0 ? "4px" : "0",
                     }}
                   >
                     {/* Tooltip */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                       {point.value} {valueLabel}
                       <div className="text-[10px] text-gray-300">
                         {new Date(point.date).toLocaleDateString("vi-VN", {
@@ -66,6 +72,13 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
                         })}
                       </div>
                     </div>
+                    
+                    {/* Indicator for very small values */}
+                    {isSmallValue && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground">
+                        ↓
+                      </div>
+                    )}
                   </div>
                 </div>
               )

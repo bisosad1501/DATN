@@ -63,11 +63,7 @@ export default function LessonPlayerPage() {
     useKeepalive?: boolean
   }) => {
     try {
-      const timeSpentMinutes = Math.floor((Date.now() - pageStartTimeRef.current) / 60000)
-
-      const payload: any = {
-        time_spent_minutes: timeSpentMinutes,
-      }
+      const payload: any = {}
 
       if (data.videoWatchedSeconds !== undefined) {
         payload.video_watched_seconds = data.videoWatchedSeconds
@@ -139,11 +135,8 @@ export default function LessonPlayerPage() {
     })
     
     // ✅ Dùng accumulated time từ hook (thời gian thực sự xem)
-    const timeSpentMinutes = Math.floor(data.accumulatedTime / 60)
-    
-    // Send progress to backend với accumulated time + last position
+    // Send progress to backend với last position + video stats
     const payload: any = {
-      time_spent_minutes: timeSpentMinutes, // ✅ Chỉ đếm khi video đang play
       video_watched_seconds: data.watchedSeconds,
       video_total_seconds: Math.floor(data.duration),
       // ⚠️ Don't send progress_percentage - let backend auto-calculate from last_position

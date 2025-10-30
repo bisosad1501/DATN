@@ -35,7 +35,9 @@ type UserProfile struct {
 type LearningProgress struct {
 	ID                      int64      `json:"id" db:"id"`
 	UserID                  uuid.UUID  `json:"user_id" db:"user_id"`
-	TotalStudyHours         float64    `json:"total_study_hours" db:"total_study_hours"`
+	// total_study_hours REMOVED - Migration 013
+	// SOURCE OF TRUTH: Calculate real-time from study_sessions
+	TotalStudyHours         float64    `json:"total_study_hours"` // Computed field (not in DB)
 	TotalLessonsCompleted   int        `json:"total_lessons_completed" db:"total_lessons_completed"`
 	TotalExercisesCompleted int        `json:"total_exercises_completed" db:"total_exercises_completed"`
 	ListeningProgress       float64    `json:"listening_progress" db:"listening_progress"`

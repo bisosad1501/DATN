@@ -450,8 +450,9 @@ export interface LessonProgress {
   progress_percentage: number
   video_watched_seconds: number
   video_total_seconds?: number
-  // video_watch_percentage REMOVED - redundant with progress_percentage (migration 011)
-  time_spent_minutes: number
+  // video_watch_percentage REMOVED - Migration 011 (redundant with progress_percentage)
+  // time_spent_minutes REMOVED - Migration 013 (SOURCE OF TRUTH: last_position_seconds)
+  last_position_seconds: number // For resume watching & time calculation
   completed_at?: string
   first_accessed_at: string
   last_accessed_at: string
@@ -462,7 +463,6 @@ export interface UpdateLessonProgressRequest {
   progress_percentage?: number
   video_watched_seconds?: number
   video_total_seconds?: number
-  time_spent_minutes?: number
   is_completed?: boolean
 }
 

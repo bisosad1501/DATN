@@ -18,7 +18,10 @@ export function AppLayout({ children, showSidebar = false, showFooter = true }: 
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} showMenuButton={showSidebar} />
+      <Navbar 
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+        showMenuButton={showSidebar}
+      />
 
       <div className="flex flex-1">
         {showSidebar && (

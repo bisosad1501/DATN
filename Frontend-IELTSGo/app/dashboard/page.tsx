@@ -7,9 +7,12 @@ import { StatCard } from "@/components/dashboard/stat-card"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
 import { SkillProgressCard } from "@/components/dashboard/skill-progress-card"
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
-import { BookOpen, CheckCircle, Clock, TrendingUp, Flame } from "lucide-react"
+import { BookOpen, CheckCircle, Clock, TrendingUp, Flame, BarChart3, Target } from "lucide-react"
 import { useEffect, useState } from "react"
 import { progressApi } from "@/lib/api/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function DashboardPage() {
   return (
@@ -25,6 +28,7 @@ function DashboardContent() {
   const [summary, setSummary] = useState<any>(null)
   const [analytics, setAnalytics] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
+  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "all">("30d")
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -32,7 +36,7 @@ function DashboardContent() {
       try {
         const [summaryData, analyticsData, historyData] = await Promise.all([
           progressApi.getProgressSummary(),
-          progressApi.getProgressAnalytics("30d"),
+          progressApi.getProgressAnalytics(timeRange),
           progressApi.getStudyHistory(1, 10),
         ])
         setSummary(summaryData)
@@ -44,7 +48,7 @@ function DashboardContent() {
     }
 
     fetchDashboardData()
-  }, [])
+  }, [timeRange])
 
   if (loading) {
     return (
@@ -62,20 +66,96 @@ function DashboardContent() {
   }
 
   // Count unique exercises completed from history
-  // Count unique exercises and total attempts
   const exerciseAttempts = history.filter(a => a.type === "exercise")
   const uniqueExercises = new Set(exerciseAttempts.map(a => a.title)).size
   const totalAttempts = exerciseAttempts.length
+
+  // Calculate analytics stats
+  const calculateStats = () => {
+    if (!analytics) return { 
+      totalMinutes: 0, 
+      totalExercises: 0, 
+      avgScore: 0, 
+      activeStreak: 0,
+      skillScores: { listening: 0, reading: 0, writing: 0, speaking: 0 }
+    }
+    
+    const totalMinutes = analytics.studyTimeByDay?.reduce((sum: number, day: any) => sum + (day.value || 0), 0) || 0
+    const totalExercises = analytics.exercisesByType?.reduce((sum: number, type: any) => sum + (type.count || 0), 0) || 0
+    const avgScore = analytics.exercisesByType?.length > 0
+      ? analytics.exercisesByType.reduce((sum: number, type: any) => sum + (type.avgScore || 0), 0) / analytics.exercisesByType.length
+      : 0
+    
+    // Calculate active streak
+    let activeStreak = 0
+    const sortedDays = [...(analytics.studyTimeByDay || [])].sort((a: any, b: any) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+    for (const day of sortedDays) {
+      if (day.value > 0) activeStreak++
+      else break
+    }
+    
+    // Extract skill scores from exercisesByType
+    const skillScores = {
+      listening: analytics.exercisesByType?.find((t: any) => t.type.toLowerCase() === 'listening')?.avgScore || 0,
+      reading: analytics.exercisesByType?.find((t: any) => t.type.toLowerCase() === 'reading')?.avgScore || 0,
+      writing: analytics.exercisesByType?.find((t: any) => t.type.toLowerCase() === 'writing')?.avgScore || 0,
+      speaking: analytics.exercisesByType?.find((t: any) => t.type.toLowerCase() === 'speaking')?.avgScore || 0,
+    }
+    
+    return { totalMinutes, totalExercises, avgScore, activeStreak, skillScores }
+  }
+
+  const stats = calculateStats()
+  
+  // Get exercise counts by skill
+  const getSkillExerciseCount = (skill: string) => {
+    return analytics?.exercisesByType?.find((t: any) => t.type.toLowerCase() === skill.toLowerCase())?.count || 0
+  }
+
   return (
     <AppLayout showSidebar={true} showFooter={false}>
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.fullName?.split(" ")[0] || "Student"}!</h1>
-          <p className="text-muted-foreground">
-            Here's your learning progress overview
-            {user?.targetBandScore && ` - Target: Band ${user.targetBandScore}`}
-          </p>
+        {/* Header with Time Range Filter */}
+        <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.fullName?.split(" ")[0] || "Student"}!</h1>
+            <p className="text-muted-foreground">
+              Track your learning journey and performance
+              {user?.targetBandScore && ` • Target: Band ${user.targetBandScore}`}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant={timeRange === "7d" ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setTimeRange("7d")}
+            >
+              7 Days
+            </Button>
+            <Button 
+              variant={timeRange === "30d" ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setTimeRange("30d")}
+            >
+              30 Days
+            </Button>
+            <Button 
+              variant={timeRange === "90d" ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setTimeRange("90d")}
+            >
+              90 Days
+            </Button>
+            <Button 
+              variant={timeRange === "all" ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setTimeRange("all")}
+            >
+              All Time
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -94,67 +174,125 @@ function DashboardContent() {
           />
           <StatCard
             title="Study Time"
-            value={`${Math.floor((summary?.totalStudyTime || 0) / 60)}h`}
-            description="This month"
+            value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`}
+            description={`${timeRange} period`}
             icon={Clock}
           />
           <StatCard
             title="Average Score"
-            value={summary?.averageScore?.toFixed(1) || "0.0"}
+            value={stats.avgScore > 0 ? stats.avgScore.toFixed(1) : (summary?.averageScore?.toFixed(1) || "0.0")}
             description="Band score"
-            icon={TrendingUp}
+            icon={Target}
           />
           <StatCard
             title="Current Streak"
-            value={`${summary?.currentStreak || 0} days`}
+            value={`${stats.activeStreak || summary?.currentStreak || 0} days`}
             description={`Longest: ${summary?.longestStreak || 0} days`}
             icon={Flame}
           />
         </div>
 
-        {/* Study Time Chart */}
-        <div className="mb-8">
-          <ProgressChart
-            title="Study Time (Last 30 Days)"
-            data={analytics?.studyTimeByDay || []}
-            color="#ED372A"
-            valueLabel="minutes"
-          />
-        </div>
+        {/* Tabs for different views */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+          </TabsList>
 
-        {/* Skills Progress */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4">Skills Progress</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <SkillProgressCard
-              skill="LISTENING"
-              currentScore={summary?.skillScores?.listening || 0}
-              targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={summary?.listeningProgress || 0}
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <ProgressChart
+              title={`Study Time (${timeRange})`}
+              data={analytics?.studyTimeByDay || []}
+              color="#ED372A"
+              valueLabel="minutes"
             />
-            <SkillProgressCard
-              skill="READING"
-              currentScore={summary?.skillScores?.reading || 0}
-              targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={summary?.readingProgress || 0}
-            />
-            <SkillProgressCard
-              skill="WRITING"
-              currentScore={summary?.skillScores?.writing || 0}
-              targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={summary?.writingProgress || 0}
-            />
-            <SkillProgressCard
-              skill="SPEAKING"
-              currentScore={summary?.skillScores?.speaking || 0}
-              targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={summary?.speakingProgress || 0}
-            />
-          </div>
-        </div>
+            <ActivityTimeline activities={history} />
+          </TabsContent>
 
-        {/* Activity Timeline */}
-        <ActivityTimeline activities={history} />
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid gap-6">
+              <ProgressChart
+                title={`Daily Study Time (${timeRange})`}
+                data={analytics?.studyTimeByDay || []}
+                color="#ED372A"
+                valueLabel="minutes"
+              />
+              <ProgressChart
+                title={`Completion Rate (${timeRange})`}
+                data={analytics?.completionRate || []}
+                color="#10B981"
+                valueLabel="%"
+              />
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Exercise Breakdown</h3>
+                {analytics?.exercisesByType?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {analytics.exercisesByType.map((item: any) => (
+                      <Card key={item.type}>
+                        <CardHeader>
+                          <CardTitle className="text-base">{item.type}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Completed</span>
+                              <span className="font-bold">{item.count}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Avg Score</span>
+                              <span className="font-bold">{item.avgScore.toFixed(1)}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <p className="text-muted-foreground">
+                        Chưa có bài tập nào được hoàn thành. Bắt đầu luyện tập để xem phân tích chi tiết!
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Skills Tab */}
+          <TabsContent value="skills" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <SkillProgressCard
+                skill="LISTENING"
+                currentScore={stats.skillScores.listening}
+                targetScore={user?.targetBandScore || 9}
+                exercisesCompleted={getSkillExerciseCount('listening')}
+              />
+              <SkillProgressCard
+                skill="READING"
+                currentScore={stats.skillScores.reading}
+                targetScore={user?.targetBandScore || 9}
+                exercisesCompleted={getSkillExerciseCount('reading')}
+              />
+              <SkillProgressCard
+                skill="WRITING"
+                currentScore={stats.skillScores.writing}
+                targetScore={user?.targetBandScore || 9}
+                exercisesCompleted={getSkillExerciseCount('writing')}
+              />
+              <SkillProgressCard
+                skill="SPEAKING"
+                currentScore={stats.skillScores.speaking}
+                targetScore={user?.targetBandScore || 9}
+                exercisesCompleted={getSkillExerciseCount('speaking')}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   )

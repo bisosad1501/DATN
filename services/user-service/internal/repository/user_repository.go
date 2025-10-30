@@ -204,21 +204,26 @@ func (r *UserRepository) UpdateAvatar(userID uuid.UUID, avatarURL string) error 
 	return nil
 }
 
-// GetLearningProgress retrieves learning progress for a user
+// GetLearningProgress retrieves learning progress for a user with REAL-TIME study hours
 func (r *UserRepository) GetLearningProgress(userID uuid.UUID) (*models.LearningProgress, error) {
+	// 📊 Query learning_progress (without deprecated total_study_hours field)
 	query := `
-		SELECT id, user_id, total_study_hours, total_lessons_completed, total_exercises_completed,
-		       listening_progress, reading_progress, writing_progress, speaking_progress,
-		       listening_score, reading_score, writing_score, speaking_score, overall_score,
-		       current_streak_days, longest_streak_days, last_study_date, created_at, updated_at
-		FROM learning_progress
-		WHERE user_id = $1
+		SELECT 
+			lp.id, lp.user_id,
+			lp.total_lessons_completed, lp.total_exercises_completed,
+			lp.listening_progress, lp.reading_progress, lp.writing_progress, lp.speaking_progress,
+			lp.listening_score, lp.reading_score, lp.writing_score, lp.speaking_score,
+			lp.overall_score, lp.current_streak_days, lp.longest_streak_days, lp.last_study_date,
+			lp.created_at, lp.updated_at
+		FROM learning_progress lp
+		WHERE lp.user_id = $1
 	`
 
 	progress := &models.LearningProgress{}
 	err := r.db.DB.QueryRow(query, userID).Scan(
-		&progress.ID, &progress.UserID, &progress.TotalStudyHours, &progress.TotalLessonsCompleted,
-		&progress.TotalExercisesCompleted, &progress.ListeningProgress, &progress.ReadingProgress,
+		&progress.ID, &progress.UserID,
+		&progress.TotalLessonsCompleted, &progress.TotalExercisesCompleted,
+		&progress.ListeningProgress, &progress.ReadingProgress,
 		&progress.WritingProgress, &progress.SpeakingProgress, &progress.ListeningScore,
 		&progress.ReadingScore, &progress.WritingScore, &progress.SpeakingScore,
 		&progress.OverallScore, &progress.CurrentStreakDays, &progress.LongestStreakDays,
@@ -232,6 +237,20 @@ func (r *UserRepository) GetLearningProgress(userID uuid.UUID) (*models.Learning
 		log.Printf("❌ Error getting learning progress for user %s: %v", userID, err)
 		return nil, fmt.Errorf("failed to get learning progress: %w", err)
 	}
+
+	// 📊 SOURCE OF TRUTH: Calculate total_study_hours from study_sessions (real-time)
+	var totalStudyHours float64
+	studyHoursQuery := `
+		SELECT COALESCE(ROUND((SUM(duration_minutes) / 60.0)::numeric, 2), 0)
+		FROM study_sessions 
+		WHERE user_id = $1
+	`
+	err = r.db.DB.QueryRow(studyHoursQuery, userID).Scan(&totalStudyHours)
+	if err != nil {
+		log.Printf("⚠️  Error calculating total_study_hours for user %s: %v", userID, err)
+		totalStudyHours = 0
+	}
+	progress.TotalStudyHours = totalStudyHours
 
 	return progress, nil
 }
@@ -596,12 +615,9 @@ func (r *UserRepository) UpdateLearningProgressAtomic(userID uuid.UUID, updates 
 		query += fmt.Sprintf(", total_exercises_completed = total_exercises_completed + $%d", paramCount)
 		args = append(args, exercisesCompleted)
 	}
-	if studyMinutes, ok := updates["study_minutes"].(int); ok && studyMinutes > 0 {
-		paramCount++
-		studyHours := float64(studyMinutes) / 60.0
-		query += fmt.Sprintf(", total_study_hours = total_study_hours + $%d", paramCount)
-		args = append(args, studyHours)
-	}
+	// study_minutes update REMOVED - Migration 013
+	// total_study_hours field removed from DB
+	// SOURCE OF TRUTH: Real-time calculation from study_sessions in GetLearningProgress()
 
 	// Handle streak updates
 	if increment, ok := updates["increment_current_streak"].(int); ok && increment > 0 {
@@ -1022,18 +1038,24 @@ func (r *UserRepository) ToggleReminder(reminderID uuid.UUID, userID uuid.UUID, 
 
 // GetTopLearners retrieves top learners by achievements count and study hours
 func (r *UserRepository) GetTopLearners(limit int) ([]models.LeaderboardEntry, error) {
-	query := `
-		SELECT 
-			ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC, lp.total_study_hours DESC) as rank,
-			up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
-			(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
-			lp.current_streak_days, lp.total_study_hours,
-			(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
-		FROM user_profiles up
-		JOIN learning_progress lp ON up.user_id = lp.user_id
-		ORDER BY achievements_count DESC, lp.total_study_hours DESC
-		LIMIT $1
-	`
+    // Order by achievements, then real-time total study hours from study_sessions
+    query := `
+        SELECT 
+            ROW_NUMBER() OVER (
+                ORDER BY 
+                    (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC,
+                    COALESCE((SELECT SUM(duration_minutes) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) DESC
+            ) as rank,
+            up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
+            (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
+            lp.current_streak_days,
+            COALESCE((SELECT ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) as total_study_hours,
+            (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
+        FROM user_profiles up
+        JOIN learning_progress lp ON up.user_id = lp.user_id
+        ORDER BY achievements_count DESC, total_study_hours DESC
+        LIMIT $1
+    `
 	rows, err := r.db.DB.Query(query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top learners: %w", err)
@@ -1055,22 +1077,28 @@ func (r *UserRepository) GetTopLearners(limit int) ([]models.LeaderboardEntry, e
 
 // GetUserRank retrieves the rank of a specific user
 func (r *UserRepository) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, error) {
-	query := `
-		WITH ranked_users AS (
-			SELECT 
-				ROW_NUMBER() OVER (ORDER BY (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC, lp.total_study_hours DESC) as rank,
-				up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
-				(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
-				lp.current_streak_days, lp.total_study_hours,
-				(SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
-			FROM user_profiles up
-			JOIN learning_progress lp ON up.user_id = lp.user_id
-		)
-		SELECT rank, user_id, full_name, avatar_url, total_points, current_streak_days, 
-		       total_study_hours, achievements_count
-		FROM ranked_users
-		WHERE user_id = $1
-	`
+    // Rank using achievements, then real-time study hours from study_sessions
+    query := `
+        WITH ranked_users AS (
+            SELECT 
+                ROW_NUMBER() OVER (
+                    ORDER BY 
+                        (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC,
+                        COALESCE((SELECT SUM(duration_minutes) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) DESC
+                ) as rank,
+                up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
+                (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
+                lp.current_streak_days,
+                COALESCE((SELECT ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) as total_study_hours,
+                (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
+            FROM user_profiles up
+            JOIN learning_progress lp ON up.user_id = lp.user_id
+        )
+        SELECT rank, user_id, full_name, avatar_url, total_points, current_streak_days, 
+               total_study_hours, achievements_count
+        FROM ranked_users
+        WHERE user_id = $1
+    `
 	entry := &models.LeaderboardEntry{}
 	err := r.db.DB.QueryRow(query, userID).Scan(&entry.Rank, &entry.UserID, &entry.FullName,
 		&entry.AvatarURL, &entry.TotalPoints, &entry.CurrentStreakDays, &entry.TotalStudyHours,

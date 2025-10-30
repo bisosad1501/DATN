@@ -430,18 +430,60 @@ func (r *CourseRepository) GetEnrollment(userID, courseID uuid.UUID) (*models.Co
 	return &enrollment, nil
 }
 
-// GetUserEnrollments retrieves all enrollments for a user
+// GetUserEnrollments retrieves all enrollments for a user with REAL-TIME progress calculation
 func (r *CourseRepository) GetUserEnrollments(userID uuid.UUID) ([]models.CourseEnrollment, error) {
-	query := `
-		SELECT id, user_id, course_id, enrollment_date, enrollment_type,
-			   payment_id, amount_paid, currency, progress_percentage,
-			   lessons_completed, total_time_spent_minutes, status,
-			   completed_at, certificate_issued, certificate_url,
-			   expires_at, last_accessed_at, created_at, updated_at
-		FROM course_enrollments
-		WHERE user_id = $1
-		ORDER BY enrollment_date DESC
-	`
+	// 📊 SOURCE OF TRUTH: Use study_sessions from user_db (same as Dashboard)
+	query := fmt.Sprintf(`
+		WITH course_lesson_counts AS (
+			-- Get total lesson count for each course
+			SELECT 
+				m.course_id,
+				COUNT(l.id) as total_lessons
+			FROM modules m
+			JOIN lessons l ON l.module_id = m.id
+			GROUP BY m.course_id
+		),
+		course_study_time AS (
+			-- 📊 Calculate study time from ACTUAL WATCH POSITION (more accurate)
+			-- This reflects real-time viewing, not just recorded sessions (which require >= 1 min delta)
+			SELECT 
+				m.course_id,
+				COALESCE(SUM(ROUND(lp.last_position_seconds / 60.0)), 0) as total_minutes
+			FROM lesson_progress lp
+			JOIN lessons l ON l.id = lp.lesson_id
+			JOIN modules m ON m.id = l.module_id
+			WHERE lp.user_id = '%s'
+			GROUP BY m.course_id
+		)
+		SELECT 
+			e.id, e.user_id, e.course_id, e.enrollment_date, e.enrollment_type,
+			e.payment_id, e.amount_paid, e.currency,
+			-- 📊 CORRECT progress calculation: SUM(progress of ALL lessons) / total_lessons
+			-- This includes lessons not yet viewed (0%%)
+			COALESCE(
+				ROUND(
+					(SUM(COALESCE(lp.progress_percentage, 0)) / NULLIF(clc.total_lessons, 0))::numeric, 2
+				), 0
+			) as progress_percentage,
+			-- Count completed lessons
+			COUNT(lp.id) FILTER (WHERE lp.status = 'completed') as lessons_completed,
+			-- 📊 SOURCE OF TRUTH: Total time from study_sessions (same as Dashboard)
+			COALESCE(cst.total_minutes, 0) as total_time_spent_minutes,
+			e.status, e.completed_at, e.certificate_issued, e.certificate_url,
+			e.expires_at, e.last_accessed_at, e.created_at, e.updated_at
+		FROM course_enrollments e
+		LEFT JOIN course_lesson_counts clc ON clc.course_id = e.course_id
+		LEFT JOIN course_study_time cst ON cst.course_id = e.course_id
+		LEFT JOIN modules m ON m.course_id = e.course_id
+		LEFT JOIN lessons l ON l.module_id = m.id
+		LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.user_id = e.user_id
+		WHERE e.user_id = $1
+		GROUP BY e.id, e.user_id, e.course_id, e.enrollment_date, e.enrollment_type,
+				 e.payment_id, e.amount_paid, e.currency, e.status, e.completed_at,
+				 e.certificate_issued, e.certificate_url, e.expires_at, e.last_accessed_at,
+				 e.created_at, e.updated_at, clc.total_lessons, cst.total_minutes
+		ORDER BY e.enrollment_date DESC
+	`, userID.String())
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
@@ -476,7 +518,7 @@ func (r *CourseRepository) GetLessonProgress(userID, lessonID uuid.UUID) (*model
 	query := `
 		SELECT id, user_id, lesson_id, course_id, status, progress_percentage,
 			   video_watched_seconds, video_total_seconds,
-			   time_spent_minutes, last_position_seconds, completed_at, first_accessed_at, last_accessed_at
+			   last_position_seconds, completed_at, first_accessed_at, last_accessed_at
 		FROM lesson_progress
 		WHERE user_id = $1 AND lesson_id = $2
 	`
@@ -486,7 +528,7 @@ func (r *CourseRepository) GetLessonProgress(userID, lessonID uuid.UUID) (*model
 		&progress.ID, &progress.UserID, &progress.LessonID, &progress.CourseID,
 		&progress.Status, &progress.ProgressPercentage, &progress.VideoWatchedSeconds,
 		&progress.VideoTotalSeconds,
-		&progress.TimeSpentMinutes, &progress.LastPositionSeconds, &progress.CompletedAt,
+		&progress.LastPositionSeconds, &progress.CompletedAt,
 		&progress.FirstAccessedAt, &progress.LastAccessedAt,
 	)
 
@@ -506,14 +548,13 @@ func (r *CourseRepository) UpdateLessonProgress(progress *models.LessonProgress)
 		INSERT INTO lesson_progress (
 			id, user_id, lesson_id, course_id, status, progress_percentage,
 			video_watched_seconds, video_total_seconds,
-			time_spent_minutes, last_position_seconds, completed_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			last_position_seconds, completed_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (user_id, lesson_id) DO UPDATE SET
 			status = EXCLUDED.status,
 			progress_percentage = EXCLUDED.progress_percentage,
 			video_watched_seconds = EXCLUDED.video_watched_seconds,
 			video_total_seconds = EXCLUDED.video_total_seconds,
-			time_spent_minutes = EXCLUDED.time_spent_minutes,
 			last_position_seconds = EXCLUDED.last_position_seconds,
 			completed_at = EXCLUDED.completed_at,
 			last_accessed_at = CURRENT_TIMESTAMP
@@ -523,77 +564,18 @@ func (r *CourseRepository) UpdateLessonProgress(progress *models.LessonProgress)
 		progress.ID, progress.UserID, progress.LessonID, progress.CourseID,
 		progress.Status, progress.ProgressPercentage, progress.VideoWatchedSeconds,
 		progress.VideoTotalSeconds,
-		progress.TimeSpentMinutes, progress.LastPositionSeconds, progress.CompletedAt,
+		progress.LastPositionSeconds, progress.CompletedAt,
 	)
 
 	return err
 }
 
-// UpdateLessonProgressAtomic atomically updates lesson progress using increments
-// FIX #7: Prevents race conditions when updating progress from multiple devices
-func (r *CourseRepository) UpdateLessonProgressAtomic(
-	userID, lessonID uuid.UUID,
-	videoWatchedSecondsIncrement int,
-	timeSpentMinutesIncrement int,
-	newProgressPercentage *float64,
-	newStatus *string,
-	newCompletedAt *string,
-) error {
-	query := `
-		UPDATE lesson_progress 
-		SET video_watched_seconds = video_watched_seconds + $3,
-		    time_spent_minutes = time_spent_minutes + $4,
-		    progress_percentage = COALESCE($5, progress_percentage),
-		    status = COALESCE($6, status),
-		    completed_at = COALESCE($7::timestamp, completed_at),
-		    last_accessed_at = CURRENT_TIMESTAMP
-		WHERE user_id = $1 AND lesson_id = $2
-	`
+// UpdateLessonProgressAtomic - REMOVED (Migration 013)
+// time_spent_minutes removed, use UpdateLessonProgress instead
 
-	_, err := r.db.Exec(query,
-		userID, lessonID,
-		videoWatchedSecondsIncrement,
-		timeSpentMinutesIncrement,
-		newProgressPercentage,
-		newStatus,
-		newCompletedAt,
-	)
-
-	return err
-}
-
-// UpdateEnrollmentProgressAtomic atomically updates enrollment progress
-// FIX #8: Auto-update enrollment progress when lessons complete
-func (r *CourseRepository) UpdateEnrollmentProgressAtomic(
-	userID, courseID uuid.UUID,
-	lessonsCompletedIncrement int,
-	timeSpentMinutesIncrement int,
-) error {
-	// Calculate progress percentage based on total lessons in course
-	query := `
-		UPDATE course_enrollments ce
-		SET lessons_completed = lessons_completed + $3,
-		    total_time_spent_minutes = total_time_spent_minutes + $4,
-		    progress_percentage = CASE 
-		        WHEN c.total_lessons > 0 
-		        THEN ((ce.lessons_completed + $3)::float / c.total_lessons) * 100
-		        ELSE 0
-		    END,
-		    last_accessed_at = CURRENT_TIMESTAMP
-		FROM courses c
-		WHERE ce.user_id = $1 
-		  AND ce.course_id = $2 
-		  AND ce.course_id = c.id
-	`
-
-	_, err := r.db.Exec(query,
-		userID, courseID,
-		lessonsCompletedIncrement,
-		timeSpentMinutesIncrement,
-	)
-
-	return err
-}
+// UpdateEnrollmentProgressAtomic - REMOVED (Migration 013)
+// progress_percentage and total_time_spent_minutes calculated real-time in GetUserEnrollments
+// Use real-time calculation instead of incremental updates
 
 // CreateCourse creates a new course
 func (r *CourseRepository) CreateCourse(course *models.Course) error {

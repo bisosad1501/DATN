@@ -15,11 +15,6 @@ export const MAIN_NAV_ITEMS = [
     icon: "PenTool",
   },
   {
-    title: "Tiến độ",
-    href: "/progress",
-    icon: "TrendingUp",
-  },
-  {
     title: "Bảng xếp hạng",
     href: "/leaderboard",
     icon: "Trophy",
@@ -54,11 +49,6 @@ export const SIDEBAR_NAV_ITEMS = [
     title: "Bài tập đã làm",
     href: "/my-exercises",
     icon: "CheckSquare",
-  },
-  {
-    title: "Thống kê",
-    href: "/analytics",
-    icon: "BarChart",
   },
   {
     title: "Bảng xếp hạng",

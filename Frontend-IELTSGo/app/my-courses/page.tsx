@@ -14,7 +14,6 @@ import {
   Clock, 
   CheckCircle,
   PlayCircle,
-  TrendingUp,
   Award,
   Target
 } from "lucide-react"
@@ -31,6 +30,7 @@ export default function MyCoursesPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseWithProgress[]>([])
+  const [totalStudyMinutes, setTotalStudyMinutes] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -38,6 +38,11 @@ export default function MyCoursesPage() {
       loadEnrolledCourses()
     }
   }, [user])
+
+  // Calculate total study time when enrolledCourses changes
+  useEffect(() => {
+    calculateTotalStudyTime()
+  }, [enrolledCourses])
 
   const loadEnrolledCourses = async () => {
     try {
@@ -50,6 +55,17 @@ export default function MyCoursesPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 📊 Calculate total study time from COURSES ONLY (sum from enrollments)
+  // NOTE: This is different from Dashboard which shows ALL study time (lessons + exercises)
+  const calculateTotalStudyTime = () => {
+    // Sum up time_spent from all course enrollments
+    const total = enrolledCourses.reduce(
+      (sum, item) => sum + (item.enrollment.total_time_spent_minutes || 0), 
+      0
+    )
+    setTotalStudyMinutes(total)
   }
 
   if (!user) {
@@ -76,13 +92,9 @@ export default function MyCoursesPage() {
     item => item.enrollment.progress_percentage >= 100
   )
 
-  // ✅ Calculate average progress
-  const avgProgress = enrolledCourses.length > 0
-    ? Math.round(
-        enrolledCourses.reduce((sum, item) => sum + (item.enrollment.progress_percentage || 0), 0) / 
-        enrolledCourses.length
-      )
-    : 0
+  // ✅ Format total study time (from all sessions: lessons + exercises)
+  const totalStudyHours = Math.floor(totalStudyMinutes / 60)
+  const totalStudyMins = totalStudyMinutes % 60
 
   return (
     <AppLayout>
@@ -137,10 +149,12 @@ export default function MyCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Avg. Progress</p>
-                  <p className="text-3xl font-bold">{avgProgress}%</p>
+                  <p className="text-sm text-muted-foreground mb-1">Total Study Time</p>
+                  <p className="text-3xl font-bold">
+                    {totalStudyHours > 0 ? `${totalStudyHours}h ${totalStudyMins}m` : `${totalStudyMins}m`}
+                  </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-purple-500" />
+                <Clock className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>

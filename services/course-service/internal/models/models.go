@@ -135,9 +135,9 @@ type LessonProgress struct {
 	ProgressPercentage   float64    `json:"progress_percentage"`
 	VideoWatchedSeconds  int        `json:"video_watched_seconds"`
 	VideoTotalSeconds    *int       `json:"video_total_seconds,omitempty"`
-	// video_watch_percentage REMOVED - redundant with progress_percentage
-	TimeSpentMinutes     int        `json:"time_spent_minutes"`
-	LastPositionSeconds  int        `json:"last_position_seconds"` // For resume watching
+	// video_watch_percentage REMOVED - Migration 011 (redundant with progress_percentage)
+	// time_spent_minutes REMOVED - Migration 013 (SOURCE OF TRUTH: last_position_seconds)
+	LastPositionSeconds  int        `json:"last_position_seconds"` // For resume watching & time calculation
 	CompletedAt          *time.Time `json:"completed_at,omitempty"`
 	FirstAccessedAt      time.Time  `json:"first_accessed_at"`
 	LastAccessedAt       time.Time  `json:"last_accessed_at"`

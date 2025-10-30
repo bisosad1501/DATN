@@ -219,12 +219,11 @@ export const coursesApi = {
   // ============================================
   // VIDEO WATCH TRACKING - REMOVED
   // ============================================
-  // ℹ️ Video tracking removed - lesson progress (updateLessonProgress) already includes:
-  //    - video_watched_seconds
-  //    - video_total_seconds
-  //    - last_position_seconds (for resume)
-  //    - progress_percentage (single source of truth)
-  //    - time_spent_minutes
+    // ℹ️ Video tracking removed - lesson progress (updateLessonProgress) already includes:
+    //    - video_watched_seconds
+    //    - video_total_seconds
+    //    - last_position_seconds (for resume)
+    //    - progress_percentage (single source of truth)
   // Note: video_watch_percentage was removed in migration 011.
 
   // trackVideoProgress: REMOVED - use updateLessonProgress instead

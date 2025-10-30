@@ -324,11 +324,9 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 
 	// ✅ Get current values from existingProgress to compare
 	currentWatchedSeconds := 0
-	currentTimeSpent := 0
 	currentProgressPct := 0.0
 	if existingProgress != nil {
 		currentWatchedSeconds = existingProgress.VideoWatchedSeconds
-		currentTimeSpent = existingProgress.TimeSpentMinutes
 		currentProgressPct = existingProgress.ProgressPercentage
 	}
 
@@ -357,19 +355,9 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 	}
 
 	// video_watch_percentage field removed (see migration 011)
+	// time_spent_minutes field removed (see migration 013)
 
 	// ⏭️ Skip progress_percentage calculation here - will calculate AFTER last_position is updated
-
-	// ✅ Only increase time_spent_minutes (never decrease)
-	if req.TimeSpentMinutes != nil {
-		if *req.TimeSpentMinutes > currentTimeSpent {
-			progress.TimeSpentMinutes = *req.TimeSpentMinutes
-		} else {
-			progress.TimeSpentMinutes = currentTimeSpent
-		}
-	} else {
-		progress.TimeSpentMinutes = currentTimeSpent
-	}
 
 	// ✅ Smart update last_position (for resume watching)
 	// CRITICAL: Don't reset to 0 if we already have a saved position!
@@ -459,65 +447,7 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 		return nil, fmt.Errorf("failed to upsert progress: %w", err)
 	}
 
-	// 🎯 AUTO-RECORD STUDY SESSION for analytics
-	// This syncs lesson viewing activity to User Service for progress tracking
-	// Only record if there's actual study time increase
-	if req.TimeSpentMinutes != nil && *req.TimeSpentMinutes > currentTimeSpent {
-		studyDuration := *req.TimeSpentMinutes - currentTimeSpent
-		
-		// Only record if duration >= 1 minute
-		if studyDuration >= 1 {
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						log.Printf("[Course-Service] PANIC in auto-record session: %v", r)
-					}
-				}()
-
-				// Get course to determine skill type
-				course, err := s.repo.GetCourseByID(lesson.CourseID)
-				skillType := ""
-				if err == nil && course != nil {
-					skillType = course.SkillType
-				}
-
-				// Record completed study session with actual duration
-				err = s.userServiceClient.RecordCompletedSession(
-					userID.String(),
-					"lesson",                  // session_type
-					skillType,                 // skill_type (listening, reading, etc.)
-					lessonID.String(),        // resource_id
-					"video_lesson",           // resource_type
-					studyDuration,            // duration_minutes
-				)
-
-				if err != nil {
-					log.Printf("[Course-Service] ⚠️  Failed to auto-record study session: %v", err)
-				} else {
-					log.Printf("[Course-Service] ✅ Auto-recorded study session: user=%s, lesson=%s, duration=%dm, skill=%s", 
-						userID, lessonID, studyDuration, skillType)
-				}
-			}()
-		}
-	}
-
-	// ✅ NEW: Always update enrollment progress (not just on completion)
-	// This keeps enrollment progress in sync with lesson progress
-	if req.TimeSpentMinutes != nil && *req.TimeSpentMinutes > 0 {
-		// Only update time, not lesson count (unless completing)
-		lessonsCompletedIncrement := 0
-		if wasJustCompleted {
-			lessonsCompletedIncrement = 1
-			log.Printf("[Course-Service] Lesson just completed! Updating enrollment progress for user %s, course %s", userID, lesson.CourseID)
-		}
-		
-		err = s.repo.UpdateEnrollmentProgressAtomic(userID, lesson.CourseID, lessonsCompletedIncrement, progress.TimeSpentMinutes)
-		if err != nil {
-			log.Printf("[Course-Service] WARNING: Failed to update enrollment progress: %v", err)
-		} else if wasJustCompleted {
-			log.Printf("[Course-Service] SUCCESS: Enrollment progress updated (lessons +%d, time +%d)", lessonsCompletedIncrement, progress.TimeSpentMinutes)
-		}
-	} // Handle lesson completion
+	// Handle lesson completion
 	if wasJustCompleted {
 
 		// Refresh progress for notification
@@ -1085,8 +1015,8 @@ func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesso
 		return
 	}
 
-	// Calculate study minutes (default to lesson duration or time spent)
-	studyMinutes := progress.TimeSpentMinutes
+	// Calculate study minutes from last_position_seconds (SOURCE OF TRUTH)
+	studyMinutes := int(progress.LastPositionSeconds / 60)
 	if studyMinutes == 0 && lesson.DurationMinutes != nil {
 		studyMinutes = *lesson.DurationMinutes
 	}

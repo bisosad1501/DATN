@@ -304,10 +304,7 @@ CREATE TABLE lesson_progress (
     -- Video progress
     video_watched_seconds INT DEFAULT 0,
     video_total_seconds INT,
-    video_watch_percentage DECIMAL(5,2) DEFAULT 0,
-    
-    -- Time tracking
-    time_spent_minutes INT DEFAULT 0,
+    -- time_spent_minutes REMOVED by Migration 013; video_watch_percentage REMOVED by Migration 011
     
     -- Completion
     completed_at TIMESTAMP,

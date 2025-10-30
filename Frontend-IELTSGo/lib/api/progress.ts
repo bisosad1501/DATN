@@ -86,24 +86,58 @@ export const progressApi = {
       writing: [],
       speaking: []
     }
+    const completionByDay: { [key: string]: { completed: number, total: number } } = {}
+    const exercisesBySkillType: { [key: string]: { count: number, scores: number[] } } = {}
 
     history.forEach(item => {
       const date = item.created_at.split('T')[0]
+      
+      // Study time by day
       studyTimeByDay[date] = (studyTimeByDay[date] || 0) + item.duration_minutes
 
+      // Completion tracking (lesson sessions)
+      if (item.session_type === 'lesson') {
+        if (!completionByDay[date]) {
+          completionByDay[date] = { completed: 0, total: 0 }
+        }
+        completionByDay[date].total++
+        if (item.duration_minutes >= 1) {
+          completionByDay[date].completed++
+        }
+      }
+
+      // Exercise breakdown by skill type
+      if (item.session_type === 'exercise' && item.skill_type) {
+        if (!exercisesBySkillType[item.skill_type]) {
+          exercisesBySkillType[item.skill_type] = { count: 0, scores: [] }
+        }
+        exercisesBySkillType[item.skill_type].count++
+        if (item.score !== undefined && item.score !== null) {
+          exercisesBySkillType[item.skill_type].scores.push(item.score)
+        }
+      }
+
+      // Scores by skill
       if (item.skill_type && item.score) {
         scoresBySkill[item.skill_type]?.push(item.score)
       }
     })
 
     const result = {
-      studyTimeByDay: Object.entries(studyTimeByDay).map(([date, minutes]) => ({ date, minutes })),
+      studyTimeByDay: Object.entries(studyTimeByDay).map(([date, minutes]) => ({ date, value: minutes })),
       scoresBySkill: Object.entries(scoresBySkill).map(([skill, scores]) => ({ skill, scores })),
-      completionRate: [], // Not available in current backend
-      exercisesByType: [] // Not available in current backend
+      completionRate: Object.entries(completionByDay).map(([date, stats]) => ({ 
+        date, 
+        value: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0 
+      })),
+      exercisesByType: Object.entries(exercisesBySkillType).map(([type, data]) => ({
+        type: type.charAt(0).toUpperCase() + type.slice(1),
+        count: data.count,
+        avgScore: data.scores.length > 0 
+          ? data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length 
+          : 0
+      }))
     }
-
-    console.log('[Progress API] Transformed result:', result)
 
     return result
   },

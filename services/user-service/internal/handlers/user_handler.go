@@ -316,11 +316,18 @@ func (h *UserHandler) GetHistory(c *gin.Context) {
 		return
 	}
 
-	// Get limit from query param
-	limitStr := c.DefaultQuery("limit", "20")
+	// Get limit from query param (support both 'limit' and 'page_size')
+	limitStr := c.Query("limit")
+	if limitStr == "" {
+		limitStr = c.DefaultQuery("page_size", "20")
+	}
 	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
+	if err != nil || limit <= 0 {
 		limit = 20
+	}
+	// Cap at 200 to prevent excessive queries
+	if limit > 200 {
+		limit = 200
 	}
 
 	sessions, err := h.service.GetStudyHistory(userID, limit)
