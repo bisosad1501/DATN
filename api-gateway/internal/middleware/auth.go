@@ -11,7 +11,7 @@ import (
 )
 
 type AuthMiddleware struct {
-	jwtSecret string
+    jwtSecret string
 }
 
 func NewAuthMiddleware(jwtSecret string) *AuthMiddleware {
@@ -119,4 +119,44 @@ func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// RequireRole ensures the authenticated user has one of the allowed roles
+func (m *AuthMiddleware) RequireRole(allowedRoles ...string) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // Try to read role from header set by ValidateToken
+        role := c.Request.Header.Get("X-User-Role")
+        if role == "" {
+            // Fallback: parse JWT directly if header missing
+            authHeader := c.GetHeader("Authorization")
+            parts := strings.Split(authHeader, " ")
+            if len(parts) == 2 && parts[0] == "Bearer" {
+                tokenString := parts[1]
+                if token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+                    if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+                        return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+                    }
+                    return []byte(m.jwtSecret), nil
+                }); err == nil && token.Valid {
+                    if claims, ok := token.Claims.(*Claims); ok {
+                        role = claims.Role
+                    }
+                }
+            }
+        }
+
+        // Check role against allowed list
+        for _, ar := range allowedRoles {
+            if role == ar {
+                c.Next()
+                return
+            }
+        }
+
+        c.JSON(http.StatusForbidden, gin.H{
+            "error":   "forbidden",
+            "message": "You do not have permission to access this resource",
+        })
+        c.Abort()
+    }
 }

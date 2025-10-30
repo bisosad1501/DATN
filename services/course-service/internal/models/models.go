@@ -135,8 +135,9 @@ type LessonProgress struct {
 	ProgressPercentage   float64    `json:"progress_percentage"`
 	VideoWatchedSeconds  int        `json:"video_watched_seconds"`
 	VideoTotalSeconds    *int       `json:"video_total_seconds,omitempty"`
-	VideoWatchPercentage float64    `json:"video_watch_percentage"`
+	// video_watch_percentage REMOVED - redundant with progress_percentage
 	TimeSpentMinutes     int        `json:"time_spent_minutes"`
+	LastPositionSeconds  int        `json:"last_position_seconds"` // For resume watching
 	CompletedAt          *time.Time `json:"completed_at,omitempty"`
 	FirstAccessedAt      time.Time  `json:"first_accessed_at"`
 	LastAccessedAt       time.Time  `json:"last_accessed_at"`
@@ -156,6 +157,9 @@ type CourseReview struct {
 	ApprovedAt   *time.Time `json:"approved_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	// User info (from JOIN)
+	UserName  *string `json:"user_name,omitempty"`
+	UserEmail *string `json:"user_email,omitempty"`
 }
 
 // VideoSubtitle represents subtitle files for videos

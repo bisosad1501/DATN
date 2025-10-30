@@ -52,7 +52,8 @@ apiClient.interceptors.response.use(
         const refreshToken = getRefreshToken()
         if (refreshToken) {
           const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
+            // Backend expects snake_case: refresh_token
+            refresh_token: refreshToken,
           })
 
           const { token } = response.data

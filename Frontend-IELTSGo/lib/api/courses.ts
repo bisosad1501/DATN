@@ -148,6 +148,21 @@ export const coursesApi = {
     return response.data.data.enrollments.map((item: any) => item.course)
   },
 
+  // ✅ NEW: Get enrolled courses WITH progress data
+  getEnrolledCoursesWithProgress: async (): Promise<Array<{
+    course: Course
+    enrollment: CourseEnrollment
+  }>> => {
+    const response = await apiClient.get<ApiResponse<{ enrollments: any[]; total: number }>>("/enrollments/my")
+    if (!response.data.data.enrollments || !Array.isArray(response.data.data.enrollments)) {
+      return []
+    }
+    return response.data.data.enrollments.map((item: any) => ({
+      course: item.course,
+      enrollment: item.enrollment,
+    }))
+  },
+
   // Get enrollment progress (detailed progress with modules)
   getEnrollmentProgress: async (enrollmentId: string): Promise<EnrollmentProgressResponse> => {
     const response = await apiClient.get<ApiResponse<EnrollmentProgressResponse>>(`/enrollments/${enrollmentId}/progress`)
@@ -157,6 +172,12 @@ export const coursesApi = {
   // Get course progress (simple progress percentage)
   getCourseProgress: async (enrollmentId: string): Promise<CourseProgress> => {
     const response = await apiClient.get<ApiResponse<CourseProgress>>(`/enrollments/${enrollmentId}/progress`)
+    return response.data.data
+  },
+
+  // ✅ Get all lesson progress for a course (by courseId)
+  getCourseProgressByCourseId: async (courseId: string): Promise<{ lessons: LessonProgress[] }> => {
+    const response = await apiClient.get<ApiResponse<{ lessons: LessonProgress[] }>>(`/courses/${courseId}/progress`)
     return response.data.data
   },
 
@@ -192,6 +213,57 @@ export const coursesApi = {
     lessonId: string,
   ): Promise<Array<{ id: string; content: string; timestamp?: number; createdAt: string }>> => {
     const response = await apiClient.get(`/courses/${courseId}/lessons/${lessonId}/notes`)
+    return response.data
+  },
+
+  // ============================================
+  // VIDEO WATCH TRACKING - REMOVED
+  // ============================================
+  // ℹ️ Video tracking removed - lesson progress (updateLessonProgress) already includes:
+  //    - video_watched_seconds
+  //    - video_total_seconds
+  //    - last_position_seconds (for resume)
+  //    - progress_percentage (single source of truth)
+  //    - time_spent_minutes
+  // Note: video_watch_percentage was removed in migration 011.
+
+  // trackVideoProgress: REMOVED - use updateLessonProgress instead
+  // getVideoWatchHistory: REMOVED - use lesson progress history instead
+
+  // Get lesson progress (for resume watching)
+  getLessonProgress: async (lessonId: string): Promise<LessonProgress | null> => {
+    try {
+      const response = await apiClient.get<ApiResponse<LessonProgress>>(`/progress/lessons/${lessonId}`)
+      return response.data.data
+    } catch (error: any) {
+      // Return null if no progress yet (404)
+      if (error.response?.status === 404) {
+        return null
+      }
+      throw error
+    }
+  },
+
+  // ============================================
+  // COURSE REVIEWS & RATINGS
+  // ============================================
+  
+  // Get course reviews
+  getCourseReviews: async (courseId: string): Promise<any> => {
+    const response = await apiClient.get(`/courses/${courseId}/reviews`)
+    return response.data
+  },
+
+  // Create course review
+  createCourseReview: async (
+    courseId: string,
+    review: {
+      rating: number
+      title?: string
+      comment?: string
+    }
+  ): Promise<any> => {
+    const response = await apiClient.post(`/courses/${courseId}/reviews`, review)
     return response.data
   },
 }

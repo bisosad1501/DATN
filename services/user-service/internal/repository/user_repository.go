@@ -293,6 +293,13 @@ func (r *UserRepository) UpdateLearningProgress(userID uuid.UUID, updates map[st
 
 // CreateStudySession creates a new study session
 func (r *UserRepository) CreateStudySession(session *models.StudySession) error {
+	// Check if this is a completed session (has duration and ended_at)
+	if session.DurationMinutes != nil && session.EndedAt != nil {
+		// Use CreateCompletedStudySession for completed sessions
+		return r.CreateCompletedStudySession(session)
+	}
+
+	// Otherwise, create regular in-progress session
 	query := `
 		INSERT INTO study_sessions (id, user_id, session_type, skill_type, resource_id, resource_type, started_at, device_type)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -306,6 +313,40 @@ func (r *UserRepository) CreateStudySession(session *models.StudySession) error 
 	}
 
 	log.Printf("✅ Study session created: %s for user: %s", session.ID, session.UserID)
+	return nil
+}
+
+// CreateCompletedStudySession creates a completed study session with all fields
+func (r *UserRepository) CreateCompletedStudySession(session *models.StudySession) error {
+	query := `
+		INSERT INTO study_sessions (
+			id, user_id, session_type, skill_type, resource_id, resource_type,
+			started_at, ended_at, duration_minutes, is_completed, score, device_type
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`
+	_, err := r.db.DB.Exec(query,
+		session.ID,
+		session.UserID,
+		session.SessionType,
+		session.SkillType,
+		session.ResourceID,
+		session.ResourceType,
+		session.StartedAt,
+		session.EndedAt,
+		session.DurationMinutes,
+		session.IsCompleted,
+		session.Score,
+		session.DeviceType,
+	)
+
+	if err != nil {
+		log.Printf("❌ Error creating completed study session for user %s: %v", session.UserID, err)
+		return fmt.Errorf("failed to create completed study session: %w", err)
+	}
+
+	log.Printf("✅ Completed study session created: %s for user: %s (duration: %dm)", 
+		session.ID, session.UserID, *session.DurationMinutes)
 	return nil
 }
 

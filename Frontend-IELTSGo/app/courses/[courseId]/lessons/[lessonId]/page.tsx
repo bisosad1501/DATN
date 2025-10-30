@@ -1,10 +1,12 @@
 "use client"
 
+// Resume watching feature + Video history tracking
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { AppLayout } from "@/components/layout/app-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -23,8 +25,10 @@ import {
   Target,
 } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
+import { getToken } from "@/lib/api/apiClient"
 import type { Lesson, Module } from "@/types"
 import { formatDuration } from "@/lib/utils/format"
+import { useYouTubeProgress } from "@/lib/hooks/use-youtube-progress"
 
 export default function LessonPlayerPage() {
   const params = useParams()
@@ -41,21 +45,188 @@ export default function LessonPlayerPage() {
   const [duration, setDuration] = useState(0)
   const [note, setNote] = useState("")
   const [notes, setNotes] = useState<Array<{ id: string; content: string; timestamp?: number; createdAt: string }>>([])
-  const [watchStartTime, setWatchStartTime] = useState<number>(Date.now())
-  const [totalWatchedSeconds, setTotalWatchedSeconds] = useState<number>(0)
-  const [lastProgressUpdate, setLastProgressUpdate] = useState<number>(0)
+  const [lastPosition, setLastPosition] = useState(0) // ✅ For resume watching
+  const [progressLoaded, setProgressLoaded] = useState(false) // ✅ Track if progress has been fetched
+  // ✅ Generate UUID for session (backend expects UUID format)
+  const sessionIdRef = useRef<string | undefined>(undefined) // Optional, backend will handle if missing
+  
+  // Track time spent on page (for non-video lessons)
+  const pageStartTimeRef = useRef<number>(Date.now())
+  const totalTimeSpentRef = useRef<number>(0)
+
+  // Send progress update to backend
+  const sendProgressUpdate = async (data: {
+    videoWatchedSeconds?: number
+    videoTotalSeconds?: number
+    progressPercentage?: number
+    isCompleted?: boolean
+    useKeepalive?: boolean
+  }) => {
+    try {
+      const timeSpentMinutes = Math.floor((Date.now() - pageStartTimeRef.current) / 60000)
+
+      const payload: any = {
+        time_spent_minutes: timeSpentMinutes,
+      }
+
+      if (data.videoWatchedSeconds !== undefined) {
+        payload.video_watched_seconds = data.videoWatchedSeconds
+      }
+      if (data.videoTotalSeconds !== undefined) {
+        payload.video_total_seconds = data.videoTotalSeconds
+      }
+      if (data.progressPercentage !== undefined) {
+        payload.progress_percentage = data.progressPercentage
+      }
+      if (data.isCompleted) {
+        payload.is_completed = true
+      }
+
+      console.log('[Lesson Player] Sending progress:', payload)
+
+      if (data.useKeepalive) {
+        // Use fetch with keepalive for page unload
+        const token = getToken()
+        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
+        const url = `${base}/progress/lessons/${params.lessonId}`
+        await fetch(url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        })
+      } else {
+        await coursesApi.updateLessonProgress(params.lessonId as string, payload)
+      }
+
+      console.log('[Lesson Player] Progress sent successfully')
+    } catch (error) {
+      console.error('[Lesson Player] Failed to send progress:', error)
+    }
+  }
+
+  // Check if this is a YouTube video
+  const isYouTube = videos.length > 0 && videos[0]?.video_provider?.toLowerCase() === 'youtube' && videos[0]?.video_id
+  const youtubeVideoId = isYouTube ? videos[0].video_id : ''
+  
+  console.log('🎥 [Lesson Player] Component render:', {
+    hasVideos: videos.length > 0,
+    isYouTube,
+    youtubeVideoId,
+    videoProvider: videos[0]?.video_provider,
+  })
+
+  // ✅ Memoize onProgressUpdate để tránh re-render loop
+  const handleProgressUpdate = useCallback((data: {
+    currentTime: number
+    duration: number
+    watchedSeconds: number
+    progressPercentage: number
+    accumulatedTime: number
+    lastPosition: number
+    completed: boolean
+  }) => {
+    // ❌ REMOVED: setCurrentTime/setDuration cause re-render loop!
+    // ✅ Use youtubeProgress.currentTime/duration directly instead
+    
+    console.log('[YouTube Hook] Progress:', {
+      accumulatedTime: data.accumulatedTime,
+      lastPosition: data.lastPosition,
+      watchedSeconds: data.watchedSeconds,
+    })
+    
+    // ✅ Dùng accumulated time từ hook (thời gian thực sự xem)
+    const timeSpentMinutes = Math.floor(data.accumulatedTime / 60)
+    
+    // Send progress to backend với accumulated time + last position
+    const payload: any = {
+      time_spent_minutes: timeSpentMinutes, // ✅ Chỉ đếm khi video đang play
+      video_watched_seconds: data.watchedSeconds,
+      video_total_seconds: Math.floor(data.duration),
+      // ⚠️ Don't send progress_percentage - let backend auto-calculate from last_position
+      // This ensures consistent calculation: progress = last_position / total_duration * 100
+      last_position_seconds: data.lastPosition, // ✅ Lưu vị trí để resume
+    }
+    
+    console.log('[Lesson Player] Sending YouTube progress:', payload)
+    
+    // Update lesson progress
+    coursesApi.updateLessonProgress(params.lessonId as string, payload)
+      .then(() => {
+        console.log('[Lesson Player] YouTube progress sent successfully')
+        
+        // ℹ️ Video tracking removed - lesson progress already includes all video metrics
+        // (watched_seconds, total_seconds, last_position, etc.)
+      })
+      .catch((error) => console.error('[Lesson Player] Failed to send YouTube progress:', error))
+  }, [params.lessonId, videos])
+
+  // Initialize YouTube player and tracking (only for YouTube videos)
+  // Hook MUST be called unconditionally, but with empty videoId it will skip init
+  // ✅ Only pass videoId after progress is loaded to ensure startPosition is correct
+  const youtubeProgress = useYouTubeProgress({
+    videoId: progressLoaded ? youtubeVideoId : '', // ✅ Wait for progress to load first
+    startPosition: lastPosition, // ✅ Resume from last position
+    onProgressUpdate: handleProgressUpdate,
+    updateInterval: 5000, // Send update every 5 seconds
+    autoPlay: false, // Don't auto play
+  })
 
   useEffect(() => {
+    console.log('[Lesson Player] 🎬 useEffect triggered for lesson:', params.lessonId)
+    
     const fetchLessonData = async () => {
       try {
         setLoading(true)
+        console.log('[Lesson Player] 🔍 Fetching lesson data...')
+        
         // Fix: getLessonById only takes lessonId, not courseId
         const lessonData = await coursesApi.getLessonById(params.lessonId as string)
+        console.log('[Lesson Player] ✅ Lesson data received:', {
+          lesson: lessonData.lesson?.title,
+          videosCount: lessonData.videos?.length,
+          firstVideo: lessonData.videos?.[0]
+        })
+        
         setLesson(lessonData.lesson)
         setVideos(lessonData.videos || [])
 
+        console.log('[Lesson Player] Video data:', lessonData.videos)
+        console.log('[Lesson Player] Is YouTube?', lessonData.videos?.[0]?.video_provider, lessonData.videos?.[0]?.video_id)
+
+        // ✅ Load last position để resume watching (BEFORE rendering player)
+        try {
+          const progress = await coursesApi.getLessonProgress(params.lessonId as string)
+          console.log('[Lesson Player] 📊 Progress response:', progress)
+          if (progress && progress.last_position_seconds > 0) {
+            console.log('[Lesson Player] 🔄 Found saved position:', progress.last_position_seconds, 'seconds')
+            setLastPosition(progress.last_position_seconds)
+          } else {
+            console.log('[Lesson Player] ⏭️ Starting from beginning (progress:', progress, 'last_position:', progress?.last_position_seconds, ')')
+          }
+        } catch (error) {
+          console.log('[Lesson Player] ❌ No previous progress found, starting from beginning:', error)
+        }
+        
+        // ✅ Mark progress as loaded so player can initialize with correct startPosition
+        setProgressLoaded(true)
+
         // Get course detail with modules and lessons (including videos)
         const courseDetail = await coursesApi.getCourseById(params.courseId as string)
+
+        // Auto-enroll if not enrolled and user is authenticated
+        const token = getToken()
+        if (token && courseDetail && courseDetail.is_enrolled === false) {
+          try {
+            await coursesApi.enrollCourse(params.courseId as string)
+            console.log('[Lesson Player] Auto-enrolled to course:', params.courseId)
+          } catch (enErr) {
+            console.warn('[Lesson Player] Failed to auto-enroll:', enErr)
+          }
+        }
         
         // Transform the modules data to match our Module type
         // UPDATED: Include exercises from API
@@ -88,60 +259,104 @@ export default function LessonPlayerPage() {
     fetchLessonData()
   }, [params.courseId, params.lessonId])
 
-  // Track video progress and update backend
+  // Track HTML5 video progress (for non-YouTube videos)
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
+    if (!video || isYouTube) return
 
-    const handleTimeUpdate = async () => {
-      const currentTime = video.currentTime
-      setCurrentTime(currentTime)
+    let progressInterval: NodeJS.Timeout | null = null
 
-      // Update progress every 30 seconds
-      const now = Date.now()
-      if (now - lastProgressUpdate > 30000 && duration > 0) {
-        const progressPercentage = (currentTime / duration) * 100
-        const timeSpentMinutes = Math.floor((now - watchStartTime) / 60000)
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime)
+    }
 
-        try {
-          await coursesApi.updateLessonProgress(params.lessonId as string, {
-            progress_percentage: Math.min(progressPercentage, 100),
-            video_watched_seconds: Math.floor(currentTime),
-            video_total_seconds: Math.floor(duration),
-            time_spent_minutes: timeSpentMinutes
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration)
+    }
+
+    const handlePlay = () => {
+      setIsPlaying(true)
+      // Send progress every 5 seconds while playing
+      progressInterval = setInterval(() => {
+        if (video.duration > 0) {
+          sendProgressUpdate({
+            videoWatchedSeconds: Math.floor(video.currentTime),
+            videoTotalSeconds: Math.floor(video.duration),
+            progressPercentage: (video.currentTime / video.duration) * 100,
           })
-          setLastProgressUpdate(now)
-          console.log('[Lesson Player] Progress updated:', {
-            progress: progressPercentage.toFixed(1),
-            watched: Math.floor(currentTime),
-            total: Math.floor(duration),
-            timeSpent: timeSpentMinutes
-          })
-        } catch (error) {
-          console.error('[Lesson Player] Failed to update progress:', error)
         }
+      }, 5000)
+    }
+
+    const handlePause = () => {
+      setIsPlaying(false)
+      if (progressInterval) {
+        clearInterval(progressInterval)
+        progressInterval = null
+      }
+      // Send final progress
+      if (video.duration > 0) {
+        sendProgressUpdate({
+          videoWatchedSeconds: Math.floor(video.currentTime),
+          videoTotalSeconds: Math.floor(video.duration),
+          progressPercentage: (video.currentTime / video.duration) * 100,
+        })
       }
     }
 
-    const handleLoadedMetadata = () => setDuration(video.duration)
-    const handlePlay = () => {
-      setIsPlaying(true)
-      setWatchStartTime(Date.now())
+    const handleEnded = () => {
+                setIsPlaying(false)
+      if (progressInterval) {
+        clearInterval(progressInterval)
+        progressInterval = null
+      }
+      // Mark as completed
+      sendProgressUpdate({
+        videoWatchedSeconds: Math.floor(video.duration),
+        videoTotalSeconds: Math.floor(video.duration),
+        progressPercentage: 100,
+        isCompleted: true,
+      })
     }
-    const handlePause = () => setIsPlaying(false)
 
-    video.addEventListener("timeupdate", handleTimeUpdate)
-    video.addEventListener("loadedmetadata", handleLoadedMetadata)
-    video.addEventListener("play", handlePlay)
-    video.addEventListener("pause", handlePause)
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('play', handlePlay)
+    video.addEventListener('pause', handlePause)
+    video.addEventListener('ended', handleEnded)
 
     return () => {
-      video.removeEventListener("timeupdate", handleTimeUpdate)
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata)
-      video.removeEventListener("play", handlePlay)
-      video.removeEventListener("pause", handlePause)
+      if (progressInterval) {
+        clearInterval(progressInterval)
+      }
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('play', handlePlay)
+      video.removeEventListener('pause', handlePause)
+      video.removeEventListener('ended', handleEnded)
     }
-  }, [duration, lastProgressUpdate, watchStartTime, params.lessonId])
+  }, [isYouTube])
+
+  // Send progress on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sendProgressUpdate({ useKeepalive: true })
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        sendProgressUpdate({ useKeepalive: true })
+      }
+    }
+
+      window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -190,8 +405,12 @@ export default function LessonPlayerPage() {
 
   const handleCompleteLesson = async () => {
     try {
-      // TODO: Backend progress endpoint not implemented yet
-      // await coursesApi.completLesson(params.lessonId as string)
+      await sendProgressUpdate({
+        videoWatchedSeconds: Math.floor(currentTime),
+        videoTotalSeconds: Math.floor(duration),
+        progressPercentage: 100,
+        isCompleted: true,
+      })
       handleNextLesson()
     } catch (error) {
       console.error("[v0] Failed to complete lesson:", error)
@@ -224,18 +443,22 @@ export default function LessonPlayerPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <AppLayout showSidebar={false} showFooter={false}>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
     )
   }
 
   if (!lesson) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-2xl font-bold mb-4">Lesson not found</h1>
-        <Button onClick={() => router.push(`/courses/${params.courseId}`)}>Back to Course</Button>
-      </div>
+      <AppLayout showSidebar={false} showFooter={false}>
+        <div className="container mx-auto px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold mb-4">Lesson not found</h1>
+          <Button onClick={() => router.push(`/courses/${params.courseId}`)}>Back to Course</Button>
+        </div>
+      </AppLayout>
     )
   }
 
@@ -245,6 +468,7 @@ export default function LessonPlayerPage() {
   const hasNext = currentIndex < allLessons.length - 1
 
   return (
+    <AppLayout showSidebar={false} showFooter={false}>
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-white sticky top-0 z-10 shadow-sm">
@@ -285,17 +509,13 @@ export default function LessonPlayerPage() {
               <Card className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="relative bg-black aspect-video">
-                    {videos[0].video_provider === "youtube" && videos[0].video_id ? (
-                      <iframe
+                    {videos[0]?.video_provider?.toLowerCase() === 'youtube' && videos[0]?.video_id ? (
+                      /* YouTube player container - controlled by useYouTubeProgress hook */
+                      <div 
+                        ref={youtubeProgress.containerRef}
                         className="absolute inset-0 w-full h-full"
-                        src={`https://www.youtube-nocookie.com/embed/${videos[0].video_id}?rel=0&modestbranding=1&fs=1&iv_load_policy=3&cc_load_policy=0&playsinline=1&controls=1`}
-                        title={lesson.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        frameBorder="0"
                       />
-                    ) : (
+                    ) : videos[0]?.video_url ? (
                       <video
                         ref={videoRef}
                         src={videos[0].video_url}
@@ -303,6 +523,10 @@ export default function LessonPlayerPage() {
                         controls
                         controlsList="nodownload"
                       />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-white">
+                        <Loader2 className="w-8 h-8 animate-spin" />
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -544,5 +768,6 @@ export default function LessonPlayerPage() {
         </div>
       </div>
     </div>
+    </AppLayout>
   )
 }

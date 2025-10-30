@@ -285,7 +285,75 @@ func (h *CourseHandler) GetMyEnrollments(c *gin.Context) {
 	})
 }
 
-// UpdateLessonProgress updates lesson progress
+// GetLessonProgress retrieves progress for a specific lesson (for resume watching)
+func (h *CourseHandler) GetLessonProgress(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "UNAUTHORIZED",
+				Message: "User not authenticated",
+			},
+		})
+		return
+	}
+
+	userIDStr := userIDVal.(string)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID",
+			},
+		})
+		return
+	}
+
+	lessonIDStr := c.Param("id")
+	lessonID, err := uuid.Parse(lessonIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_LESSON_ID",
+				Message: "Invalid lesson ID format",
+			},
+		})
+		return
+	}
+
+	// Get progress from service
+	progress, err := h.service.GetLessonProgressByID(userID, lessonID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INTERNAL_ERROR",
+				Message: "Failed to get lesson progress",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	// If no progress found, return nil (frontend will handle this)
+	if progress == nil {
+		c.JSON(http.StatusOK, Response{
+			Success: true,
+			Data:    nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    progress,
+	})
+}
+
 func (h *CourseHandler) UpdateLessonProgress(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
 	if !exists {
@@ -417,6 +485,67 @@ func (h *CourseHandler) GetEnrollmentProgress(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Data:    progress,
+	})
+}
+
+// GetCourseProgress retrieves all lesson progress for a course
+func (h *CourseHandler) GetCourseProgress(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "UNAUTHORIZED",
+				Message: "User not authenticated",
+			},
+		})
+		return
+	}
+
+	userIDStr := userIDVal.(string)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID",
+			},
+		})
+		return
+	}
+
+	courseIDStr := c.Param("id")
+	courseID, err := uuid.Parse(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_COURSE_ID",
+				Message: "Invalid course ID format",
+			},
+		})
+		return
+	}
+
+	// Get all lesson progress for this course
+	lessons, err := h.service.GetCourseProgressLessons(userID, courseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "PROGRESS_ERROR",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: map[string]interface{}{
+			"lessons": lessons,
+		},
 	})
 }
 
@@ -893,7 +1022,7 @@ func (h *CourseHandler) CreateReview(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, Response{
 		Success: true,
-		Message: "Review submitted successfully. It will be visible after admin approval.",
+		Message: "Review submitted successfully.",
 		Data:    review,
 	})
 }

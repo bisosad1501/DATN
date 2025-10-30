@@ -76,14 +76,14 @@ services:
     container_name: ielts_migrations
     volumes:
       - ./database/migrations:/migrations
-      - ./scripts/run-migrations.sh:/run-migrations.sh
+      - ./scripts/run-all-migrations.sh:/run-all-migrations.sh
     networks:
       - ielts_network
     depends_on:
       postgres:
         condition: service_healthy
     entrypoint: /bin/sh
-    command: -c "chmod +x /run-migrations.sh && /run-migrations.sh"
+    command: -c "chmod +x /run-all-migrations.sh && /run-all-migrations.sh"
     restart: "no"
 
   # ============================================

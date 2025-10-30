@@ -93,6 +93,31 @@ docker-compose ps
 
 ---
 
+## 🗄️ Database Migrations
+
+**Migrations tự động chạy** khi dùng `./setup.sh` hoặc `./update.sh`
+
+```bash
+# Chạy manual (nếu cần)
+./scripts/run-all-migrations.sh
+
+# Hoặc via Docker
+docker-compose up migrations
+
+# Check migrations đã apply
+docker exec -i ielts_postgres psql -U ielts_admin -d course_db -c \
+  "SELECT * FROM schema_migrations ORDER BY applied_at DESC LIMIT 5;"
+```
+
+**Migration Files:** `database/migrations/*.sql` (numbered: 001, 002, ...)  
+**Docs:** `database/README.md` và `database/migrations/README_MIGRATION_*.md`
+
+**⚠️ Quan trọng:**
+- Migration 011: Xóa field `video_watch_percentage`
+- Migration 012: Enable dblink extension (cross-database queries)
+
+---
+
 ## 📋 Tổng quan
 
 Hệ thống học IELTS trực tuyến với kiến trúc microservices, được xây dựng bằng Golang và PostgreSQL.

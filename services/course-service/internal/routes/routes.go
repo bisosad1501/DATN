@@ -27,6 +27,13 @@ func SetupRoutes(
 			courses.GET("/:id/categories", handler.GetCourseCategories) // Get course categories
 		}
 
+		// Protected course progress endpoint
+		coursesProtected := v1.Group("/courses")
+		coursesProtected.Use(authMiddleware.AuthRequired())
+		{
+			coursesProtected.GET("/:id/progress", handler.GetCourseProgress) // Get all lesson progress for course
+		}
+
 		// Public lesson endpoints
 		lessons := v1.Group("/lessons")
 		lessons.Use(authMiddleware.OptionalAuth())
@@ -73,6 +80,7 @@ func SetupRoutes(
 		progress := v1.Group("/progress")
 		progress.Use(authMiddleware.AuthRequired())
 		{
+			progress.GET("/lessons/:id", handler.GetLessonProgress)    // Get lesson progress (for resume watching)
 			progress.PUT("/lessons/:id", handler.UpdateLessonProgress) // Update lesson progress
 		}
 

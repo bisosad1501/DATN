@@ -20,12 +20,17 @@ import {
 } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
 import { useAuth } from "@/lib/contexts/auth-context"
-import type { Course } from "@/types"
+import type { Course, CourseEnrollment } from "@/types"
+
+interface EnrolledCourseWithProgress {
+  course: Course
+  enrollment: CourseEnrollment
+}
 
 export default function MyCoursesPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
+  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseWithProgress[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,9 +42,9 @@ export default function MyCoursesPage() {
   const loadEnrolledCourses = async () => {
     try {
       setLoading(true)
-      const courses = await coursesApi.getEnrolledCourses()
-      setEnrolledCourses(courses)
-      console.log('[My Courses] Loaded:', courses)
+      const data = await coursesApi.getEnrolledCoursesWithProgress()
+      setEnrolledCourses(data)
+      console.log('[My Courses] Loaded with progress:', data)
     } catch (error) {
       console.error('[My Courses] Error:', error)
     } finally {
@@ -63,8 +68,21 @@ export default function MyCoursesPage() {
     )
   }
 
-  const inProgressCourses = enrolledCourses.filter(c => true) // TODO: Add progress filter
-  const completedCourses = enrolledCourses.filter(c => false) // TODO: Add completed filter
+  // ✅ Filter by progress
+  const inProgressCourses = enrolledCourses.filter(
+    item => item.enrollment.progress_percentage > 0 && item.enrollment.progress_percentage < 100
+  )
+  const completedCourses = enrolledCourses.filter(
+    item => item.enrollment.progress_percentage >= 100
+  )
+
+  // ✅ Calculate average progress
+  const avgProgress = enrolledCourses.length > 0
+    ? Math.round(
+        enrolledCourses.reduce((sum, item) => sum + (item.enrollment.progress_percentage || 0), 0) / 
+        enrolledCourses.length
+      )
+    : 0
 
   return (
     <AppLayout>
@@ -120,7 +138,7 @@ export default function MyCoursesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Avg. Progress</p>
-                  <p className="text-3xl font-bold">0%</p>
+                  <p className="text-3xl font-bold">{avgProgress}%</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-purple-500" />
               </div>
@@ -162,108 +180,199 @@ export default function MyCoursesPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 gap-4">
-                {enrolledCourses.map((course) => (
-                  <Card 
-                    key={course.id}
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => router.push(`/courses/${course.id}`)}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-6">
-                        {/* Thumbnail */}
-                        <div className="w-48 h-32 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
-                          {course.thumbnail_url ? (
-                            <img 
-                              src={course.thumbnail_url} 
-                              alt={course.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <BookOpen className="h-12 w-12 text-muted-foreground" />
+                {enrolledCourses.map((item) => {
+                  const { course, enrollment } = item
+                  const progressPct = Math.round(enrollment.progress_percentage || 0)
+                  
+                  return (
+                    <Card 
+                      key={course.id}
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => router.push(`/courses/${course.id}`)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-6">
+                          {/* Thumbnail */}
+                          <div className="w-48 h-32 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+                            {course.thumbnail_url ? (
+                              <img 
+                                src={course.thumbnail_url} 
+                                alt={course.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <BookOpen className="h-12 w-12 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="text-xl font-bold mb-1">{course.title}</h3>
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {course.short_description || course.description}
+                                </p>
+                              </div>
+                              <Badge variant="outline" className="ml-4">
+                                {course.skill_type}
+                              </Badge>
                             </div>
-                          )}
+
+                            {/* Progress */}
+                            <div className="mt-4 space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Progress</span>
+                                <span className="font-semibold">{progressPct}%</span>
+                              </div>
+                              <Progress value={progressPct} className="h-2" />
+                            </div>
+
+                            {/* Stats */}
+                            <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <BookOpen className="h-4 w-4" />
+                                <span>{enrollment.lessons_completed || 0}/{course.total_lessons || 0} lessons</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{enrollment.total_time_spent_minutes || 0} min</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Target className="h-4 w-4" />
+                                <span>Band {course.target_band_score || '7.0'}</span>
+                              </div>
+                            </div>
+
+                            {/* Action */}
+                            <div className="mt-4">
+                              <Button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/courses/${course.id}`)
+                                }}
+                              >
+                                Continue Learning
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-
-                        {/* Content */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h3 className="text-xl font-bold mb-1">{course.title}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {course.short_description || course.description}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className="ml-4">
-                              {course.skill_type}
-                            </Badge>
-                          </div>
-
-                          {/* Progress */}
-                          <div className="mt-4 space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Progress</span>
-                              <span className="font-semibold">0%</span>
-                            </div>
-                            <Progress value={0} className="h-2" />
-                          </div>
-
-                          {/* Stats */}
-                          <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <BookOpen className="h-4 w-4" />
-                              <span>{course.total_lessons || 0} lessons</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{course.duration_hours || 0}h</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Target className="h-4 w-4" />
-                              <span>Band {course.target_band_score || '7.0'}</span>
-                            </div>
-                          </div>
-
-                          {/* Action */}
-                          <div className="mt-4">
-                            <Button 
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                router.push(`/courses/${course.id}`)
-                              }}
-                            >
-                              Continue Learning
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="in-progress">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <PlayCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  Courses you're currently working on will appear here
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="in-progress" className="space-y-4">
+            {inProgressCourses.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <PlayCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Start learning to see your progress here
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {inProgressCourses.map((item) => {
+                  const { course, enrollment } = item
+                  const progressPct = Math.round(enrollment.progress_percentage || 0)
+                  
+                  return (
+                    <Card 
+                      key={course.id}
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => router.push(`/courses/${course.id}`)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-6">
+                          <div className="w-48 h-32 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+                            {course.thumbnail_url ? (
+                              <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <BookOpen className="h-12 w-12 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold mb-2">{course.title}</h3>
+                            <div className="mt-4 space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Progress</span>
+                                <span className="font-semibold">{progressPct}%</span>
+                              </div>
+                              <Progress value={progressPct} className="h-2" />
+                            </div>
+                            <div className="mt-4">
+                              <Button size="sm">Continue Learning</Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="completed">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  Completed courses will appear here
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="completed" className="space-y-4">
+            {completedCourses.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Complete your first course to earn achievements
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {completedCourses.map((item) => {
+                  const { course, enrollment } = item
+                  
+                  return (
+                    <Card 
+                      key={course.id}
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => router.push(`/courses/${course.id}`)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-6">
+                          <div className="w-48 h-32 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+                            {course.thumbnail_url ? (
+                              <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <BookOpen className="h-12 w-12 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <h3 className="text-xl font-bold mb-2">{course.title}</h3>
+                              <Badge className="bg-green-500">Completed</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {enrollment.lessons_completed} lessons • {enrollment.total_time_spent_minutes} min
+                            </p>
+                            <div className="mt-4">
+                              <Button size="sm" variant="outline">Review Course</Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

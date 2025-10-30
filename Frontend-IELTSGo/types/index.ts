@@ -450,7 +450,7 @@ export interface LessonProgress {
   progress_percentage: number
   video_watched_seconds: number
   video_total_seconds?: number
-  video_watch_percentage: number
+  // video_watch_percentage REMOVED - redundant with progress_percentage (migration 011)
   time_spent_minutes: number
   completed_at?: string
   first_accessed_at: string

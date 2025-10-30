@@ -9,11 +9,14 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
 import { Users, Star, BookOpen, PlayCircle, FileText, CheckCircle, Loader2, Target } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
 import { useAuth } from "@/lib/contexts/auth-context"
-import type { Course, Module } from "@/types"
+import type { Course, Module, LessonProgress } from "@/types"
 import { formatDuration, formatNumber } from "@/lib/utils/format"
+import { ReviewList } from "@/components/course/review-list"
+import { ReviewForm } from "@/components/course/review-form"
 
 export default function CourseDetailPage() {
   const params = useParams()
@@ -24,6 +27,8 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
   const [isEnrolled, setIsEnrolled] = useState(false)
+  const [lessonProgressMap, setLessonProgressMap] = useState<Record<string, LessonProgress>>({})
+  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0)
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -47,6 +52,26 @@ export default function CourseDetailPage() {
           console.log('[DEBUG] Loaded modules:', formattedModules)
         } else {
           console.warn('[DEBUG] No modules in course detail response')
+        }
+
+        // ✅ Fetch lesson progress if enrolled
+        if (courseDetail.is_enrolled && user) {
+          try {
+            // Use the correct endpoint: GET /courses/:id/progress
+            const response = await coursesApi.getCourseProgressByCourseId(params.courseId as string)
+            const progressMap: Record<string, LessonProgress> = {}
+            
+            // Backend returns { lessons: LessonProgress[] }
+            if (response?.lessons && Array.isArray(response.lessons)) {
+              response.lessons.forEach((p: LessonProgress) => {
+                progressMap[p.lesson_id] = p
+              })
+              setLessonProgressMap(progressMap)
+              console.log('[Course Detail] ✅ Loaded lesson progress:', progressMap)
+            }
+          } catch (error) {
+            console.log('[Course Detail] No lesson progress yet:', error)
+          }
         }
       } catch (error) {
         console.error("[v0] Failed to fetch course:", error)
@@ -268,7 +293,7 @@ export default function CourseDetailPage() {
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Duration</span>
-                      <span className="font-medium">{formatDuration((course.duration_hours || course.duration || 0) * 60)}</span>
+                      <span className="font-medium">{formatDuration((course.duration_hours || course.duration || 0) * 3600)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Lessons</span>
@@ -292,9 +317,10 @@ export default function CourseDetailPage() {
 
       <div className="container mx-auto px-4 py-12">
         <Tabs defaultValue="curriculum" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-3xl grid-cols-3">
             <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
 
           <TabsContent value="curriculum" className="mt-6">
@@ -347,6 +373,13 @@ export default function CourseDetailPage() {
                                 const durationMinutes = lesson.duration_minutes || lesson.duration || 0
                                 const durationSeconds = videoDurationSeconds > 0 ? videoDurationSeconds : durationMinutes * 60
 
+                                // ✅ Get lesson progress
+                                const progress = lessonProgressMap[lesson.id]
+                                // 📊 Use progress_percentage (single source of truth)
+                                // Note: video_watch_percentage is deprecated and synced with progress_percentage
+                                const progressPct = Math.round(progress?.progress_percentage || 0)
+                                const isCompleted = progress?.status === 'completed' || progressPct >= 100
+
                                 const handleLessonClick = () => {
                                   // Check if user is enrolled or if lesson is free/preview
                                   if (isEnrolled || isPreview) {
@@ -360,22 +393,43 @@ export default function CourseDetailPage() {
                                   <button
                                     key={lesson.id}
                                     onClick={handleLessonClick}
-                                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                                    className="w-full p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-left"
                                   >
-                                    <div className="flex items-center gap-3 flex-1">
-                                      <Icon className="w-4 h-4 text-muted-foreground" />
-                                      <div className="flex-1">
-                                        <span className="text-sm font-medium">{lesson.title}</span>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium truncate">{lesson.title}</span>
+                                            {isCompleted && (
+                                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                                        {progressPct > 0 && !isCompleted && (
+                                          <span className="text-xs font-medium text-primary">
+                                            {progressPct}%
+                                          </span>
+                                        )}
+                                        {durationSeconds > 0 && (
+                                          <span className="text-xs text-muted-foreground">
+                                            {formatDuration(durationSeconds)}
+                                          </span>
+                                        )}
+                                        {isPreview && <Badge variant="outline">Preview</Badge>}
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                      {durationSeconds > 0 && (
-                                        <span className="text-xs text-muted-foreground">
-                                          {formatDuration(durationSeconds)}
-                                        </span>
-                                      )}
-                                      {isPreview && <Badge variant="outline">Preview</Badge>}
-                                    </div>
+                                    {/* ✅ Progress bar */}
+                                    {progressPct > 0 && (
+                                      <div className="ml-7">
+                                        <Progress 
+                                          value={progressPct} 
+                                          className="h-1.5"
+                                        />
+                                      </div>
+                                    )}
                                   </button>
                                 )
                               })}
@@ -463,6 +517,47 @@ export default function CourseDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="reviews" className="mt-6">
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Review Form - Left column (only if enrolled) */}
+              {isEnrolled && (
+                <div className="lg:col-span-1">
+                  <ReviewForm 
+                    courseId={params.courseId as string}
+                    onSuccess={() => {
+                      // Refresh review list immediately after successful submission
+                      setReviewRefreshTrigger(prev => prev + 1)
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Review List - Right column (takes full width if not enrolled) */}
+              <div className={isEnrolled ? "lg:col-span-2" : "lg:col-span-3"}>
+                <ReviewList 
+                  courseId={params.courseId as string} 
+                  refreshTrigger={reviewRefreshTrigger}
+                />
+              </div>
+            </div>
+
+            {/* Show enrollment CTA if not enrolled */}
+            {!isEnrolled && (
+              <Card className="mt-6">
+                <CardContent className="py-8">
+                  <p className="text-center text-muted-foreground mb-4">
+                    Bạn cần đăng ký khóa học để viết đánh giá
+                  </p>
+                  <div className="flex justify-center">
+                    <Button onClick={handleEnroll} disabled={enrolling}>
+                      {enrolling ? "Đang đăng ký..." : "Đăng ký ngay"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

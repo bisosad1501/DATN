@@ -77,9 +77,10 @@ func SetupRoutes(handler *handlers.UserHandler, internalHandler *handlers.Intern
 			// Skill statistics updates
 			internal.PUT("/statistics/:skill/update", internalHandler.UpdateSkillStatisticsInternal)
 
-			// Study session tracking
-			internal.POST("/session/start", internalHandler.StartSessionInternal)
-			internal.PUT("/session/:session_id/end", internalHandler.EndSessionInternal)
+		// Study session tracking
+		internal.POST("/session/start", internalHandler.StartSessionInternal)
+		internal.PUT("/session/:session_id/end", internalHandler.EndSessionInternal)
+		internal.POST("/session/record", internalHandler.RecordCompletedSessionInternal)
 		}
 	}
 

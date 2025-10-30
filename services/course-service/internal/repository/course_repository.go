@@ -475,8 +475,8 @@ func (r *CourseRepository) GetUserEnrollments(userID uuid.UUID) ([]models.Course
 func (r *CourseRepository) GetLessonProgress(userID, lessonID uuid.UUID) (*models.LessonProgress, error) {
 	query := `
 		SELECT id, user_id, lesson_id, course_id, status, progress_percentage,
-			   video_watched_seconds, video_total_seconds, video_watch_percentage,
-			   time_spent_minutes, completed_at, first_accessed_at, last_accessed_at
+			   video_watched_seconds, video_total_seconds,
+			   time_spent_minutes, last_position_seconds, completed_at, first_accessed_at, last_accessed_at
 		FROM lesson_progress
 		WHERE user_id = $1 AND lesson_id = $2
 	`
@@ -485,8 +485,8 @@ func (r *CourseRepository) GetLessonProgress(userID, lessonID uuid.UUID) (*model
 	err := r.db.QueryRow(query, userID, lessonID).Scan(
 		&progress.ID, &progress.UserID, &progress.LessonID, &progress.CourseID,
 		&progress.Status, &progress.ProgressPercentage, &progress.VideoWatchedSeconds,
-		&progress.VideoTotalSeconds, &progress.VideoWatchPercentage,
-		&progress.TimeSpentMinutes, &progress.CompletedAt,
+		&progress.VideoTotalSeconds,
+		&progress.TimeSpentMinutes, &progress.LastPositionSeconds, &progress.CompletedAt,
 		&progress.FirstAccessedAt, &progress.LastAccessedAt,
 	)
 
@@ -505,16 +505,16 @@ func (r *CourseRepository) UpdateLessonProgress(progress *models.LessonProgress)
 	query := `
 		INSERT INTO lesson_progress (
 			id, user_id, lesson_id, course_id, status, progress_percentage,
-			video_watched_seconds, video_total_seconds, video_watch_percentage,
-			time_spent_minutes, completed_at
+			video_watched_seconds, video_total_seconds,
+			time_spent_minutes, last_position_seconds, completed_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (user_id, lesson_id) DO UPDATE SET
 			status = EXCLUDED.status,
 			progress_percentage = EXCLUDED.progress_percentage,
 			video_watched_seconds = EXCLUDED.video_watched_seconds,
 			video_total_seconds = EXCLUDED.video_total_seconds,
-			video_watch_percentage = EXCLUDED.video_watch_percentage,
 			time_spent_minutes = EXCLUDED.time_spent_minutes,
+			last_position_seconds = EXCLUDED.last_position_seconds,
 			completed_at = EXCLUDED.completed_at,
 			last_accessed_at = CURRENT_TIMESTAMP
 	`
@@ -522,8 +522,8 @@ func (r *CourseRepository) UpdateLessonProgress(progress *models.LessonProgress)
 	_, err := r.db.Exec(query,
 		progress.ID, progress.UserID, progress.LessonID, progress.CourseID,
 		progress.Status, progress.ProgressPercentage, progress.VideoWatchedSeconds,
-		progress.VideoTotalSeconds, progress.VideoWatchPercentage,
-		progress.TimeSpentMinutes, progress.CompletedAt,
+		progress.VideoTotalSeconds,
+		progress.TimeSpentMinutes, progress.LastPositionSeconds, progress.CompletedAt,
 	)
 
 	return err
@@ -724,12 +724,23 @@ func (r *CourseRepository) GetModuleCourseID(moduleID uuid.UUID) (uuid.UUID, err
 
 // GetCourseReviews retrieves approved reviews for a course
 func (r *CourseRepository) GetCourseReviews(courseID uuid.UUID) ([]models.CourseReview, error) {
+	// Use dblink to get user info from user_db (cross-database JOIN)
 	query := `
-		SELECT id, user_id, course_id, rating, title, comment, helpful_count, 
-			   is_approved, approved_by, approved_at, created_at, updated_at
-		FROM course_reviews
-		WHERE course_id = $1 AND is_approved = true
-		ORDER BY created_at DESC
+		SELECT 
+			cr.id, cr.user_id, cr.course_id, cr.rating, cr.title, cr.comment, cr.helpful_count, 
+			cr.is_approved, cr.approved_by, cr.approved_at, cr.created_at, cr.updated_at,
+			up.full_name, au.email
+		FROM course_reviews cr
+		LEFT JOIN dblink(
+			'dbname=user_db user=ielts_admin',
+			'SELECT user_id, full_name FROM user_profiles'
+		) AS up(user_id uuid, full_name text) ON cr.user_id = up.user_id
+		LEFT JOIN dblink(
+			'dbname=auth_db user=ielts_admin',
+			'SELECT id, email FROM users'
+		) AS au(id uuid, email text) ON cr.user_id = au.id
+		WHERE cr.course_id = $1 AND cr.is_approved = true
+		ORDER BY cr.created_at DESC
 	`
 
 	rows, err := r.db.Query(query, courseID)
@@ -746,6 +757,7 @@ func (r *CourseRepository) GetCourseReviews(courseID uuid.UUID) ([]models.Course
 			&review.Title, &review.Comment, &review.HelpfulCount,
 			&review.IsApproved, &review.ApprovedBy, &review.ApprovedAt,
 			&review.CreatedAt, &review.UpdatedAt,
+			&review.UserName, &review.UserEmail,
 		)
 		if err != nil {
 			log.Printf("Error scanning review: %v", err)
@@ -760,8 +772,8 @@ func (r *CourseRepository) GetCourseReviews(courseID uuid.UUID) ([]models.Course
 // CreateReview creates a new course review
 func (r *CourseRepository) CreateReview(review *models.CourseReview) error {
 	query := `
-		INSERT INTO course_reviews (user_id, course_id, rating, title, comment, is_approved)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO course_reviews (user_id, course_id, rating, title, comment, is_approved, approved_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -773,6 +785,7 @@ func (r *CourseRepository) CreateReview(review *models.CourseReview) error {
 		review.Title,
 		review.Comment,
 		review.IsApproved,
+		review.ApprovedAt,
 	).Scan(&review.ID, &review.CreatedAt, &review.UpdatedAt)
 
 	return err

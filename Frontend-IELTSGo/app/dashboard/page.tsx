@@ -28,10 +28,8 @@ function DashboardContent() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setLoading(true)
       try {
-        setLoading(true)
-
-        // Fetch real data from backend
         const [summaryData, analyticsData, historyData] = await Promise.all([
           progressApi.getProgressSummary(),
           progressApi.getProgressAnalytics("30d"),
@@ -40,64 +38,6 @@ function DashboardContent() {
         setSummary(summaryData)
         setAnalytics(analyticsData)
         setHistory(historyData.data || [])
-      } catch (error) {
-        // Use mock data for demo purposes
-        // Set mock data for demo purposes
-        setSummary({
-          totalCourses: 5,
-          completedCourses: 2,
-          inProgressCourses: 3,
-          totalExercises: 50,
-          completedExercises: 47,
-          totalStudyTime: 1470, // 24.5 hours
-          currentStreak: 7,
-          longestStreak: 14,
-          averageScore: 7.5,
-          skillScores: {
-            listening: 7.0,
-            reading: 8.0,
-            writing: 7.0,
-            speaking: 7.5,
-          },
-        })
-
-        setAnalytics({
-          studyTimeByDay: Array.from({ length: 30 }, (_, i) => ({
-            date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
-            minutes: Math.floor(Math.random() * 120) + 30,
-          })),
-          scoresBySkill: [],
-          completionRate: [],
-          exercisesByType: [],
-        })
-
-        setHistory([
-          {
-            id: "1",
-            type: "exercise" as const,
-            title: "IELTS Reading Practice Test 5",
-            completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            duration: 45,
-            score: 8.0,
-            skillType: "reading" as const,
-          },
-          {
-            id: "2",
-            type: "lesson" as const,
-            title: "Writing Task 2: Opinion Essays",
-            completedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-            duration: 30,
-          },
-          {
-            id: "3",
-            type: "exercise" as const,
-            title: "Listening Mock Test 3",
-            completedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            duration: 60,
-            score: 7.5,
-            skillType: "listening" as const,
-          },
-        ])
       } finally {
         setLoading(false)
       }
@@ -121,6 +61,11 @@ function DashboardContent() {
     )
   }
 
+  // Count unique exercises completed from history
+  // Count unique exercises and total attempts
+  const exerciseAttempts = history.filter(a => a.type === "exercise")
+  const uniqueExercises = new Set(exerciseAttempts.map(a => a.title)).size
+  const totalAttempts = exerciseAttempts.length
   return (
     <AppLayout showSidebar={true} showFooter={false}>
       <div className="container mx-auto px-4 py-8">
@@ -143,8 +88,8 @@ function DashboardContent() {
           />
           <StatCard
             title="Exercises Completed"
-            value={summary?.completedExercises || 0}
-            description={`${summary?.totalExercises || 0} total`}
+            value={uniqueExercises}
+            description={`${uniqueExercises} bài, ${totalAttempts} lần làm`}
             icon={CheckCircle}
           />
           <StatCard
@@ -185,25 +130,25 @@ function DashboardContent() {
               skill="LISTENING"
               currentScore={summary?.skillScores?.listening || 0}
               targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={12}
+              exercisesCompleted={summary?.listeningProgress || 0}
             />
             <SkillProgressCard
               skill="READING"
               currentScore={summary?.skillScores?.reading || 0}
               targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={15}
+              exercisesCompleted={summary?.readingProgress || 0}
             />
             <SkillProgressCard
               skill="WRITING"
               currentScore={summary?.skillScores?.writing || 0}
               targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={10}
+              exercisesCompleted={summary?.writingProgress || 0}
             />
             <SkillProgressCard
               skill="SPEAKING"
               currentScore={summary?.skillScores?.speaking || 0}
               targetScore={user?.targetBandScore || 9}
-              exercisesCompleted={10}
+              exercisesCompleted={summary?.speakingProgress || 0}
             />
           </div>
         </div>

@@ -60,6 +60,9 @@ func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (
 		return nil, fmt.Errorf("failed to get modules: %w", err)
 	}
 
+	// 📊 Calculate total duration from lessons
+	var totalDurationMinutes int
+
 	// Get lessons and exercises for each module
 	var modulesWithLessons []models.ModuleWithLessons
 	for _, module := range modules {
@@ -73,6 +76,11 @@ func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (
 		// Load videos for each lesson
 		var lessonsWithVideos []models.LessonWithVideos
 		for _, lesson := range lessons {
+			// 📊 Add lesson duration to total (already computed with video duration in query)
+			if lesson.DurationMinutes != nil {
+				totalDurationMinutes += *lesson.DurationMinutes
+			}
+
 			lessonWithVideo := models.LessonWithVideos{
 				Lesson: lesson,
 			}
@@ -120,6 +128,13 @@ func (s *CourseService) GetCourseDetail(courseID uuid.UUID, userID *uuid.UUID) (
 			Lessons:   lessonsWithVideos,
 			Exercises: exercises,
 		})
+	}
+
+	// 📊 Update course duration_hours from calculated total
+	if totalDurationMinutes > 0 {
+		durationHours := float64(totalDurationMinutes) / 60.0
+		course.DurationHours = &durationHours
+		log.Printf("[Course-Service] 📊 Calculated course duration: %d minutes = %.2f hours", totalDurationMinutes, durationHours)
 	}
 
 	response := &models.CourseDetailResponse{
@@ -288,7 +303,7 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 	existingProgress, _ := s.repo.GetLessonProgress(userID, lessonID)
 	wasAlreadyCompleted := existingProgress != nil && existingProgress.Status == "completed"
 
-	// Build progress update
+	// Build progress update (preserve existing values)
 	progress := &models.LessonProgress{
 		ID:       uuid.New(),
 		UserID:   userID,
@@ -297,25 +312,113 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 		Status:   "in_progress",
 	}
 
-	// Set fields from request
-	if req.ProgressPercentage != nil {
-		progress.ProgressPercentage = *req.ProgressPercentage
+	// Preserve existing completed_at if already completed
+	if existingProgress != nil {
+		if existingProgress.Status == "completed" {
+			progress.Status = "completed"
+			progress.CompletedAt = existingProgress.CompletedAt
+		}
+		// Preserve ID for UPSERT
+		progress.ID = existingProgress.ID
 	}
 
+	// ✅ Get current values from existingProgress to compare
+	currentWatchedSeconds := 0
+	currentTimeSpent := 0
+	currentProgressPct := 0.0
+	if existingProgress != nil {
+		currentWatchedSeconds = existingProgress.VideoWatchedSeconds
+		currentTimeSpent = existingProgress.TimeSpentMinutes
+		currentProgressPct = existingProgress.ProgressPercentage
+	}
+
+	// ✅ Only update video progress if new value is GREATER than current
+	// This prevents progress from being reset when user reloads page
 	if req.VideoWatchedSeconds != nil {
-		progress.VideoWatchedSeconds = *req.VideoWatchedSeconds
+		if *req.VideoWatchedSeconds > currentWatchedSeconds {
+			progress.VideoWatchedSeconds = *req.VideoWatchedSeconds
+			log.Printf("[Course-Service] ✅ Updated video_watched_seconds: %d -> %d", 
+				currentWatchedSeconds, *req.VideoWatchedSeconds)
+		} else {
+			// Keep existing value
+			progress.VideoWatchedSeconds = currentWatchedSeconds
+			log.Printf("[Course-Service] ⏭️  Skipped video_watched_seconds update: new=%d <= current=%d", 
+				*req.VideoWatchedSeconds, currentWatchedSeconds)
+		}
+	} else {
+		// If not provided in request, keep existing value
+		progress.VideoWatchedSeconds = currentWatchedSeconds
 	}
 
 	if req.VideoTotalSeconds != nil {
 		progress.VideoTotalSeconds = req.VideoTotalSeconds
-		// Only calculate percentage if we have both values
-		if *req.VideoTotalSeconds > 0 && req.VideoWatchedSeconds != nil {
-			progress.VideoWatchPercentage = float64(*req.VideoWatchedSeconds) / float64(*req.VideoTotalSeconds) * 100
-		}
+	} else if existingProgress != nil {
+		progress.VideoTotalSeconds = existingProgress.VideoTotalSeconds
 	}
 
+	// video_watch_percentage field removed (see migration 011)
+
+	// ⏭️ Skip progress_percentage calculation here - will calculate AFTER last_position is updated
+
+	// ✅ Only increase time_spent_minutes (never decrease)
 	if req.TimeSpentMinutes != nil {
-		progress.TimeSpentMinutes = *req.TimeSpentMinutes
+		if *req.TimeSpentMinutes > currentTimeSpent {
+			progress.TimeSpentMinutes = *req.TimeSpentMinutes
+		} else {
+			progress.TimeSpentMinutes = currentTimeSpent
+		}
+	} else {
+		progress.TimeSpentMinutes = currentTimeSpent
+	}
+
+	// ✅ Smart update last_position (for resume watching)
+	// CRITICAL: Don't reset to 0 if we already have a saved position!
+	// This prevents overwriting resume position when page reloads (video not started yet)
+	if req.LastPositionSeconds != nil {
+		newPosition := *req.LastPositionSeconds
+		currentPosition := 0
+		if existingProgress != nil {
+			currentPosition = existingProgress.LastPositionSeconds
+		}
+
+		// Only update if:
+		// 1. New position > 0 (video is actually playing)
+		// 2. OR current position is 0 (no saved position yet)
+		if newPosition > 0 || currentPosition == 0 {
+			progress.LastPositionSeconds = newPosition
+			log.Printf("[Course-Service] ✅ Updated last_position_seconds: %d -> %d",
+				currentPosition, newPosition)
+		} else {
+			// Keep existing position (don't reset to 0)
+			progress.LastPositionSeconds = currentPosition
+			log.Printf("[Course-Service] ⏭️  Kept last_position_seconds: %d (rejected new=0)",
+				currentPosition)
+		}
+	} else if existingProgress != nil {
+		// Keep existing value if not provided in request
+		progress.LastPositionSeconds = existingProgress.LastPositionSeconds
+	}
+
+	// 🎯 PRODUCTION LOGIC: Calculate Progress AFTER last_position is updated
+	// Progress = Furthest Position Reached (like YouTube/Coursera/Udemy)
+	// This is simple, predictable, and matches user expectations:
+	// - User seeks ahead → progress increases ✅
+	// - User rewinds → progress stays same ✅
+	// - Clear percentage based on how far they've reached in the video
+	if req.ProgressPercentage != nil {
+		// Allow manual override if provided
+		progress.ProgressPercentage = *req.ProgressPercentage
+		log.Printf("[Course-Service] 📊 Using provided progress_percentage: %.2f%%", progress.ProgressPercentage)
+	} else {
+		// Auto-calculate: Progress = last_position / total_duration * 100
+		if progress.VideoTotalSeconds != nil && *progress.VideoTotalSeconds > 0 {
+			progress.ProgressPercentage = float64(progress.LastPositionSeconds) / float64(*progress.VideoTotalSeconds) * 100
+			log.Printf("[Course-Service] 📊 Auto-calculated progress: %.2f%% (position: %ds / %ds)", 
+				progress.ProgressPercentage, progress.LastPositionSeconds, *progress.VideoTotalSeconds)
+		} else {
+			// Keep existing value if no video data
+			progress.ProgressPercentage = currentProgressPct
+		}
 	}
 
 	// Check if completing (and was not already completed)
@@ -354,15 +457,68 @@ func (s *CourseService) UpdateLessonProgress(userID, lessonID uuid.UUID, req *mo
 	err = s.repo.UpdateLessonProgress(progress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upsert progress: %w", err)
-	} // FIX #8: Update enrollment progress atomically when lesson completed
-	if wasJustCompleted {
-		log.Printf("[Course-Service] Lesson just completed! Updating enrollment progress for user %s, course %s", userID, lesson.CourseID)
-		err = s.repo.UpdateEnrollmentProgressAtomic(userID, lesson.CourseID, 1, progress.TimeSpentMinutes)
+	}
+
+	// 🎯 AUTO-RECORD STUDY SESSION for analytics
+	// This syncs lesson viewing activity to User Service for progress tracking
+	// Only record if there's actual study time increase
+	if req.TimeSpentMinutes != nil && *req.TimeSpentMinutes > currentTimeSpent {
+		studyDuration := *req.TimeSpentMinutes - currentTimeSpent
+		
+		// Only record if duration >= 1 minute
+		if studyDuration >= 1 {
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[Course-Service] PANIC in auto-record session: %v", r)
+					}
+				}()
+
+				// Get course to determine skill type
+				course, err := s.repo.GetCourseByID(lesson.CourseID)
+				skillType := ""
+				if err == nil && course != nil {
+					skillType = course.SkillType
+				}
+
+				// Record completed study session with actual duration
+				err = s.userServiceClient.RecordCompletedSession(
+					userID.String(),
+					"lesson",                  // session_type
+					skillType,                 // skill_type (listening, reading, etc.)
+					lessonID.String(),        // resource_id
+					"video_lesson",           // resource_type
+					studyDuration,            // duration_minutes
+				)
+
+				if err != nil {
+					log.Printf("[Course-Service] ⚠️  Failed to auto-record study session: %v", err)
+				} else {
+					log.Printf("[Course-Service] ✅ Auto-recorded study session: user=%s, lesson=%s, duration=%dm, skill=%s", 
+						userID, lessonID, studyDuration, skillType)
+				}
+			}()
+		}
+	}
+
+	// ✅ NEW: Always update enrollment progress (not just on completion)
+	// This keeps enrollment progress in sync with lesson progress
+	if req.TimeSpentMinutes != nil && *req.TimeSpentMinutes > 0 {
+		// Only update time, not lesson count (unless completing)
+		lessonsCompletedIncrement := 0
+		if wasJustCompleted {
+			lessonsCompletedIncrement = 1
+			log.Printf("[Course-Service] Lesson just completed! Updating enrollment progress for user %s, course %s", userID, lesson.CourseID)
+		}
+		
+		err = s.repo.UpdateEnrollmentProgressAtomic(userID, lesson.CourseID, lessonsCompletedIncrement, progress.TimeSpentMinutes)
 		if err != nil {
 			log.Printf("[Course-Service] WARNING: Failed to update enrollment progress: %v", err)
-		} else {
-			log.Printf("[Course-Service] SUCCESS: Enrollment progress updated (lessons +1, time +%d)", progress.TimeSpentMinutes)
+		} else if wasJustCompleted {
+			log.Printf("[Course-Service] SUCCESS: Enrollment progress updated (lessons +%d, time +%d)", lessonsCompletedIncrement, progress.TimeSpentMinutes)
 		}
+	} // Handle lesson completion
+	if wasJustCompleted {
 
 		// Refresh progress for notification
 		updatedProgress, _ := s.repo.GetLessonProgress(userID, lessonID)
@@ -444,6 +600,62 @@ func (s *CourseService) GetEnrollmentProgress(userID, courseID uuid.UUID) (*mode
 		ModulesProgress: modulesProgress,
 		RecentLessons:   []models.LessonWithProgress{}, // Can be enhanced later
 	}, nil
+}
+
+// GetLessonProgressByID retrieves progress for a single lesson (for resume watching)
+func (s *CourseService) GetLessonProgressByID(userID, lessonID uuid.UUID) (*models.LessonProgress, error) {
+	// Simply return the progress from repository (no enrollment check needed here)
+	progress, err := s.repo.GetLessonProgress(userID, lessonID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get lesson progress: %w", err)
+	}
+	
+	// ℹ️ No resume position sanitization needed with production logic
+	// Progress = last_position → User sees 65%, resumes at 65% → CONSISTENT!
+	// Old logic would reset skip-ahead, causing mismatch between progress display and resume position.
+	
+	return progress, nil
+}
+
+// GetCourseProgressLessons retrieves all lesson progress for a course
+func (s *CourseService) GetCourseProgressLessons(userID, courseID uuid.UUID) ([]models.LessonProgress, error) {
+	// Check if user is enrolled
+	enrollment, err := s.repo.GetEnrollment(userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get enrollment: %w", err)
+	}
+	if enrollment == nil {
+		return nil, fmt.Errorf("not enrolled in this course")
+	}
+
+	// Get all modules for this course
+	modules, err := s.repo.GetModulesByCourseID(courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get modules: %w", err)
+	}
+
+	// Collect all lesson progress
+	var allProgress []models.LessonProgress
+	for _, module := range modules {
+		lessons, err := s.repo.GetLessonsByModuleID(module.ID)
+		if err != nil {
+			log.Printf("Warning: failed to get lessons for module %s: %v", module.ID, err)
+			continue
+		}
+
+		for _, lesson := range lessons {
+			progress, err := s.repo.GetLessonProgress(userID, lesson.ID)
+			if err != nil {
+				// If no progress yet, skip (don't return error)
+				continue
+			}
+			if progress != nil {
+				allProgress = append(allProgress, *progress)
+			}
+		}
+	}
+
+	return allProgress, nil
 }
 
 // CreateCourse creates a new course (Admin/Instructor only)
@@ -685,13 +897,15 @@ func (s *CourseService) CreateReview(userID, courseID uuid.UUID, req *models.Cre
 	}
 
 	// Create review
+	now := time.Now()
 	review := &models.CourseReview{
 		UserID:     userID,
 		CourseID:   courseID,
 		Rating:     req.Rating,
 		Title:      req.Title,
 		Comment:    req.Comment,
-		IsApproved: false, // Require admin approval
+		IsApproved: true,        // Auto-approve (instant publish like Udemy/Coursera)
+		ApprovedAt: &now,        // Set approval timestamp
 	}
 
 	err = s.repo.CreateReview(review)

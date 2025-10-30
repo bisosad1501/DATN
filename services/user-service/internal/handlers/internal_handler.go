@@ -424,3 +424,99 @@ func (h *InternalHandler) EndSessionInternal(c *gin.Context) {
 		Message: "Study session ended successfully",
 	})
 }
+
+// RecordCompletedSessionInternal records a completed study session with custom duration
+// This is used for tracking activity that already happened (e.g., video watching progress)
+func (h *InternalHandler) RecordCompletedSessionInternal(c *gin.Context) {
+	var req struct {
+		UserID          string  `json:"user_id" binding:"required"`
+		SessionType     string  `json:"session_type" binding:"required"`
+		SkillType       string  `json:"skill_type"`
+		ResourceID      string  `json:"resource_id"`
+		ResourceType    string  `json:"resource_type"`
+		DurationMinutes int     `json:"duration_minutes" binding:"required,min=1"`
+		Score           float64 `json:"score"`
+		IsCompleted     bool    `json:"is_completed"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid request payload",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	var resourceID *uuid.UUID
+	if req.ResourceID != "" {
+		id, err := uuid.Parse(req.ResourceID)
+		if err == nil {
+			resourceID = &id
+		}
+	}
+
+	var skillType *string
+	if req.SkillType != "" {
+		skillType = &req.SkillType
+	}
+
+	var resourceType *string
+	if req.ResourceType != "" {
+		resourceType = &req.ResourceType
+	}
+
+	// Create session with custom start time based on duration
+	now := time.Now()
+	startedAt := now.Add(-time.Duration(req.DurationMinutes) * time.Minute)
+
+	session := &models.StudySession{
+		ID:              uuid.New(),
+		UserID:          userID,
+		SessionType:     req.SessionType,
+		SkillType:       skillType,
+		ResourceID:      resourceID,
+		ResourceType:    resourceType,
+		StartedAt:       startedAt,
+		EndedAt:         &now,
+		DurationMinutes: &req.DurationMinutes,
+		IsCompleted:     req.IsCompleted,
+		Score:           &req.Score,
+	}
+
+	if err := h.userService.RecordCompletedSession(session); err != nil {
+		log.Printf("❌ Failed to record completed session for user %s: %v", req.UserID, err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "SESSION_RECORD_FAILED",
+				Message: "Failed to record completed session",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	log.Printf("✅ Recorded completed session for user %s: type=%s, duration=%dm, skill=%s", 
+		req.UserID, req.SessionType, req.DurationMinutes, req.SkillType)
+
+	c.JSON(http.StatusCreated, models.Response{
+		Success: true,
+		Message: "Completed session recorded successfully",
+	})
+}

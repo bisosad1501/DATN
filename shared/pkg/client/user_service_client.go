@@ -144,3 +144,26 @@ func (c *UserServiceClient) EndStudySession(sessionID string, score float64, com
 
 	return nil
 }
+
+// RecordCompletedSession records a completed study session with custom duration
+// This is used for tracking activity that already happened (e.g., video watching progress)
+func (c *UserServiceClient) RecordCompletedSession(userID, sessionType, skillType, resourceID, resourceType string, durationMinutes int) error {
+	endpoint := "/api/v1/user/internal/session/record"
+
+	payload := map[string]interface{}{
+		"user_id":          userID,
+		"session_type":     sessionType,
+		"skill_type":       skillType,
+		"resource_id":      resourceID,
+		"resource_type":    resourceType,
+		"duration_minutes": durationMinutes,
+		"is_completed":     false, // For video watching, we track progress not completion
+	}
+
+	err := c.PostWithRetry(endpoint, payload, 3)
+	if err != nil {
+		return fmt.Errorf("record completed session: %w", err)
+	}
+
+	return nil
+}

@@ -258,27 +258,43 @@ docker exec -i ielts_postgres psql -U ielts_admin -d auth_db < backup_auth.sql
 
 ## Migration Strategy
 
-### Initial Setup
-1. Run docker-compose to create databases
-2. Schema files are auto-executed via init script
-3. Seed data is inserted
-
-### Future Migrations
-Use migration tools like:
-- **golang-migrate**: https://github.com/golang-migrate/migrate
-- **Goose**: https://github.com/pressly/goose
-
-Example structure:
+### Automatic (Recommended)
+```bash
+./setup.sh      # Initial setup - runs ALL migrations
+./update.sh     # Update code - runs NEW migrations only
 ```
-database/migrations/
-├── auth_db/
-│   ├── 001_initial_schema.up.sql
-│   ├── 001_initial_schema.down.sql
-│   ├── 002_add_social_login.up.sql
-│   └── 002_add_social_login.down.sql
-├── user_db/
-│   └── ...
+
+### Manual
+```bash
+# Run all migrations
+./scripts/run-all-migrations.sh
+
+# Via Docker
+docker-compose up migrations
+
+# Check applied migrations
+docker exec -i ielts_postgres psql -U ielts_admin -d course_db -c \
+  "SELECT * FROM schema_migrations ORDER BY applied_at DESC LIMIT 5;"
 ```
+
+### Migration Files
+- Location: `database/migrations/*.sql`
+- Naming: `XXX_descriptive_name.sql` (001, 002, 003, ...)
+- Tracking: `schema_migrations` table in each database
+- Docs: `database/migrations/README_MIGRATION_*.md`
+
+### Current Migrations
+- **011**: Remove `video_watch_percentage` field
+- **012**: Enable dblink extension (cross-DB queries for reviews)
+
+### Creating New Migrations
+1. Find next number: `ls database/migrations/*.sql | tail -1`
+2. Create file: `013_your_feature.sql`
+3. Write SQL changes
+4. Create rollback: `013_your_feature.rollback.sql` (optional)
+5. Create README: `README_MIGRATION_013.md` (if complex)
+6. Test locally, commit, push
+7. Team runs `./update.sh` → auto-apply
 
 ---
 

@@ -188,7 +188,8 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 	progressGroup := v1.Group("/progress")
 	progressGroup.Use(authMiddleware.ValidateToken())
 	{
-		progressGroup.PUT("/lessons/:id", proxy.ReverseProxy(cfg.Services.CourseService))
+		progressGroup.GET("/lessons/:id", proxy.ReverseProxy(cfg.Services.CourseService)) // Get lesson progress (for resume watching)
+		progressGroup.PUT("/lessons/:id", proxy.ReverseProxy(cfg.Services.CourseService)) // Update lesson progress
 	}
 
 	// ============================================
@@ -265,8 +266,9 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 	// ============================================
 	// ADMIN ROUTES - Require admin/instructor role
 	// ============================================
-	adminGroup := v1.Group("/admin")
-	adminGroup.Use(authMiddleware.ValidateToken())
+    adminGroup := v1.Group("/admin")
+    adminGroup.Use(authMiddleware.ValidateToken())
+    adminGroup.Use(authMiddleware.RequireRole("instructor", "admin"))
 	{
 		// Course management
 		adminGroup.POST("/courses", proxy.ReverseProxy(cfg.Services.CourseService))

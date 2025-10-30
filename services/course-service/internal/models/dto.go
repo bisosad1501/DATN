@@ -114,6 +114,7 @@ type UpdateLessonProgressRequest struct {
 	VideoWatchedSeconds *int     `json:"video_watched_seconds,omitempty"`
 	VideoTotalSeconds   *int     `json:"video_total_seconds,omitempty"`
 	TimeSpentMinutes    *int     `json:"time_spent_minutes,omitempty"`
+	LastPositionSeconds *int     `json:"last_position_seconds,omitempty"` // For resume watching
 	IsCompleted         *bool    `json:"is_completed,omitempty"`
 }
 
