@@ -2,20 +2,38 @@ package service
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"time"
 
+	"github.com/bisosad1501/DATN/services/user-service/internal/config"
 	"github.com/bisosad1501/DATN/services/user-service/internal/models"
 	"github.com/bisosad1501/DATN/services/user-service/internal/repository"
+	"github.com/bisosad1501/DATN/shared/pkg/client"
 	"github.com/google/uuid"
 )
 
 type UserService struct {
-	repo *repository.UserRepository
+	repo              *repository.UserRepository
+	notificationClient *client.NotificationServiceClient
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
-	return &UserService{repo: repo}
+func NewUserService(repo *repository.UserRepository, cfg *config.Config) *UserService {
+	var notificationClient *client.NotificationServiceClient
+	if cfg != nil && cfg.NotificationServiceURL != "" {
+		notificationClient = client.NewNotificationServiceClient(
+			cfg.NotificationServiceURL,
+			cfg.InternalAPIKey,
+		)
+		log.Printf("✅ Notification Service client initialized")
+	} else {
+		log.Printf("⚠️  Notification Service URL not configured, sync will be disabled")
+	}
+	
+	return &UserService{
+		repo:               repo,
+		notificationClient: notificationClient,
+	}
 }
 
 // GetOrCreateProfile gets existing profile or creates a new one
@@ -38,6 +56,95 @@ func (s *UserService) GetOrCreateProfile(userID uuid.UUID) (*models.UserProfile,
 	}
 
 	return profile, nil
+}
+
+// GetPublicProfile gets another user's profile with visibility check
+// Returns profile with profile_visibility included in response
+func (s *UserService) GetPublicProfile(targetUserID uuid.UUID, requestingUserID *uuid.UUID) (map[string]interface{}, error) {
+	// Get target user's profile
+	profile, err := s.repo.GetProfileByUserID(targetUserID)
+	if err != nil {
+		return nil, err
+	}
+	if profile == nil {
+		return nil, fmt.Errorf("profile not found")
+	}
+
+	// Get target user's preferences to check profile_visibility
+	prefs, err := s.repo.GetPreferences(targetUserID)
+	if err != nil {
+		// If preferences not found, default to "public"
+		log.Printf("⚠️  Warning: Failed to get preferences for user %s, defaulting to public: %v", targetUserID, err)
+		prefs = &models.UserPreferences{
+			ProfileVisibility: "public",
+		}
+	}
+
+	// Check if requesting user is the profile owner
+	isOwner := requestingUserID != nil && *requestingUserID == targetUserID
+
+	// Check visibility
+	visibility := prefs.ProfileVisibility
+	if visibility == "" {
+		visibility = "public" // Default to public if not set
+	}
+
+	// If profile is private and requester is not the owner, return error
+	if visibility == "private" && !isOwner {
+		return nil, fmt.Errorf("profile is private")
+	}
+
+	// TODO: Check "friends" visibility (requires friendship check)
+	if visibility == "friends" && !isOwner {
+		// For now, treat as private if not owner (friendship check not implemented)
+		return nil, fmt.Errorf("profile is only visible to friends")
+	}
+
+	// Convert profile to map and add profile_visibility
+	result := map[string]interface{}{
+		"user_id":              profile.UserID.String(),
+		"first_name":           profile.FirstName,
+		"last_name":            profile.LastName,
+		"full_name":            profile.FullName,
+		"avatar_url":           profile.AvatarURL,
+		"cover_image_url":      profile.CoverImageURL,
+		"bio":                  profile.Bio,
+		"target_band_score":    profile.TargetBandScore,
+		"current_level":        profile.CurrentLevel,
+		"profile_visibility":   visibility, // ✅ Include profile_visibility in response
+		"created_at":           profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"updated_at":           profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+
+	// Get learning progress for stats
+	progress, err := s.repo.GetLearningProgress(targetUserID)
+	if err == nil && progress != nil {
+		// Map progress fields to frontend expected format
+		// Calculate level from overall score (simplified: level = floor(overall_score))
+		level := 0
+		if progress.OverallScore != nil && *progress.OverallScore > 0 {
+			level = int(*progress.OverallScore)
+		}
+		result["level"] = level
+		
+		// Points: calculate from achievements or use a default
+		// For now, use a simple calculation based on progress
+		points := (progress.TotalLessonsCompleted * 10) + (progress.TotalExercisesCompleted * 5)
+		result["points"] = points
+		
+		result["coursesCompleted"] = 0 // TODO: Get from enrollments if needed
+		result["exercisesCompleted"] = int(progress.TotalExercisesCompleted)
+		
+		// Calculate study time in seconds (convert from hours)
+		studyTimeSeconds := int(progress.TotalStudyHours * 3600)
+		result["studyTime"] = studyTimeSeconds
+		result["streak"] = int(progress.CurrentStreakDays)
+		result["followersCount"] = 0 // TODO: Get from social service if needed
+		result["followingCount"] = 0  // TODO: Get from social service if needed
+		result["isFollowing"] = false  // TODO: Check relationship if requestingUserID provided
+	}
+
+	return result, nil
 }
 
 // UpdateProfile updates user profile
@@ -442,6 +549,26 @@ func (s *UserService) UpdatePreferences(userID uuid.UUID, req *models.UpdatePref
 	}
 	if req.PushNotifications != nil {
 		prefs.PushNotifications = *req.PushNotifications
+		
+		// Sync with Notification Service (source of truth)
+		if s.notificationClient != nil {
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[User-Service] PANIC in notification sync: %v", r)
+					}
+				}()
+				
+				pushEnabled := *req.PushNotifications
+				err := s.syncPushNotificationPreference(userID, pushEnabled)
+				if err != nil {
+					log.Printf("[User-Service] ⚠️  Failed to sync push_notifications with Notification Service: %v", err)
+					// Non-critical error, continue with User Service update
+				} else {
+					log.Printf("[User-Service] ✅ Synced push_notifications=%v with Notification Service", pushEnabled)
+				}
+			}()
+		}
 	}
 	if req.StudyReminders != nil {
 		prefs.StudyReminders = *req.StudyReminders
@@ -484,6 +611,72 @@ func (s *UserService) UpdatePreferences(userID uuid.UUID, req *models.UpdatePref
 	}
 
 	return prefs, nil
+}
+
+// syncPushNotificationPreference syncs push_notifications with Notification Service
+// Notification Service is the source of truth for notification preferences
+// Uses retry mechanism with exponential backoff for reliability
+func (s *UserService) syncPushNotificationPreference(userID uuid.UUID, pushEnabled bool) error {
+	if s.notificationClient == nil || s.notificationClient.ServiceClient == nil {
+		return fmt.Errorf("notification client not initialized")
+	}
+
+	// Update Notification Service preferences using internal endpoint
+	// Map push_notifications → push_enabled and in_app_enabled
+	endpoint := fmt.Sprintf("/api/v1/notifications/internal/preferences/%s", userID.String())
+	
+	payload := map[string]interface{}{
+		"push_enabled":  pushEnabled,
+		"in_app_enabled": pushEnabled, // In-app notifications follow the same preference
+	}
+
+	// Retry mechanism with exponential backoff (max 3 retries)
+	maxRetries := 3
+	var lastErr error
+	
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Use internal API endpoint for service-to-service communication
+		resp, err := s.notificationClient.ServiceClient.Put(endpoint, payload)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to call Notification Service: %w", err)
+			if attempt < maxRetries {
+				// Exponential backoff: 1s, 2s, 4s
+				backoff := time.Duration(1<<uint(attempt-1)) * time.Second
+				log.Printf("[User-Service] ⚠️  Sync attempt %d/%d failed, retrying in %v: %v", attempt, maxRetries, backoff, lastErr)
+				time.Sleep(backoff)
+				continue
+			}
+			return lastErr
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// Success
+			if attempt > 1 {
+				log.Printf("[User-Service] ✅ Sync succeeded after %d attempts", attempt)
+			}
+			return nil
+		}
+
+		// Non-2xx status code
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		lastErr = fmt.Errorf("Notification Service returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		
+		// Don't retry on client errors (4xx)
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			log.Printf("[User-Service] ❌ Client error, not retrying: %v", lastErr)
+			return lastErr
+		}
+		
+		// Retry on server errors (5xx)
+		if attempt < maxRetries {
+			backoff := time.Duration(1<<uint(attempt-1)) * time.Second
+			log.Printf("[User-Service] ⚠️  Server error on attempt %d/%d, retrying in %v: %v", attempt, maxRetries, backoff, lastErr)
+			time.Sleep(backoff)
+		}
+	}
+
+	return lastErr
 }
 
 // ============= Study Reminders =============

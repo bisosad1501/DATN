@@ -30,6 +30,7 @@ import { getToken } from "@/lib/api/apiClient"
 import type { Lesson, Module } from "@/types"
 import { formatDuration } from "@/lib/utils/format"
 import { useYouTubeProgress } from "@/lib/hooks/use-youtube-progress"
+import { usePreferences } from "@/lib/contexts/preferences-context"
 
 export default function LessonPlayerPage() {
   const params = useParams()
@@ -54,6 +55,11 @@ export default function LessonPlayerPage() {
   // Track time spent on page (for non-video lessons)
   const pageStartTimeRef = useRef<number>(Date.now())
   const totalTimeSpentRef = useRef<number>(0)
+  
+  // ✅ Get user preferences for playback speed and auto-play
+  const { preferences } = usePreferences()
+  const playbackSpeed = preferences?.playback_speed || 1.0
+  const autoPlayNext = preferences?.auto_play_next_lesson || false
 
   // Send progress update to backend
   const sendProgressUpdate = async (data: {
@@ -167,6 +173,7 @@ export default function LessonPlayerPage() {
     onProgressUpdate: handleProgressUpdate,
     updateInterval: 5000, // Send update every 5 seconds
     autoPlay: false, // Don't auto play
+    playbackSpeed: playbackSpeed, // ✅ Apply user's preferred playback speed
   })
 
   useEffect(() => {
@@ -260,12 +267,22 @@ export default function LessonPlayerPage() {
 
     let progressInterval: NodeJS.Timeout | null = null
 
+    // ✅ Apply playback speed from user preferences
+    if (playbackSpeed && playbackSpeed !== 1.0) {
+      video.playbackRate = playbackSpeed
+      console.log('[HTML5 Video] 🎚️ Playback speed set to:', playbackSpeed)
+    }
+
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime)
     }
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration)
+      // ✅ Ensure playback speed is set after metadata loads
+      if (playbackSpeed && playbackSpeed !== 1.0) {
+        video.playbackRate = playbackSpeed
+      }
     }
 
     const handlePlay = () => {
@@ -329,7 +346,7 @@ export default function LessonPlayerPage() {
       video.removeEventListener('pause', handlePause)
       video.removeEventListener('ended', handleEnded)
     }
-  }, [isYouTube])
+  }, [isYouTube, playbackSpeed])
 
   // Send progress on page unload
   useEffect(() => {
@@ -405,7 +422,15 @@ export default function LessonPlayerPage() {
         progressPercentage: 100,
         isCompleted: true,
       })
-      handleNextLesson()
+      
+      // ✅ Check auto_play_next_lesson preference
+      if (autoPlayNext) {
+        // Auto-redirect to next lesson
+        handleNextLesson()
+      } else {
+        // Show completion message or just stay on page
+        // User can manually navigate to next lesson
+      }
     } catch (error) {
       console.error("[v0] Failed to complete lesson:", error)
     }

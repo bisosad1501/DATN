@@ -16,6 +16,7 @@ interface YouTubeProgressOptions {
   updateInterval?: number // ms between progress updates (default: 5000 = 5s)
   autoPlay?: boolean
   startPosition?: number // ✅ Vị trí bắt đầu (resume from last position)
+  playbackSpeed?: number // ✅ Playback speed from user preferences (0.75 - 2.0)
 }
 
 interface YouTubePlayer {
@@ -36,7 +37,7 @@ declare global {
 }
 
 export function useYouTubeProgress(options: YouTubeProgressOptions) {
-  const { videoId, onProgressUpdate, updateInterval = 5000, autoPlay = false, startPosition = 0 } = options
+  const { videoId, onProgressUpdate, updateInterval = 5000, autoPlay = false, startPosition = 0, playbackSpeed = 1.0 } = options
   
   console.log('🎬 [useYouTubeProgress] Hook called with videoId:', videoId, 'startPosition:', startPosition)
 
@@ -127,6 +128,16 @@ export function useYouTubeProgress(options: YouTubeProgressOptions) {
                 durationRef.current = dur // ✅ Use ref instead of state
               } else {
                 console.warn('[YouTube] ⚠️ Duration not available yet, will try in polling')
+              }
+              
+              // ✅ Apply playback speed from user preferences
+              if (playbackSpeed && playbackSpeed !== 1.0) {
+                try {
+                  event.target.setPlaybackRate(playbackSpeed)
+                  console.log('[YouTube] 🎚️ Playback speed set to:', playbackSpeed)
+                } catch (err) {
+                  console.warn('[YouTube] ⚠️ Failed to set playback speed:', err)
+                }
               }
               
               // ✅ Resume from last position if provided
@@ -230,7 +241,7 @@ export function useYouTubeProgress(options: YouTubeProgressOptions) {
       lastUpdateTimeRef.current = 0
       lastSentTimeRef.current = 0
     }
-  }, [videoId, container]) // Re-run when videoId or container changes!
+  }, [videoId, container, playbackSpeed]) // Re-run when videoId, container, or playbackSpeed changes!
 
   // Poll currentTime and duration every second
   const startPolling = useCallback(() => {

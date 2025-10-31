@@ -11,8 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Award, BookOpen, UserPlus, UserMinus, Trophy, Target, Zap } from "lucide-react"
+import { Award, BookOpen, UserPlus, UserMinus, Trophy, Target, Zap, Lock } from "lucide-react"
 import { useAuth } from "@/lib/contexts/auth-context"
+import { userApi } from "@/lib/api/user"
 
 interface UserProfile {
   id: string
@@ -47,8 +48,23 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
+  const [profileVisibility, setProfileVisibility] = useState<"public" | "friends" | "private" | null>(null)
 
   const isOwnProfile = currentUser?.id === userId
+  
+  // ✅ Check if profile should be visible
+  const isProfileVisible = () => {
+    if (isOwnProfile) return true // Always visible to owner
+    if (!profileVisibility) return true // Default to visible if not loaded yet
+    if (profileVisibility === "public") return true
+    if (profileVisibility === "private") return false
+    if (profileVisibility === "friends") {
+      // TODO: Check if currentUser is following this user
+      // For now, assume visible (requires backend API)
+      return true
+    }
+    return true
+  }
 
   useEffect(() => {
     loadProfile()
@@ -60,9 +76,25 @@ export default function UserProfilePage() {
       setLoading(true)
       const data = await socialApi.getUserProfile(userId)
       setProfile(data)
+      
+      // ✅ Load profile visibility preference from backend response
+      // Backend now returns profile_visibility in getUserProfile response
+      if (isOwnProfile) {
+        // Own profile: always visible to owner
+        setProfileVisibility("public")
+      } else {
+        // Other user's profile: check visibility from response
+        if (data.profile_visibility) {
+          setProfileVisibility(data.profile_visibility)
+        } else {
+          // Default to public if not provided (backward compatibility)
+          console.warn(`[Profile Visibility] Backend did not provide profile_visibility for user ${userId}, defaulting to public`)
+          setProfileVisibility("public")
+        }
+      }
     } catch (error) {
       console.error("Failed to load profile:", error)
-      // Mock data for demo
+      // Mock data for demo (fallback)
       setProfile({
         id: userId,
         fullName: "Nguyễn Văn A",
@@ -78,6 +110,8 @@ export default function UserProfilePage() {
         followingCount: 156,
         isFollowing: false,
       })
+      // Default to public on error (fallback behavior)
+      setProfileVisibility("public")
     } finally {
       setLoading(false)
     }
@@ -213,61 +247,75 @@ export default function UserProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
+        {/* Stats Grid - Only show if profile is visible */}
+        {isProfileVisible() ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-yellow-100">
+                    <Trophy className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{profile.points}</p>
+                    <p className="text-sm text-muted-foreground">Total Points</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-blue-100">
+                    <BookOpen className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{profile.coursesCompleted}</p>
+                    <p className="text-sm text-muted-foreground">Courses Completed</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-green-100">
+                    <Target className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{profile.exercisesCompleted}</p>
+                    <p className="text-sm text-muted-foreground">Exercises Done</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-orange-100">
+                    <Zap className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{profile.streak}</p>
+                    <p className="text-sm text-muted-foreground">Day Streak</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-full bg-yellow-100">
-                  <Trophy className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{profile.points}</p>
-                  <p className="text-sm text-muted-foreground">Total Points</p>
-                </div>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Lock className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-semibold mb-2">Profile is Private</p>
+                <p className="text-sm text-muted-foreground">
+                  This user has set their profile to private.
+                </p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-full bg-blue-100">
-                  <BookOpen className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{profile.coursesCompleted}</p>
-                  <p className="text-sm text-muted-foreground">Courses Completed</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-full bg-green-100">
-                  <Target className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{profile.exercisesCompleted}</p>
-                  <p className="text-sm text-muted-foreground">Exercises Done</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-full bg-orange-100">
-                  <Zap className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{profile.streak}</p>
-                  <p className="text-sm text-muted-foreground">Day Streak</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        )}
 
         {/* Achievements */}
         <Card>

@@ -158,3 +158,66 @@ func (h *InternalHandler) SendBulkNotificationInternal(c *gin.Context) {
 
 	c.JSON(statusCode, response)
 }
+
+// UpdatePreferencesInternalRequest represents request to update preferences (internal API)
+type UpdatePreferencesInternalRequest struct {
+	PushEnabled  *bool `json:"push_enabled,omitempty"`
+	InAppEnabled *bool `json:"in_app_enabled,omitempty"`
+}
+
+// UpdatePreferencesInternal updates notification preferences for a specific user (internal API)
+// PUT /api/v1/notifications/internal/preferences/:user_id
+func (h *InternalHandler) UpdatePreferencesInternal(c *gin.Context) {
+	userIDStr := c.Param("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		log.Printf("[Internal] Invalid user ID: %s", userIDStr)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_user_id",
+			Message: "Invalid user ID format",
+		})
+		return
+	}
+
+	var req UpdatePreferencesInternalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[Internal] Update preferences validation error: %v", err)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Invalid request payload: " + err.Error(),
+		})
+		return
+	}
+
+	// Convert to Notification Service UpdatePreferencesRequest
+	updateReq := &models.UpdatePreferencesRequest{}
+	if req.PushEnabled != nil {
+		updateReq.PushEnabled = req.PushEnabled
+	}
+	if req.InAppEnabled != nil {
+		updateReq.InAppEnabled = req.InAppEnabled
+	}
+
+	// Update preferences
+	prefs, err := h.notificationService.UpdatePreferences(userID, updateReq)
+	if err != nil {
+		log.Printf("[Internal] Failed to update preferences for user %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "update_failed",
+			Message: "Failed to update preferences: " + err.Error(),
+		})
+		return
+	}
+
+	log.Printf("[Internal] Successfully updated preferences for user %s (push_enabled=%v, in_app_enabled=%v)",
+		userID, prefs.PushEnabled, prefs.InAppEnabled)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Preferences updated successfully",
+		"data": gin.H{
+			"push_enabled":  prefs.PushEnabled,
+			"in_app_enabled": prefs.InAppEnabled,
+		},
+	})
+}

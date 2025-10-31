@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { PageContainer } from "@/components/layout/page-container"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useAuth } from "@/lib/contexts/auth-context"
+import { usePreferences } from "@/lib/contexts/preferences-context"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
 import { SkillProgressCard } from "@/components/dashboard/skill-progress-card"
@@ -14,6 +15,7 @@ import { progressApi } from "@/lib/api/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   return (
@@ -25,6 +27,8 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const { user } = useAuth()
+  const { preferences } = usePreferences()
+  const showStats = preferences?.show_study_stats ?? true // Default to true for backward compatibility
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<any>(null)
   const [analytics, setAnalytics] = useState<any>(null)
@@ -159,140 +163,153 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <StatCard
-            title="Courses in Progress"
-            value={summary?.inProgressCourses || 0}
-            description={`${summary?.completedCourses || 0} completed`}
-            icon={BookOpen}
-          />
-          <StatCard
-            title="Exercises Completed"
-            value={uniqueExercises}
-            description={`${uniqueExercises} bài, ${totalAttempts} lần làm`}
-            icon={CheckCircle}
-          />
-          <StatCard
-            title="Study Time"
-            value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`}
-            description={`${timeRange} period`}
-            icon={Clock}
-          />
-          <StatCard
-            title="Average Score"
-            value={stats.avgScore > 0 ? stats.avgScore.toFixed(1) : (summary?.averageScore?.toFixed(1) || "0.0")}
-            description="Band score"
-            icon={Target}
-          />
-          <StatCard
-            title="Current Streak"
-            value={`${stats.activeStreak || summary?.currentStreak || 0} days`}
-            description={`Longest: ${summary?.longestStreak || 0} days`}
-            icon={Flame}
-          />
-        </div>
+        {/* Stats Grid - Only show if user preference allows */}
+        {showStats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <StatCard
+              title="Courses in Progress"
+              value={summary?.inProgressCourses || 0}
+              description={`${summary?.completedCourses || 0} completed`}
+              icon={BookOpen}
+            />
+            <StatCard
+              title="Exercises Completed"
+              value={uniqueExercises}
+              description={`${uniqueExercises} bài, ${totalAttempts} lần làm`}
+              icon={CheckCircle}
+            />
+            <StatCard
+              title="Study Time"
+              value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`}
+              description={`${timeRange} period`}
+              icon={Clock}
+            />
+            <StatCard
+              title="Average Score"
+              value={stats.avgScore > 0 ? stats.avgScore.toFixed(1) : (summary?.averageScore?.toFixed(1) || "0.0")}
+              description="Band score"
+              icon={Target}
+            />
+            <StatCard
+              title="Current Streak"
+              value={`${stats.activeStreak || summary?.currentStreak || 0} days`}
+              description={`Longest: ${summary?.longestStreak || 0} days`}
+              icon={Flame}
+            />
+          </div>
+        )}
 
         {/* Tabs for different views */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className={cn(
+            "grid w-full max-w-md",
+            showStats ? "grid-cols-3" : "grid-cols-1"
+          )}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="skills">Skills</TabsTrigger>
+            {showStats && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+            {showStats && <TabsTrigger value="skills">Skills</TabsTrigger>}
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <ProgressChart
-              title={`Study Time (${timeRange})`}
-              data={analytics?.studyTimeByDay || []}
-              color="#ED372A"
-              valueLabel="minutes"
-            />
+            {showStats && (
+              <>
+                <ProgressChart
+                  title={`Study Time (${timeRange})`}
+                  data={analytics?.studyTimeByDay || []}
+                  color="#ED372A"
+                  valueLabel="minutes"
+                />
+              </>
+            )}
             <ActivityTimeline activities={history} />
           </TabsContent>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid gap-6">
-              <ProgressChart
-                title={`Daily Study Time (${timeRange})`}
-                data={analytics?.studyTimeByDay || []}
-                color="#ED372A"
-                valueLabel="minutes"
-              />
-              <ProgressChart
-                title={`Completion Rate (${timeRange})`}
-                data={analytics?.completionRate || []}
-                color="#10B981"
-                valueLabel="%"
-              />
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Exercise Breakdown</h3>
-                {analytics?.exercisesByType?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {analytics.exercisesByType.map((item: any) => (
-                      <Card key={item.type}>
-                        <CardHeader>
-                          <CardTitle className="text-base">{item.type}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-muted-foreground">Completed</span>
-                              <span className="font-bold">{item.count}</span>
+          {/* Analytics Tab - Only show if user preference allows */}
+          {showStats && (
+            <TabsContent value="analytics" className="space-y-6">
+              <div className="grid gap-6">
+                <ProgressChart
+                  title={`Daily Study Time (${timeRange})`}
+                  data={analytics?.studyTimeByDay || []}
+                  color="#ED372A"
+                  valueLabel="minutes"
+                />
+                <ProgressChart
+                  title={`Completion Rate (${timeRange})`}
+                  data={analytics?.completionRate || []}
+                  color="#10B981"
+                  valueLabel="%"
+                />
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Exercise Breakdown</h3>
+                  {analytics?.exercisesByType?.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {analytics.exercisesByType.map((item: any) => (
+                        <Card key={item.type}>
+                          <CardHeader>
+                            <CardTitle className="text-base">{item.type}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Completed</span>
+                                <span className="font-bold">{item.count}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Avg Score</span>
+                                <span className="font-bold">{item.avgScore.toFixed(1)}</span>
+                              </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-muted-foreground">Avg Score</span>
-                              <span className="font-bold">{item.avgScore.toFixed(1)}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <p className="text-muted-foreground">
-                        Chưa có bài tập nào được hoàn thành. Bắt đầu luyện tập để xem phân tích chi tiết!
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <p className="text-muted-foreground">
+                          Chưa có bài tập nào được hoàn thành. Bắt đầu luyện tập để xem phân tích chi tiết!
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
-          {/* Skills Tab */}
-          <TabsContent value="skills" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <SkillProgressCard
-                skill="LISTENING"
-                currentScore={stats.skillScores.listening}
-                targetScore={user?.targetBandScore || 9}
-                exercisesCompleted={getSkillExerciseCount('listening')}
-              />
-              <SkillProgressCard
-                skill="READING"
-                currentScore={stats.skillScores.reading}
-                targetScore={user?.targetBandScore || 9}
-                exercisesCompleted={getSkillExerciseCount('reading')}
-              />
-              <SkillProgressCard
-                skill="WRITING"
-                currentScore={stats.skillScores.writing}
-                targetScore={user?.targetBandScore || 9}
-                exercisesCompleted={getSkillExerciseCount('writing')}
-              />
-              <SkillProgressCard
-                skill="SPEAKING"
-                currentScore={stats.skillScores.speaking}
-                targetScore={user?.targetBandScore || 9}
-                exercisesCompleted={getSkillExerciseCount('speaking')}
-              />
-            </div>
-          </TabsContent>
+          {/* Skills Tab - Only show if user preference allows */}
+          {showStats && (
+            <TabsContent value="skills" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <SkillProgressCard
+                  skill="LISTENING"
+                  currentScore={stats.skillScores.listening}
+                  targetScore={user?.targetBandScore || 9}
+                  exercisesCompleted={getSkillExerciseCount('listening')}
+                />
+                <SkillProgressCard
+                  skill="READING"
+                  currentScore={stats.skillScores.reading}
+                  targetScore={user?.targetBandScore || 9}
+                  exercisesCompleted={getSkillExerciseCount('reading')}
+                />
+                <SkillProgressCard
+                  skill="WRITING"
+                  currentScore={stats.skillScores.writing}
+                  targetScore={user?.targetBandScore || 9}
+                  exercisesCompleted={getSkillExerciseCount('writing')}
+                />
+                <SkillProgressCard
+                  skill="SPEAKING"
+                  currentScore={stats.skillScores.speaking}
+                  targetScore={user?.targetBandScore || 9}
+                  exercisesCompleted={getSkillExerciseCount('speaking')}
+                />
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </PageContainer>
     </AppLayout>

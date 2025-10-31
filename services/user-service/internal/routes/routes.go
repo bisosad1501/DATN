@@ -15,6 +15,13 @@ func SetupRoutes(handler *handlers.UserHandler, internalHandler *handlers.Intern
 	// API v1
 	v1 := router.Group("/api/v1")
 	{
+		// Public user profile route (optional auth - for visibility check)
+		usersGroup := v1.Group("/users")
+		usersGroup.Use(authMiddleware.OptionalAuth()) // Optional auth - allows unauthenticated access but checks auth if available
+		{
+			usersGroup.GET("/:id/profile", handler.GetPublicProfile) // Get public user profile
+		}
+
 		// User routes (protected)
 		user := v1.Group("/user")
 		user.Use(authMiddleware.AuthRequired())

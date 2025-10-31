@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
-import { Bell, Monitor, BookOpen, Lock, Save, Loader2, CheckCircle2 } from "lucide-react"
-import type { UserPreferences, UpdatePreferencesRequest } from "@/types"
+import { Bell, Monitor, BookOpen, Lock, Save, Loader2, CheckCircle2, Clock, Settings } from "lucide-react"
+import type { UserPreferences, UpdatePreferencesRequest, NotificationPreferences, UpdateNotificationPreferencesRequest } from "@/types"
+import { notificationsApi } from "@/lib/api/notifications"
 
 export default function SettingsPage() {
   return (
@@ -29,6 +30,9 @@ function SettingsContent() {
   const { preferences: contextPrefs, isLoading: contextLoading, updatePreferences: updateContextPrefs } = usePreferences()
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [originalPreferences, setOriginalPreferences] = useState<UserPreferences | null>(null)
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null)
+  const [originalNotificationPreferences, setOriginalNotificationPreferences] = useState<NotificationPreferences | null>(null)
+  const [isLoadingNotificationPrefs, setIsLoadingNotificationPrefs] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -40,6 +44,24 @@ function SettingsContent() {
       setOriginalPreferences(JSON.parse(JSON.stringify(contextPrefs))) // Deep clone
     }
   }, [contextPrefs])
+
+  // Load notification preferences from Notification Service
+  useEffect(() => {
+    const loadNotificationPreferences = async () => {
+      if (!user) return
+      try {
+        setIsLoadingNotificationPrefs(true)
+        const prefs = await notificationsApi.getNotificationPreferences()
+        setNotificationPreferences(prefs)
+        setOriginalNotificationPreferences(JSON.parse(JSON.stringify(prefs))) // Deep clone
+      } catch (err: any) {
+        console.error("Failed to load notification preferences:", err)
+      } finally {
+        setIsLoadingNotificationPrefs(false)
+      }
+    }
+    loadNotificationPreferences()
+  }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,6 +119,49 @@ function SettingsContent() {
 
       // Use context update which handles API call and state sync
       await updateContextPrefs(updateData)
+      
+      // Also update notification preferences if changed
+      if (notificationPreferences && originalNotificationPreferences) {
+        const notificationUpdates: UpdateNotificationPreferencesRequest = {}
+        
+        // Check for changes in notification preferences
+        if (notificationPreferences.push_enabled !== originalNotificationPreferences.push_enabled) {
+          notificationUpdates.push_enabled = notificationPreferences.push_enabled
+        }
+        if (notificationPreferences.push_achievements !== originalNotificationPreferences.push_achievements) {
+          notificationUpdates.push_achievements = notificationPreferences.push_achievements
+        }
+        if (notificationPreferences.push_reminders !== originalNotificationPreferences.push_reminders) {
+          notificationUpdates.push_reminders = notificationPreferences.push_reminders
+        }
+        if (notificationPreferences.push_course_updates !== originalNotificationPreferences.push_course_updates) {
+          notificationUpdates.push_course_updates = notificationPreferences.push_course_updates
+        }
+        if (notificationPreferences.push_exercise_graded !== originalNotificationPreferences.push_exercise_graded) {
+          notificationUpdates.push_exercise_graded = notificationPreferences.push_exercise_graded
+        }
+        if (notificationPreferences.quiet_hours_enabled !== originalNotificationPreferences.quiet_hours_enabled) {
+          notificationUpdates.quiet_hours_enabled = notificationPreferences.quiet_hours_enabled
+        }
+        if (notificationPreferences.quiet_hours_start !== originalNotificationPreferences.quiet_hours_start) {
+          notificationUpdates.quiet_hours_start = notificationPreferences.quiet_hours_start
+        }
+        if (notificationPreferences.quiet_hours_end !== originalNotificationPreferences.quiet_hours_end) {
+          notificationUpdates.quiet_hours_end = notificationPreferences.quiet_hours_end
+        }
+        if (notificationPreferences.max_notifications_per_day !== originalNotificationPreferences.max_notifications_per_day) {
+          notificationUpdates.max_notifications_per_day = notificationPreferences.max_notifications_per_day
+        }
+        
+        if (Object.keys(notificationUpdates).length > 0) {
+          await notificationsApi.updateNotificationPreferences(notificationUpdates)
+          // Reload notification preferences
+          const updated = await notificationsApi.getNotificationPreferences()
+          setNotificationPreferences(updated)
+          setOriginalNotificationPreferences(JSON.parse(JSON.stringify(updated)))
+        }
+      }
+      
       setSuccessMessage("Settings saved successfully!")
       setTimeout(() => setSuccessMessage(""), 3000)
       
@@ -137,77 +202,268 @@ function SettingsContent() {
             </Card>
           ) : preferences ? (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Notifications Section */}
+              {/* Notifications Section - Unified */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Bell className="h-5 w-5 text-primary" />
                     <CardTitle>Notifications</CardTitle>
                   </div>
-                  <CardDescription>Manage how you receive notifications</CardDescription>
+                  <CardDescription>Manage how and when you receive notifications</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="email_notifications" className="text-base text-foreground dark:text-foreground">Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive notifications via email</p>
+                <CardContent className="space-y-6">
+                  {/* Master Switches */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-base font-medium text-foreground dark:text-foreground">General Settings</Label>
                     </div>
-                    <Switch
-                      id="email_notifications"
-                      checked={preferences.email_notifications}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, email_notifications: checked })
-                      }
-                    />
+                    
+                    <div className="flex items-center justify-between py-2">
+                      <div className="space-y-0.5 flex-1">
+                        <Label htmlFor="push_notifications" className="text-base text-foreground dark:text-foreground">Push Notifications</Label>
+                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">Enable push and in-app notifications</p>
+                      </div>
+                      <Switch
+                        id="push_notifications"
+                        checked={preferences.push_notifications}
+                        onCheckedChange={(checked) => {
+                          setPreferences({ ...preferences, push_notifications: checked })
+                          // Sync with notification preferences
+                          if (notificationPreferences) {
+                            setNotificationPreferences({
+                              ...notificationPreferences,
+                              push_enabled: checked,
+                              in_app_enabled: checked
+                            })
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between py-2">
+                      <div className="space-y-0.5 flex-1">
+                        <Label htmlFor="email_notifications" className="text-base text-foreground dark:text-foreground">Email Notifications</Label>
+                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive notifications via email</p>
+                      </div>
+                      <Switch
+                        id="email_notifications"
+                        checked={preferences.email_notifications}
+                        onCheckedChange={(checked) =>
+                          setPreferences({ ...preferences, email_notifications: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
-                  <Separator />
+                  <Separator className="my-4" />
 
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="push_notifications" className="text-base text-foreground dark:text-foreground">Push Notifications</Label>
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive push notifications</p>
+                  {/* Notification Types - Only show when push is enabled */}
+                  {notificationPreferences && preferences.push_notifications && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Bell className="h-4 w-4 text-muted-foreground" />
+                        <Label className="text-base font-medium text-foreground dark:text-foreground">What to Notify</Label>
+                      </div>
+                      
+                      <div className="space-y-3 pl-2">
+                        <div className="flex items-center justify-between py-2">
+                          <div className="space-y-0.5 flex-1">
+                            <Label htmlFor="push_achievements" className="text-sm text-foreground dark:text-foreground">Achievements</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">When you earn achievements</p>
+                          </div>
+                          <Switch
+                            id="push_achievements"
+                            checked={notificationPreferences.push_achievements}
+                            onCheckedChange={(checked) =>
+                              setNotificationPreferences({ ...notificationPreferences, push_achievements: checked })
+                            }
+                          />
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex items-center justify-between py-2">
+                          <div className="space-y-0.5 flex-1">
+                            <Label htmlFor="push_reminders" className="text-sm text-foreground dark:text-foreground">Reminders</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">Scheduled activity reminders</p>
+                          </div>
+                          <Switch
+                            id="push_reminders"
+                            checked={notificationPreferences.push_reminders}
+                            onCheckedChange={(checked) =>
+                              setNotificationPreferences({ ...notificationPreferences, push_reminders: checked })
+                            }
+                          />
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex items-center justify-between py-2">
+                          <div className="space-y-0.5 flex-1">
+                            <Label htmlFor="push_course_updates" className="text-sm text-foreground dark:text-foreground">Course Updates</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">Changes to your courses</p>
+                          </div>
+                          <Switch
+                            id="push_course_updates"
+                            checked={notificationPreferences.push_course_updates}
+                            onCheckedChange={(checked) =>
+                              setNotificationPreferences({ ...notificationPreferences, push_course_updates: checked })
+                            }
+                          />
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex items-center justify-between py-2">
+                          <div className="space-y-0.5 flex-1">
+                            <Label htmlFor="push_exercise_graded" className="text-sm text-foreground dark:text-foreground">Exercise Results</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">When exercises are graded</p>
+                          </div>
+                          <Switch
+                            id="push_exercise_graded"
+                            checked={notificationPreferences.push_exercise_graded}
+                            onCheckedChange={(checked) =>
+                              setNotificationPreferences({ ...notificationPreferences, push_exercise_graded: checked })
+                            }
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <Switch
-                      id="push_notifications"
-                      checked={preferences.push_notifications}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, push_notifications: checked })
-                      }
-                    />
+                  )}
+
+                  {notificationPreferences && !preferences.push_notifications && (
+                    <div className="rounded-lg bg-muted/50 p-4 border border-border">
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground text-center">
+                        Enable "Push Notifications" to customize notification types
+                      </p>
+                    </div>
+                  )}
+
+                  <Separator className="my-4" />
+
+                  {/* Schedule Settings */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-base font-medium text-foreground dark:text-foreground">Schedule</Label>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="space-y-0.5 flex-1">
+                          <Label htmlFor="study_reminders" className="text-base text-foreground dark:text-foreground">Study Reminders</Label>
+                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">Get reminded about your study schedule</p>
+                        </div>
+                        <Switch
+                          id="study_reminders"
+                          checked={preferences.study_reminders}
+                          onCheckedChange={(checked) =>
+                            setPreferences({ ...preferences, study_reminders: checked })
+                          }
+                        />
+                      </div>
+
+                      <Separator />
+
+                      <div className="flex items-center justify-between py-2">
+                        <div className="space-y-0.5 flex-1">
+                          <Label htmlFor="weekly_report" className="text-base text-foreground dark:text-foreground">Weekly Report</Label>
+                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive weekly progress reports</p>
+                        </div>
+                        <Switch
+                          id="weekly_report"
+                          checked={preferences.weekly_report}
+                          onCheckedChange={(checked) =>
+                            setPreferences({ ...preferences, weekly_report: checked })
+                          }
+                        />
+                      </div>
+
+                      {notificationPreferences && (
+                        <>
+                          <Separator />
+
+                          <div className="flex items-center justify-between py-2">
+                            <div className="space-y-0.5 flex-1">
+                              <Label htmlFor="quiet_hours_enabled" className="text-base text-foreground dark:text-foreground">Quiet Hours</Label>
+                              <p className="text-sm text-muted-foreground dark:text-muted-foreground">Pause notifications during specified hours</p>
+                            </div>
+                            <Switch
+                              id="quiet_hours_enabled"
+                              checked={notificationPreferences.quiet_hours_enabled}
+                              onCheckedChange={(checked) =>
+                                setNotificationPreferences({ ...notificationPreferences, quiet_hours_enabled: checked })
+                              }
+                            />
+                          </div>
+
+                          {notificationPreferences.quiet_hours_enabled && (
+                            <div className="grid grid-cols-2 gap-4 mt-4 pl-2">
+                              <div className="space-y-2">
+                                <Label htmlFor="quiet_hours_start" className="text-sm text-foreground dark:text-foreground">Start Time</Label>
+                                <input
+                                  id="quiet_hours_start"
+                                  type="time"
+                                  value={notificationPreferences.quiet_hours_start?.substring(0, 5) || "22:00"}
+                                  onChange={(e) => {
+                                    const time = e.target.value + ":00"
+                                    setNotificationPreferences({ ...notificationPreferences, quiet_hours_start: time })
+                                  }}
+                                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="quiet_hours_end" className="text-sm text-foreground dark:text-foreground">End Time</Label>
+                                <input
+                                  id="quiet_hours_end"
+                                  type="time"
+                                  value={notificationPreferences.quiet_hours_end?.substring(0, 5) || "08:00"}
+                                  onChange={(e) => {
+                                    const time = e.target.value + ":00"
+                                    setNotificationPreferences({ ...notificationPreferences, quiet_hours_end: time })
+                                  }}
+                                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  <Separator />
+                  {/* Advanced Settings */}
+                  {notificationPreferences && (
+                    <>
+                      <Separator className="my-4" />
 
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="study_reminders" className="text-base text-foreground dark:text-foreground">Study Reminders</Label>
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Get reminded about your study schedule</p>
-                    </div>
-                    <Switch
-                      id="study_reminders"
-                      checked={preferences.study_reminders}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, study_reminders: checked })
-                      }
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="weekly_report" className="text-base text-foreground dark:text-foreground">Weekly Report</Label>
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive weekly progress reports</p>
-                    </div>
-                    <Switch
-                      id="weekly_report"
-                      checked={preferences.weekly_report}
-                      onCheckedChange={(checked) =>
-                        setPreferences({ ...preferences, weekly_report: checked })
-                      }
-                    />
-                  </div>
+                      <div className="space-y-4">
+                        <Label className="text-base font-medium text-foreground dark:text-foreground">Advanced</Label>
+                        
+                        <div className="space-y-2 pl-2">
+                          <Label htmlFor="max_notifications_per_day" className="text-sm text-foreground dark:text-foreground">Maximum Notifications Per Day</Label>
+                          <input
+                            id="max_notifications_per_day"
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={notificationPreferences.max_notifications_per_day}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 0
+                              setNotificationPreferences({ ...notificationPreferences, max_notifications_per_day: value })
+                            }}
+                            className="w-full md:w-[200px] px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                          />
+                          <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                            Limit daily notifications (0 = unlimited)
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 

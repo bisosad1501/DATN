@@ -73,6 +73,45 @@ export interface UserPreferences {
   updated_at: string
 }
 
+// Notification Preferences (from Notification Service)
+export interface NotificationPreferences {
+  push_enabled: boolean
+  push_achievements: boolean
+  push_reminders: boolean
+  push_course_updates: boolean
+  push_exercise_graded: boolean
+  email_enabled: boolean
+  email_weekly_report: boolean
+  email_course_updates: boolean
+  email_marketing: boolean
+  in_app_enabled: boolean
+  quiet_hours_enabled: boolean
+  quiet_hours_start?: string | null // "22:00:00"
+  quiet_hours_end?: string | null   // "08:00:00"
+  max_notifications_per_day: number
+  timezone: string
+  updated_at: string
+}
+
+// Update Notification Preferences Request
+export interface UpdateNotificationPreferencesRequest {
+  push_enabled?: boolean
+  push_achievements?: boolean
+  push_reminders?: boolean
+  push_course_updates?: boolean
+  push_exercise_graded?: boolean
+  email_enabled?: boolean
+  email_weekly_report?: boolean
+  email_course_updates?: boolean
+  email_marketing?: boolean
+  in_app_enabled?: boolean
+  quiet_hours_enabled?: boolean
+  quiet_hours_start?: string | null // "22:00:00"
+  quiet_hours_end?: string | null   // "08:00:00"
+  max_notifications_per_day?: number
+  timezone?: string
+}
+
 // Update Preferences Request - all fields optional for partial updates
 export interface UpdatePreferencesRequest {
   email_notifications?: boolean

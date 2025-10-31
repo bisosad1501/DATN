@@ -132,6 +132,48 @@ func (m *AuthMiddleware) RequireRole(allowedRoles ...string) gin.HandlerFunc {
 	}
 }
 
+// OptionalAuth validates token if present, but allows requests without token
+// Used for public endpoints that may need user context for visibility checks
+func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			// No auth header, continue without user context
+			c.Next()
+			return
+		}
+
+		// Extract token from "Bearer <token>"
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			// Invalid format, continue without user context
+			c.Next()
+			return
+		}
+
+		// Try to parse and validate token
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(m.jwtSecret), nil
+		})
+
+		// If token is valid, set user context
+		if err == nil && token.Valid {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				c.Set("user_id", claims["user_id"])
+				c.Set("email", claims["email"])
+				if role, ok := claims["role"].(string); ok {
+					c.Set("role", role)
+				}
+			}
+		}
+
+		c.Next()
+	}
+}
+
 // InternalAuth validates internal API key for service-to-service communication
 func (m *AuthMiddleware) InternalAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {

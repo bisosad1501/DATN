@@ -89,6 +89,14 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 	// ============================================
 	// USER SERVICE - Most require auth
 	// ============================================
+	// Public user profile route (optional auth)
+	usersGroup := v1.Group("/users")
+	usersGroup.Use(authMiddleware.OptionalAuth()) // Optional auth for visibility check
+	{
+		usersGroup.GET("/:id/profile", proxy.ReverseProxy(cfg.Services.UserService))
+		usersGroup.GET("/:id/achievements", proxy.ReverseProxy(cfg.Services.UserService)) // If needed for achievements
+	}
+
 	userGroup := v1.Group("/user")
 	userGroup.Use(authMiddleware.ValidateToken())
 	{

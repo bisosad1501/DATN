@@ -11,10 +11,13 @@ import { Progress } from "@/components/ui/progress"
 import { Loader2, CheckCircle2, XCircle, Clock, Target, TrendingUp, Home, RotateCcw } from "lucide-react"
 import { exercisesApi } from "@/lib/api/exercises"
 import type { SubmissionResult } from "@/types"
+import { usePreferences } from "@/lib/contexts/preferences-context"
 
 export default function ExerciseResultPage() {
   const params = useParams()
   const router = useRouter()
+  const { preferences } = usePreferences()
+  const showExplanations = preferences?.show_answer_explanation ?? true // Default to true for backward compatibility
   const exerciseId = params.exerciseId as string
   const submissionId = params.submissionId as string
 
@@ -218,8 +221,8 @@ export default function ExerciseResultPage() {
                     )}
                   </div>
 
-                  {/* Explanation */}
-                  {question.explanation && (
+                  {/* Explanation - Only show if user preference allows */}
+                  {question.explanation && showExplanations && (
                     <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <p className="font-medium text-blue-900 dark:text-blue-100 mb-1 text-sm">
                         💡 Explanation:

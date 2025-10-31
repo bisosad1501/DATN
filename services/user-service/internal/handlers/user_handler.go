@@ -66,6 +66,80 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	})
 }
 
+// GetPublicProfile gets another user's public profile
+// GET /api/v1/users/:id/profile
+func (h *UserHandler) GetPublicProfile(c *gin.Context) {
+	targetUserIDStr := c.Param("id")
+	targetUserID, err := uuid.Parse(targetUserIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	// Get requesting user ID (if authenticated)
+	// Try to get from context first (if OptionalAuth set it)
+	// Otherwise try from header (set by API Gateway)
+	var requestingUserID *uuid.UUID
+	if userIDStr, exists := c.Get("user_id"); exists {
+		uid, err := uuid.Parse(userIDStr.(string))
+		if err == nil {
+			requestingUserID = &uid
+		}
+	} else if userIDHeader := c.GetHeader("X-User-ID"); userIDHeader != "" {
+		// Try header (set by API Gateway OptionalAuth middleware)
+		uid, err := uuid.Parse(userIDHeader)
+		if err == nil {
+			requestingUserID = &uid
+		}
+	}
+
+	// Get public profile with visibility check
+	profileData, err := h.service.GetPublicProfile(targetUserID, requestingUserID)
+	if err != nil {
+		if err.Error() == "profile not found" {
+			c.JSON(http.StatusNotFound, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "PROFILE_NOT_FOUND",
+					Message: "User profile not found",
+				},
+			})
+			return
+		}
+		if err.Error() == "profile is private" || err.Error() == "profile is only visible to friends" {
+			c.JSON(http.StatusForbidden, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "PROFILE_PRIVATE",
+					Message: err.Error(),
+				},
+			})
+			return
+		}
+		log.Printf("❌ Error getting public profile: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INTERNAL_ERROR",
+				Message: "Failed to retrieve profile",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Data:    profileData,
+	})
+}
+
 // UpdateProfile updates current user's profile
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userIDStr, _ := c.Get("user_id")

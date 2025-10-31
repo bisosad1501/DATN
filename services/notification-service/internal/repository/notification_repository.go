@@ -440,6 +440,12 @@ func (r *NotificationRepository) CanSendNotification(userID uuid.UUID, notifType
 		return false, fmt.Errorf("failed to get preferences: %w", err)
 	}
 
+	// Check if push notifications are enabled (master switch)
+	// If push_enabled=false, block all notifications (both push and in-app)
+	if !prefs.PushEnabled {
+		return false, nil
+	}
+
 	// Check if in-app notifications are enabled
 	if !prefs.InAppEnabled {
 		return false, nil

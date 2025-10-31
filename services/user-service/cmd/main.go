@@ -33,7 +33,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 
 	// Initialize service
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, cfg)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg)

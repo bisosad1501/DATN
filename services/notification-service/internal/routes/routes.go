@@ -65,5 +65,6 @@ func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, internalH
 	{
 		internal.POST("/send", internalHandler.SendNotificationInternal)     // Send notification from another service
 		internal.POST("/bulk", internalHandler.SendBulkNotificationInternal) // Send bulk notifications from another service
+		internal.PUT("/preferences/:user_id", internalHandler.UpdatePreferencesInternal) // Update preferences for a user (internal)
 	}
 }

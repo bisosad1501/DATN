@@ -32,6 +32,18 @@ export const notificationsApi = {
     await apiClient.delete(`/notifications/${notificationId}`)
   },
 
+  // Get notification preferences (from Notification Service)
+  getPreferences: async (): Promise<any> => {
+    const response = await apiClient.get("/notifications/preferences")
+    return response.data
+  },
+
+  // Update notification preferences (from Notification Service)
+  updatePreferences: async (updates: any): Promise<any> => {
+    const response = await apiClient.put("/notifications/preferences", updates)
+    return response.data
+  },
+
   // Connect to SSE stream for realtime notifications
   // Uses singleton SSE manager to ensure only one connection
   connectSSE: (
@@ -218,6 +230,20 @@ export const notificationsApi = {
       }
     }
   },
+
+  // Get notification preferences (from Notification Service)
+  getNotificationPreferences: async (): Promise<import("@/types").NotificationPreferences> => {
+    const response = await apiClient.get<import("@/types").NotificationPreferences>("/notifications/preferences")
+    return response.data
+  },
+
+  // Update notification preferences (from Notification Service)
+  updateNotificationPreferences: async (
+    updates: import("@/types").UpdateNotificationPreferencesRequest,
+  ): Promise<import("@/types").NotificationPreferences> => {
+    const response = await apiClient.put<import("@/types").NotificationPreferences>("/notifications/preferences", updates)
+    return response.data
+  },
 }
 
 export const leaderboardApi = {
@@ -264,7 +290,8 @@ export const socialApi = {
   // Get user profile
   getUserProfile: async (userId: string): Promise<any> => {
     const response = await apiClient.get(`/users/${userId}/profile`)
-    return response.data
+    // Backend returns: { success: true, data: { ...profile with profile_visibility... } }
+    return response.data?.data || response.data
   },
 
   // Get user achievements
