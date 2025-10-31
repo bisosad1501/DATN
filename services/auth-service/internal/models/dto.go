@@ -2,10 +2,12 @@ package models
 
 // RegisterRequest represents a registration request
 type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
-	Phone    string `json:"phone" binding:"omitempty"`
-	Role     string `json:"role" binding:"required,oneof=student instructor"`
+	Email           string  `json:"email" binding:"required,email"`
+	Password        string  `json:"password" binding:"required,min=8"`
+	Phone           string  `json:"phone" binding:"omitempty"`
+	Role            string  `json:"role" binding:"required,oneof=student instructor"`
+	FullName        string  `json:"fullName" binding:"omitempty"`
+	TargetBandScore float64 `json:"targetBandScore" binding:"omitempty,min=0,max=9"`
 }
 
 // LoginRequest represents a login request

@@ -9,13 +9,14 @@ interface FormFieldProps {
   name: string
   type?: "text" | "email" | "password" | "number" | "textarea"
   placeholder?: string
-  value: string | number
+  value: string | number | undefined
   onChange: (value: string) => void
   error?: string
   required?: boolean
   disabled?: boolean
   className?: string
   rows?: number
+  autoComplete?: string
 }
 
 export function FormField({
@@ -30,6 +31,7 @@ export function FormField({
   disabled,
   className,
   rows = 4,
+  autoComplete,
 }: FormFieldProps) {
   const id = `field-${name}`
 
@@ -44,7 +46,7 @@ export function FormField({
           id={id}
           name={name}
           placeholder={placeholder}
-          value={value}
+          value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           rows={rows}
@@ -56,9 +58,10 @@ export function FormField({
           name={name}
           type={type}
           placeholder={placeholder}
-          value={value}
+          value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          {...(autoComplete ? { autoComplete } : {})}
           className={cn(error && "border-destructive focus-visible:ring-destructive")}
         />
       )}

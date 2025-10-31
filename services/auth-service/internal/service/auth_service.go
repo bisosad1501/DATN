@@ -188,13 +188,16 @@ func (s *authService) Register(req *models.RegisterRequest, ip, userAgent string
 
 	// Call User Service to create profile - CRITICAL: Must succeed for data consistency
 	log.Printf("[Auth-Service] Creating profile for user %s", user.ID)
+	log.Printf("[Auth-Service] FullName from request: '%s' (len=%d)", req.FullName, len(req.FullName))
+	log.Printf("[Auth-Service] TargetBandScore from request: %.1f", req.TargetBandScore)
 	profileReq := client.CreateProfileRequest{
-		UserID:   user.ID.String(),
-		Email:    user.Email,
-		Role:     req.Role,
-		FullName: "", // Will be updated later
+		UserID:          user.ID.String(),
+		Email:           user.Email,
+		Role:            req.Role,
+		FullName:        req.FullName,
+		TargetBandScore: req.TargetBandScore,
 	}
-	log.Printf("[Auth-Service] Calling User Service at %s", s.config.UserServiceURL)
+	log.Printf("[Auth-Service] Calling User Service at %s with FullName='%s'", s.config.UserServiceURL, profileReq.FullName)
 	if err := s.userServiceClient.CreateProfile(profileReq); err != nil {
 		log.Printf("[Auth-Service] CRITICAL ERROR: Failed to create user profile for %s: %v", user.Email, err)
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"math"
 	"log"
 	"net/http"
 	"strconv"
@@ -1153,15 +1154,23 @@ func (h *UserHandler) ToggleReminder(c *gin.Context) {
 
 // ============= Leaderboard Handlers =============
 
-// GetLeaderboard retrieves the leaderboard
+// GetLeaderboard retrieves the leaderboard with period filtering and pagination
 func (h *UserHandler) GetLeaderboard(c *gin.Context) {
+	period := c.DefaultQuery("period", "all-time") // daily, weekly, monthly, all-time
+	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "50")
+	
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	
 	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
+	if err != nil || limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
-	leaderboard, err := h.service.GetLeaderboard(limit)
+	leaderboard, total, err := h.service.GetLeaderboard(period, page, limit)
 	if err != nil {
 		log.Printf("❌ Error getting leaderboard: %v", err)
 		c.JSON(http.StatusInternalServerError, models.Response{
@@ -1175,11 +1184,18 @@ func (h *UserHandler) GetLeaderboard(c *gin.Context) {
 		return
 	}
 
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+	
 	c.JSON(http.StatusOK, models.Response{
 		Success: true,
 		Data: gin.H{
 			"leaderboard": leaderboard,
-			"count":       len(leaderboard),
+			"pagination": gin.H{
+				"total":       total,
+				"page":        page,
+				"limit":       limit,
+				"total_pages": totalPages,
+			},
 		},
 	})
 }

@@ -76,7 +76,7 @@ func (c *NotificationServiceClient) SendWelcomeNotification(userID, email string
 	return c.SendNotification(SendNotificationRequest{
 		UserID:   userID,
 		Title:    "Chào mừng đến với IELTSGo",
-		Message:  fmt.Sprintf("Cảm ơn bạn đã tham gia IELTSGo! Bắt đầu hành trình học IELTS của bạn ngay hôm nay.", email),
+		Message:  "Cảm ơn bạn đã tham gia IELTSGo! Bắt đầu hành trình học IELTS của bạn ngay hôm nay.",
 		Type:     "system",
 		Category: "info",
 		Priority: "normal",

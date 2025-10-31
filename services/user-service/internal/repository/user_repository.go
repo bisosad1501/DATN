@@ -21,12 +21,53 @@ func NewUserRepository(db *database.Database) *UserRepository {
 
 // CreateProfile creates a new user profile
 func (r *UserRepository) CreateProfile(userID uuid.UUID) error {
+	return r.CreateProfileWithData(userID, "", 0)
+}
+
+// CreateProfileWithData creates a new user profile with full name and target band score
+func (r *UserRepository) CreateProfileWithData(userID uuid.UUID, fullName string, targetBandScore float64) error {
+	// Build query dynamically based on provided data
 	query := `
-		INSERT INTO user_profiles (user_id, timezone, language_preference)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (user_id) DO NOTHING
-	`
-	_, err := r.db.DB.Exec(query, userID, "Asia/Ho_Chi_Minh", "vi")
+		INSERT INTO user_profiles (user_id, timezone, language_preference`
+	values := `VALUES ($1, $2, $3`
+	args := []interface{}{userID, "Asia/Ho_Chi_Minh", "vi"}
+	argCount := 3
+
+	if fullName != "" {
+		argCount++
+		query += `, full_name`
+		values += `, $` + fmt.Sprintf("%d", argCount)
+		args = append(args, fullName)
+	}
+
+	if targetBandScore > 0 {
+		argCount++
+		query += `, target_band_score`
+		values += `, $` + fmt.Sprintf("%d", argCount)
+		args = append(args, targetBandScore)
+	}
+
+	// Build UPDATE clause for ON CONFLICT
+	updateClause := ""
+	if fullName != "" {
+		updateClause += ` full_name = EXCLUDED.full_name,`
+	}
+	if targetBandScore > 0 {
+		updateClause += ` target_band_score = EXCLUDED.target_band_score,`
+	}
+	if updateClause != "" {
+		updateClause += ` updated_at = CURRENT_TIMESTAMP`
+	} else {
+		// If no fields to update, just update timestamp
+		updateClause = ` updated_at = CURRENT_TIMESTAMP`
+	}
+
+	query += `) ` + values + `)
+		ON CONFLICT (user_id) DO UPDATE SET ` + updateClause
+	
+	log.Printf("🔍 Creating profile for user %s with fullName='%s' (len=%d), targetBandScore=%.1f", userID, fullName, len(fullName), targetBandScore)
+	
+	_, err := r.db.DB.Exec(query, args...)
 	if err != nil {
 		log.Printf("❌ Error creating profile for user %s: %v", userID, err)
 		return fmt.Errorf("failed to create profile: %w", err)
@@ -44,7 +85,7 @@ func (r *UserRepository) CreateProfile(userID uuid.UUID) error {
 		return fmt.Errorf("failed to create learning progress: %w", err)
 	}
 
-	log.Printf("✅ Profile created for user: %s", userID)
+	log.Printf("✅ Profile created for user: %s (fullName: %s, targetBandScore: %.1f)", userID, fullName, targetBandScore)
 	return nil
 }
 
@@ -1037,28 +1078,127 @@ func (r *UserRepository) ToggleReminder(reminderID uuid.UUID, userID uuid.UUID, 
 // ============= Leaderboard =============
 
 // GetTopLearners retrieves top learners by achievements count and study hours
-func (r *UserRepository) GetTopLearners(limit int) ([]models.LeaderboardEntry, error) {
-    // Order by achievements, then real-time total study hours from study_sessions
-    query := `
-        SELECT 
-            ROW_NUMBER() OVER (
-                ORDER BY 
-                    (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC,
-                    COALESCE((SELECT SUM(duration_minutes) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) DESC
-            ) as rank,
-            up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
-            (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
-            lp.current_streak_days,
-            COALESCE((SELECT ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) as total_study_hours,
-            (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
-        FROM user_profiles up
-        JOIN learning_progress lp ON up.user_id = lp.user_id
-        ORDER BY achievements_count DESC, total_study_hours DESC
-        LIMIT $1
-    `
-	rows, err := r.db.DB.Query(query, limit)
+// Optimized query using CTEs to avoid repeated subqueries
+// Supports period filtering (daily, weekly, monthly, all-time) and pagination
+func (r *UserRepository) GetTopLearners(period string, page, limit int) ([]models.LeaderboardEntry, int, error) {
+	// Default to all-time if period is empty or invalid
+	if period == "" {
+		period = "all-time"
+	}
+	
+	// Calculate date range based on period
+	var dateFilter string
+	switch period {
+	case "daily":
+		dateFilter = "AND ss.started_at >= CURRENT_DATE"
+	case "weekly":
+		dateFilter = "AND ss.started_at >= DATE_TRUNC('week', CURRENT_DATE)"
+	case "monthly":
+		dateFilter = "AND ss.started_at >= DATE_TRUNC('month', CURRENT_DATE)"
+	case "all-time":
+		dateFilter = ""
+	default:
+		dateFilter = ""
+	}
+	
+	// Get total count for pagination
+	var totalCount int
+	countQuery := `
+		SELECT COUNT(DISTINCT up.user_id)
+		FROM user_profiles up
+		LEFT JOIN learning_progress lp ON up.user_id = lp.user_id
+		LEFT JOIN (
+			SELECT user_id, COUNT(*) as achievements_count
+			FROM user_achievements
+			GROUP BY user_id
+		) achievement_counts ON up.user_id = achievement_counts.user_id
+		LEFT JOIN (
+			SELECT 
+				user_id,
+				ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) as total_study_hours
+			FROM study_sessions ss
+			WHERE 1=1 ` + dateFilter + `
+			GROUP BY user_id
+		) study_times ON up.user_id = study_times.user_id
+		WHERE COALESCE(achievement_counts.achievements_count, 0) > 0 
+		   OR COALESCE(study_times.total_study_hours, 0) > 0
+	`
+	err := r.db.DB.QueryRow(countQuery).Scan(&totalCount)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get top learners: %w", err)
+		totalCount = 0
+	}
+	
+	// Calculate offset for pagination
+	offset := (page - 1) * limit
+	
+	// Build query with period filtering
+	query := `
+		WITH user_stats AS (
+			SELECT 
+				up.user_id,
+				COALESCE(
+					NULLIF(TRIM(up.full_name), ''),
+					TRIM(CONCAT(COALESCE(up.first_name, ''), ' ', COALESCE(up.last_name, ''))),
+					COALESCE(SPLIT_PART(au.email, '@', 1), 'Học viên')
+				) as full_name,
+				up.avatar_url,
+				COALESCE(lp.current_streak_days, 0) as current_streak_days,
+				COALESCE(achievement_counts.achievements_count, 0) as achievements_count,
+				COALESCE(study_times.total_study_hours, 0) as total_study_hours
+			FROM user_profiles up
+			LEFT JOIN learning_progress lp ON up.user_id = lp.user_id
+			LEFT JOIN dblink(
+				'dbname=auth_db user=ielts_admin password=ielts_password_2025',
+				'SELECT id, email FROM users WHERE deleted_at IS NULL'
+			) AS au(id uuid, email text) ON up.user_id = au.id
+			LEFT JOIN (
+				SELECT user_id, COUNT(*) as achievements_count
+				FROM user_achievements
+				` + func() string {
+				if period == "daily" {
+					return "WHERE earned_at >= CURRENT_DATE"
+				} else if period == "weekly" {
+					return "WHERE earned_at >= DATE_TRUNC('week', CURRENT_DATE)"
+				} else if period == "monthly" {
+					return "WHERE earned_at >= DATE_TRUNC('month', CURRENT_DATE)"
+				}
+				return ""
+			}() + `
+				GROUP BY user_id
+			) achievement_counts ON up.user_id = achievement_counts.user_id
+			LEFT JOIN (
+				SELECT 
+					user_id,
+					ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) as total_study_hours
+				FROM study_sessions ss
+				WHERE 1=1 ` + dateFilter + `
+				GROUP BY user_id
+			) study_times ON up.user_id = study_times.user_id
+		),
+		ranked_users AS (
+			SELECT 
+				ROW_NUMBER() OVER (
+					ORDER BY achievements_count DESC, total_study_hours DESC
+				) as rank,
+				user_id,
+				full_name,
+				avatar_url,
+				achievements_count * 10 as total_points,
+				current_streak_days,
+				total_study_hours,
+				achievements_count
+			FROM user_stats
+			WHERE achievements_count > 0 OR total_study_hours > 0
+		)
+		SELECT rank, user_id, full_name, avatar_url, total_points, 
+		       current_streak_days, total_study_hours, achievements_count
+		FROM ranked_users
+		ORDER BY rank ASC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := r.db.DB.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get top learners: %w", err)
 	}
 	defer rows.Close()
 
@@ -1068,44 +1208,93 @@ func (r *UserRepository) GetTopLearners(limit int) ([]models.LeaderboardEntry, e
 		err := rows.Scan(&entry.Rank, &entry.UserID, &entry.FullName, &entry.AvatarURL,
 			&entry.TotalPoints, &entry.CurrentStreakDays, &entry.TotalStudyHours, &entry.AchievementsCount)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan leaderboard entry: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan leaderboard entry: %w", err)
 		}
+		// Adjust rank for pagination
+		entry.Rank = offset + len(entries) + 1
 		entries = append(entries, entry)
 	}
-	return entries, nil
+	return entries, totalCount, nil
 }
 
 // GetUserRank retrieves the rank of a specific user
+// Uses the same optimized query structure as GetTopLearners
+// Always returns a rank, even if user has no achievements or study hours yet
 func (r *UserRepository) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, error) {
-    // Rank using achievements, then real-time study hours from study_sessions
-    query := `
-        WITH ranked_users AS (
-            SELECT 
-                ROW_NUMBER() OVER (
-                    ORDER BY 
-                        (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) DESC,
-                        COALESCE((SELECT SUM(duration_minutes) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) DESC
-                ) as rank,
-                up.user_id, COALESCE(up.full_name, 'Anonymous User') as full_name, up.avatar_url, 
-                (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) * 10 as total_points,
-                lp.current_streak_days,
-                COALESCE((SELECT ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) FROM study_sessions ss WHERE ss.user_id = up.user_id), 0) as total_study_hours,
-                (SELECT COUNT(*) FROM user_achievements ua WHERE ua.user_id = up.user_id) as achievements_count
-            FROM user_profiles up
-            JOIN learning_progress lp ON up.user_id = lp.user_id
-        )
-        SELECT rank, user_id, full_name, avatar_url, total_points, current_streak_days, 
-               total_study_hours, achievements_count
-        FROM ranked_users
-        WHERE user_id = $1
-    `
+	query := `
+		WITH all_user_stats AS (
+			SELECT 
+				up.user_id,
+				COALESCE(
+					NULLIF(TRIM(up.full_name), ''),
+					TRIM(CONCAT(COALESCE(up.first_name, ''), ' ', COALESCE(up.last_name, ''))),
+					COALESCE(SPLIT_PART(au.email, '@', 1), 'Học viên')
+				) as full_name,
+				up.avatar_url,
+				COALESCE(lp.current_streak_days, 0) as current_streak_days,
+				COALESCE(achievement_counts.achievements_count, 0) as achievements_count,
+				COALESCE(study_times.total_study_hours, 0) as total_study_hours
+			FROM user_profiles up
+			LEFT JOIN learning_progress lp ON up.user_id = lp.user_id
+			LEFT JOIN dblink(
+				'dbname=auth_db user=ielts_admin password=ielts_password_2025',
+				'SELECT id, email FROM users WHERE deleted_at IS NULL'
+			) AS au(id uuid, email text) ON up.user_id = au.id
+			LEFT JOIN (
+				SELECT user_id, COUNT(*) as achievements_count
+				FROM user_achievements
+				GROUP BY user_id
+			) achievement_counts ON up.user_id = achievement_counts.user_id
+			LEFT JOIN (
+				SELECT 
+					user_id,
+					ROUND((SUM(duration_minutes) / 60.0)::numeric, 2) as total_study_hours
+				FROM study_sessions
+				GROUP BY user_id
+			) study_times ON up.user_id = study_times.user_id
+		),
+		ranked_users AS (
+			SELECT 
+				ROW_NUMBER() OVER (
+					ORDER BY achievements_count DESC, total_study_hours DESC
+				) as rank,
+				user_id,
+				full_name,
+				avatar_url,
+				achievements_count * 10 as total_points,
+				current_streak_days,
+				total_study_hours,
+				achievements_count
+			FROM all_user_stats
+			WHERE achievements_count > 0 OR total_study_hours > 0
+		),
+		active_count AS (
+			SELECT COALESCE(COUNT(*), 0) as total_active
+			FROM ranked_users
+		),
+		current_user_stats AS (
+			SELECT user_id, full_name, avatar_url, current_streak_days,
+			       achievements_count, total_study_hours
+			FROM all_user_stats
+			WHERE user_id = $1
+		)
+		SELECT 
+			COALESCE(ru.rank, ac.total_active + 1) as rank,
+			cus.user_id,
+			cus.full_name,
+			cus.avatar_url,
+			COALESCE(ru.total_points, cus.achievements_count * 10) as total_points,
+			cus.current_streak_days,
+			cus.total_study_hours,
+			cus.achievements_count
+		FROM current_user_stats cus
+		CROSS JOIN active_count ac
+		LEFT JOIN ranked_users ru ON cus.user_id = ru.user_id
+	`
 	entry := &models.LeaderboardEntry{}
 	err := r.db.DB.QueryRow(query, userID).Scan(&entry.Rank, &entry.UserID, &entry.FullName,
 		&entry.AvatarURL, &entry.TotalPoints, &entry.CurrentStreakDays, &entry.TotalStudyHours,
 		&entry.AchievementsCount)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user rank not found")
-	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user rank: %w", err)
 	}

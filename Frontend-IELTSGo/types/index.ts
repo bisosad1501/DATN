@@ -22,6 +22,8 @@ export interface RegisterData {
   password: string
   phone?: string
   role: "student" | "instructor"
+  fullName?: string
+  targetBandScore?: number
 }
 
 export interface AuthResponse {
@@ -611,22 +613,9 @@ export interface ApiError {
   details?: any
 }
 
-// Authentication Types
+// Authentication Types (duplicate removed - see RegisterData above)
 export interface LoginCredentials {
   email: string
   password: string
   rememberMe?: boolean
-}
-
-export interface RegisterData {
-  email: string
-  password: string
-  fullName: string
-  targetBandScore?: number
-}
-
-export interface AuthResponse {
-  access_token: string
-  refresh_token: string
-  user: User
 }

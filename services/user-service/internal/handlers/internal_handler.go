@@ -26,12 +26,13 @@ func NewInternalHandler(userService *service.UserService) *InternalHandler {
 // CreateProfileInternal creates a user profile (called by Auth Service after registration)
 func (h *InternalHandler) CreateProfileInternal(c *gin.Context) {
 	var req struct {
-		UserID    string `json:"user_id" binding:"required"`
-		Email     string `json:"email" binding:"required"`
-		Role      string `json:"role" binding:"required"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		FullName  string `json:"full_name"`
+		UserID          string  `json:"user_id" binding:"required"`
+		Email           string  `json:"email" binding:"required"`
+		Role            string  `json:"role" binding:"required"`
+		FirstName       string  `json:"first_name"`
+		LastName        string  `json:"last_name"`
+		FullName        string  `json:"full_name"`
+		TargetBandScore float64 `json:"target_band_score"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -59,8 +60,8 @@ func (h *InternalHandler) CreateProfileInternal(c *gin.Context) {
 		return
 	}
 
-	// Create profile using GetOrCreateProfile (will create if doesn't exist)
-	_, err = h.userService.GetOrCreateProfile(userID)
+	// Create profile with full name and target band score
+	err = h.userService.CreateProfileWithData(userID, req.FullName, req.TargetBandScore)
 	if err != nil {
 		log.Printf("❌ Failed to create profile for user %s: %v", req.UserID, err)
 		c.JSON(http.StatusInternalServerError, models.Response{
@@ -74,7 +75,7 @@ func (h *InternalHandler) CreateProfileInternal(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✅ Profile created for user %s (email: %s, role: %s)", req.UserID, req.Email, req.Role)
+	log.Printf("✅ Profile created for user %s (email: %s, role: %s, fullName: %s)", req.UserID, req.Email, req.Role, req.FullName)
 
 	c.JSON(http.StatusCreated, models.Response{
 		Success: true,

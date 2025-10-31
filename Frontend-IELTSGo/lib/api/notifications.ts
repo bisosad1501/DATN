@@ -221,22 +221,42 @@ export const notificationsApi = {
 }
 
 export const leaderboardApi = {
-  // Get leaderboard
+  // Get leaderboard with period filtering and pagination
   getLeaderboard: async (
-    period: "daily" | "weekly" | "monthly" | "all-time" = "weekly",
+    period: "daily" | "weekly" | "monthly" | "all-time" = "all-time",
     page = 1,
-    pageSize = 50,
-  ): Promise<PaginatedResponse<any>> => {
-    const response = await apiClient.get<PaginatedResponse<any>>(
-      `/leaderboard?period=${period}&page=${page}&pageSize=${pageSize}`,
-    )
-    return response.data
+    limit = 50,
+  ): Promise<{
+    leaderboard: any[]
+    pagination: {
+      total: number
+      page: number
+      limit: number
+      total_pages: number
+    }
+  }> => {
+    const response = await apiClient.get<{
+      success: boolean
+      data: {
+        leaderboard: any[]
+        pagination: {
+          total: number
+          page: number
+          limit: number
+          total_pages: number
+        }
+      }
+    }>(`/user/leaderboard?period=${period}&page=${page}&limit=${limit}`)
+    return response.data.data
   },
 
-  // Get user rank
-  getUserRank: async (userId: string, period: "daily" | "weekly" | "monthly" | "all-time" = "weekly"): Promise<any> => {
-    const response = await apiClient.get(`/leaderboard/user/${userId}?period=${period}`)
-    return response.data
+  // Get current user rank (backend: GET /user/leaderboard/rank)
+  getUserRank: async (): Promise<any> => {
+    const response = await apiClient.get<{
+      success: boolean
+      data: any
+    }>(`/user/leaderboard/rank`)
+    return response.data.data
   },
 }
 

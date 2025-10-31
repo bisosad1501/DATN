@@ -20,12 +20,13 @@ func NewUserServiceClient(baseURL, apiKey string) *UserServiceClient {
 
 // CreateProfileRequest represents profile creation request
 type CreateProfileRequest struct {
-	UserID    string `json:"user_id"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	FirstName string `json:"first_name,omitempty"`
-	LastName  string `json:"last_name,omitempty"`
-	FullName  string `json:"full_name,omitempty"`
+	UserID          string  `json:"user_id"`
+	Email           string  `json:"email"`
+	Role            string  `json:"role"`
+	FirstName       string  `json:"first_name,omitempty"`
+	LastName        string  `json:"last_name,omitempty"`
+	FullName        string  `json:"full_name,omitempty"`
+	TargetBandScore float64 `json:"target_band_score,omitempty"`
 }
 
 // UpdateProgressRequest represents progress update request

@@ -562,12 +562,15 @@ func (s *UserService) ToggleReminder(reminderID uuid.UUID, userID uuid.UUID, isA
 
 // ============= Leaderboard =============
 
-// GetLeaderboard retrieves top learners
-func (s *UserService) GetLeaderboard(limit int) ([]models.LeaderboardEntry, error) {
+// GetLeaderboard retrieves top learners with optional period filtering
+func (s *UserService) GetLeaderboard(period string, page, limit int) ([]models.LeaderboardEntry, int, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50 // Default limit
 	}
-	return s.repo.GetTopLearners(limit)
+	if page < 1 {
+		page = 1
+	}
+	return s.repo.GetTopLearners(period, page, limit)
 }
 
 // GetUserRank retrieves the rank of a specific user
@@ -581,6 +584,11 @@ func (s *UserService) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, e
 func (s *UserService) CreateProfile(profile *models.UserProfile) error {
 	// Ensure learning progress exists
 	return s.repo.CreateProfile(profile.UserID)
+}
+
+// CreateProfileWithData creates a new user profile with full name and target band score
+func (s *UserService) CreateProfileWithData(userID uuid.UUID, fullName string, targetBandScore float64) error {
+	return s.repo.CreateProfileWithData(userID, fullName, targetBandScore)
 }
 
 // UpdateProgress updates user learning progress using atomic operations

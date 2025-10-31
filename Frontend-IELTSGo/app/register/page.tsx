@@ -17,11 +17,13 @@ import { BrandText } from "@/components/ui/brand-text"
 export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
     phone: "",
     role: "student" as "student" | "instructor",
+    targetBandScore: "",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -66,6 +68,8 @@ export default function RegisterPage() {
         password: formData.password,
         phone: formData.phone || undefined,
         role: formData.role,
+        fullName: formData.fullName || undefined,
+        targetBandScore: formData.targetBandScore ? parseFloat(formData.targetBandScore) : undefined,
       })
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message 
@@ -187,6 +191,7 @@ export default function RegisterPage() {
               onChange={(value) => setFormData({ ...formData, password: value })}
               error={errors.password}
               required
+              autoComplete="new-password"
             />
 
             <FormField
@@ -198,6 +203,7 @@ export default function RegisterPage() {
               onChange={(value) => setFormData({ ...formData, confirmPassword: value })}
               error={errors.confirmPassword}
               required
+              autoComplete="new-password"
             />
 
             <div className="space-y-2">
