@@ -165,11 +165,11 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
       - FRONTEND_URL=${FRONTEND_URL}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@ieltsplatform.com}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME}
       - USER_SERVICE_URL=http://user-service:8082
       - NOTIFICATION_SERVICE_URL=http://notification-service:8085
@@ -246,7 +246,7 @@ services:
       - NOTIFICATION_SERVICE_URL=http://notification-service:8085
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-internal_secret_key_ielts_2025_change_in_production}
       # YouTube Data API
-      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
     volumes:
       - ./database/schemas:/schemas:ro
       - ./scripts:/scripts:ro
