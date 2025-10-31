@@ -17,6 +17,7 @@ interface FormFieldProps {
   className?: string
   rows?: number
   autoComplete?: string
+  autoFocus?: boolean
 }
 
 export function FormField({
@@ -32,6 +33,7 @@ export function FormField({
   className,
   rows = 4,
   autoComplete,
+  autoFocus,
 }: FormFieldProps) {
   const id = `field-${name}`
 
@@ -50,6 +52,7 @@ export function FormField({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           rows={rows}
+          autoFocus={autoFocus}
           className={cn(error && "border-destructive focus-visible:ring-destructive")}
         />
       ) : (
@@ -58,6 +61,7 @@ export function FormField({
           name={name}
           type={type}
           placeholder={placeholder}
+          autoFocus={autoFocus}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}

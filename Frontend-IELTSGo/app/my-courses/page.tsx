@@ -101,8 +101,8 @@ export default function MyCoursesPage() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">My Learning</h1>
-          <p className="text-muted-foreground text-lg">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">My Learning</h1>
+          <p className="text-base text-muted-foreground">
             Track your progress and continue your IELTS journey
           </p>
         </div>

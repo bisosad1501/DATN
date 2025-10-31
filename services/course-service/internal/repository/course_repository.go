@@ -873,6 +873,65 @@ func (r *CourseRepository) GetUserReview(userID, courseID uuid.UUID) (*models.Co
 	return &review, err
 }
 
+// UpdateReview updates an existing course review
+func (r *CourseRepository) UpdateReview(userID, courseID uuid.UUID, req *models.UpdateReviewRequest) (*models.CourseReview, error) {
+	// Build dynamic UPDATE query based on provided fields
+	updates := []string{}
+	args := []interface{}{}
+	argCount := 1
+
+	// Check which fields to update
+	if req.Rating != nil {
+		updates = append(updates, fmt.Sprintf("rating = $%d", argCount))
+		args = append(args, *req.Rating)
+		argCount++
+	}
+	if req.Title != nil {
+		updates = append(updates, fmt.Sprintf("title = $%d", argCount))
+		args = append(args, *req.Title)
+		argCount++
+	}
+	if req.Comment != nil {
+		updates = append(updates, fmt.Sprintf("comment = $%d", argCount))
+		args = append(args, *req.Comment)
+		argCount++
+	}
+
+	// If no fields to update, return error
+	if len(updates) == 0 {
+		return nil, fmt.Errorf("no fields to update")
+	}
+
+	// Always update updated_at
+	updates = append(updates, fmt.Sprintf("updated_at = CURRENT_TIMESTAMP"))
+	
+	// Build WHERE clause separately
+	whereClause := fmt.Sprintf("user_id = $%d AND course_id = $%d", argCount, argCount+1)
+	args = append(args, userID, courseID)
+
+	query := fmt.Sprintf(`
+		UPDATE course_reviews
+		SET %s
+		WHERE %s
+		RETURNING id, user_id, course_id, rating, title, comment, helpful_count,
+		          is_approved, approved_by, approved_at, created_at, updated_at
+	`, strings.Join(updates, ", "), whereClause)
+
+	var review models.CourseReview
+	err := r.db.QueryRow(query, args...).Scan(
+		&review.ID, &review.UserID, &review.CourseID, &review.Rating,
+		&review.Title, &review.Comment, &review.HelpfulCount,
+		&review.IsApproved, &review.ApprovedBy, &review.ApprovedAt,
+		&review.CreatedAt, &review.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("review not found")
+	}
+
+	return &review, err
+}
+
 // ============================================
 // COURSE CATEGORIES
 // ============================================

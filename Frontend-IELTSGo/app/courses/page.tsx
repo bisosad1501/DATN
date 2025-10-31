@@ -69,8 +69,8 @@ export default function CoursesPage() {
     <AppLayout showFooter={true}>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Explore Courses</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Explore Courses</h1>
+          <p className="text-base text-muted-foreground">
             Discover IELTS courses designed by experts to help you achieve your goals
           </p>
         </div>

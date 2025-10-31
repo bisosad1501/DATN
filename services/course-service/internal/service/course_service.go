@@ -946,6 +946,39 @@ func (s *CourseService) CreateReview(userID, courseID uuid.UUID, req *models.Cre
 	return review, nil
 }
 
+// UpdateReview updates an existing review for a course
+// Similar to Udemy/Coursera: User can edit their review (rating, title, comment) independently
+func (s *CourseService) UpdateReview(userID, courseID uuid.UUID, req *models.UpdateReviewRequest) (*models.CourseReview, error) {
+	// Check if user is enrolled
+	enrollment, err := s.repo.GetEnrollment(userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check enrollment: %w", err)
+	}
+	if enrollment == nil {
+		return nil, fmt.Errorf("you must be enrolled in the course to update a review")
+	}
+
+	// Check if review exists
+	existingReview, err := s.repo.GetUserReview(userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing review: %w", err)
+	}
+	if existingReview == nil {
+		return nil, fmt.Errorf("you haven't reviewed this course yet. Please create a review first")
+	}
+
+	// Note: Rating can remain unchanged if not provided in update request
+	// This allows users to update only title or comment without changing rating
+
+	// Update review
+	review, err := s.repo.UpdateReview(userID, courseID, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update review: %w", err)
+	}
+
+	return review, nil
+}
+
 // ============================================
 // CATEGORIES
 // ============================================

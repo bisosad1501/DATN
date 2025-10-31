@@ -1027,6 +1027,66 @@ func (h *CourseHandler) CreateReview(c *gin.Context) {
 	})
 }
 
+// UpdateReview updates an existing review for a course
+func (h *CourseHandler) UpdateReview(c *gin.Context) {
+	courseIDStr := c.Param("id")
+	courseID, err := uuid.Parse(courseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_COURSE_ID",
+				Message: "Invalid course ID format",
+			},
+		})
+		return
+	}
+
+	userIDStr := c.GetString("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_USER",
+				Message: "Invalid user authentication",
+			},
+		})
+		return
+	}
+
+	var req models.UpdateReviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "INVALID_REQUEST",
+				Message: "Invalid review data",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	review, err := h.service.UpdateReview(userID, courseID, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error: &ErrorInfo{
+				Code:    "UPDATE_REVIEW_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Review updated successfully.",
+		Data:    review,
+	})
+}
+
 // ============================================
 // CATEGORIES
 // ============================================

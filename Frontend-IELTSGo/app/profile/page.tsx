@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { AppLayout } from "@/components/layout/app-layout"
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Camera, CheckCircle2 } from "lucide-react"
+import { Camera, CheckCircle2, Edit2, Save, X } from "lucide-react"
 import { userApi } from "@/lib/api/user"
 
 export default function ProfilePage() {
@@ -38,6 +38,18 @@ function ProfileContent() {
     bio: user?.bio || "",
     targetBandScore: user?.targetBandScore?.toString() || "",
   })
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.fullName || "",
+        email: user.email || "",
+        bio: user.bio || "",
+        targetBandScore: user.targetBandScore?.toString() || "",
+      })
+    }
+  }, [user])
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -73,15 +85,27 @@ function ProfileContent() {
     setIsLoading(true)
     try {
       await updateProfile({
-        fullName: formData.fullName,
-        bio: formData.bio,
-        targetBandScore: formData.targetBandScore ? Number(formData.targetBandScore) : undefined,
+        fullName: formData.fullName.trim(),
+        bio: formData.bio?.trim() || "",
+        targetBandScore: formData.targetBandScore ? parseFloat(formData.targetBandScore) : undefined,
       })
       setSuccessMessage("Profile updated successfully!")
       setIsEditing(false)
-      setTimeout(() => setSuccessMessage(""), 3000)
+      
+      // Refresh user data from backend to get updated values
+      await refreshUser()
+      
+      // Clear success message after delay
+      setTimeout(() => {
+        setSuccessMessage("")
+      }, 3000)
     } catch (error: any) {
-      setErrors({ general: error.response?.data?.message || "Failed to update profile" })
+      console.error("Profile update error:", error)
+      const errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.message 
+        || error.message 
+        || "Failed to update profile"
+      setErrors({ general: errorMessage })
     } finally {
       setIsLoading(false)
     }
@@ -178,13 +202,13 @@ function ProfileContent() {
   }
 
   return (
-    <AppLayout showSidebar showFooter>
-      <div className="container max-w-4xl py-8 px-4">
+    <AppLayout showSidebar={false} showFooter>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Profile Settings</h1>
-            <p className="text-muted-foreground mt-2">Manage your account settings and preferences</p>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
+            <p className="text-base text-muted-foreground mt-2">Manage your account settings and preferences</p>
           </div>
 
           {/* Success Message */}
@@ -205,8 +229,24 @@ function ProfileContent() {
             <TabsContent value="profile" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Profile Information</CardTitle>
-                  <CardDescription>Update your personal information and profile picture</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Profile Information</CardTitle>
+                      <CardDescription>Update your personal information and profile picture</CardDescription>
+                    </div>
+                    {!isEditing && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditing(true)}
+                        className="gap-2"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                        Edit profile
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Avatar */}
@@ -248,72 +288,68 @@ function ProfileContent() {
                   </div>
 
                   {/* Form */}
-                  <form onSubmit={handleProfileUpdate} className="space-y-4">
-                    <FormField
-                      label="Full Name"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={(value) => setFormData({ ...formData, fullName: value })}
-                      error={errors.fullName}
-                      disabled={!isEditing}
-                      required
-                    />
+                  <form onSubmit={handleProfileUpdate} className="space-y-5">
+                    {isEditing ? (
+                      <>
+                        <FormField
+                          label="Full Name"
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={(value) => setFormData({ ...formData, fullName: value })}
+                          error={errors.fullName}
+                          required
+                          autoFocus
+                        />
 
-                    <FormField
-                      label="Email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(value) => setFormData({ ...formData, email: value })}
-                      disabled
-                    />
+                        <FormField
+                          label="Email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(value) => setFormData({ ...formData, email: value })}
+                          disabled
+                          className="bg-muted/50"
+                        />
 
-                    <FormField
-                      label="Bio"
-                      name="bio"
-                      type="textarea"
-                      placeholder="Tell us about yourself..."
-                      value={formData.bio}
-                      onChange={(value) => setFormData({ ...formData, bio: value })}
-                      disabled={!isEditing}
-                      rows={3}
-                    />
+                        <FormField
+                          label="Bio"
+                          name="bio"
+                          type="textarea"
+                          placeholder="Tell us about yourself..."
+                          value={formData.bio}
+                          onChange={(value) => setFormData({ ...formData, bio: value })}
+                          rows={3}
+                        />
 
-                    <div className="space-y-2">
-                      <Label htmlFor="targetBandScore">Target Band Score</Label>
-                      <Select
-                        value={formData.targetBandScore}
-                        onValueChange={(value) => setFormData({ ...formData, targetBandScore: value })}
-                        disabled={!isEditing}
-                      >
-                        <SelectTrigger id="targetBandScore">
-                          <SelectValue placeholder="Select your target score" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5.5">5.5</SelectItem>
-                          <SelectItem value="6.0">6.0</SelectItem>
-                          <SelectItem value="6.5">6.5</SelectItem>
-                          <SelectItem value="7.0">7.0</SelectItem>
-                          <SelectItem value="7.5">7.5</SelectItem>
-                          <SelectItem value="8.0">8.0</SelectItem>
-                          <SelectItem value="8.5">8.5</SelectItem>
-                          <SelectItem value="9.0">9.0</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="targetBandScore">Target Band Score</Label>
+                          <Select
+                            value={formData.targetBandScore}
+                            onValueChange={(value) => setFormData({ ...formData, targetBandScore: value })}
+                          >
+                            <SelectTrigger id="targetBandScore">
+                              <SelectValue placeholder="Select your target score" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5.5">5.5</SelectItem>
+                              <SelectItem value="6.0">6.0</SelectItem>
+                              <SelectItem value="6.5">6.5</SelectItem>
+                              <SelectItem value="7.0">7.0</SelectItem>
+                              <SelectItem value="7.5">7.5</SelectItem>
+                              <SelectItem value="8.0">8.0</SelectItem>
+                              <SelectItem value="8.5">8.5</SelectItem>
+                              <SelectItem value="9.0">9.0</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                    {errors.general && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{errors.general}</AlertDescription>
-                      </Alert>
-                    )}
+                        {errors.general && (
+                          <Alert variant="destructive">
+                            <AlertDescription>{errors.general}</AlertDescription>
+                          </Alert>
+                        )}
 
-                    <div className="flex gap-3">
-                      {isEditing ? (
-                        <>
-                          <Button type="submit" disabled={isLoading}>
-                            {isLoading ? "Saving..." : "Save changes"}
-                          </Button>
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t">
                           <Button
                             type="button"
                             variant="outline"
@@ -327,16 +363,48 @@ function ProfileContent() {
                               })
                               setErrors({})
                             }}
+                            disabled={isLoading}
+                            className="gap-2"
                           >
+                            <X className="h-4 w-4" />
                             Cancel
                           </Button>
-                        </>
-                      ) : (
-                        <Button type="button" onClick={() => setIsEditing(true)}>
-                          Edit profile
-                        </Button>
-                      )}
-                    </div>
+                          <Button type="submit" disabled={isLoading} className="gap-2">
+                            <Save className="h-4 w-4" />
+                            {isLoading ? "Saving..." : "Save changes"}
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* View Mode - Display as read-only */}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-muted-foreground">Full Name</Label>
+                            <p className="text-sm font-medium">{formData.fullName || "Not set"}</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                            <p className="text-sm">{formData.email}</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-muted-foreground">Bio</Label>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {formData.bio || "No bio added yet."}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-muted-foreground">Target Band Score</Label>
+                            <p className="text-sm">
+                              {formData.targetBandScore ? `Band ${formData.targetBandScore}` : "Not set"}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </form>
                 </CardContent>
               </Card>

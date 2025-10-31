@@ -297,11 +297,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: { fullName?: string; bio?: string; targetBandScore?: number }) => {
     try {
-      await userApi.updateProfile({
-        full_name: data.fullName,
-        bio: data.bio,
-        target_band_score: data.targetBandScore,
-      })
+      // Only send fields that are actually provided (not undefined)
+      const payload: { full_name?: string; bio?: string; target_band_score?: number } = {}
+      
+      if (data.fullName !== undefined) {
+        payload.full_name = data.fullName
+      }
+      
+      if (data.bio !== undefined) {
+        payload.bio = data.bio
+      }
+      
+      if (data.targetBandScore !== undefined && data.targetBandScore !== null) {
+        payload.target_band_score = data.targetBandScore
+      }
+      
+      await userApi.updateProfile(payload)
       await refreshUser()
     } catch (error) {
       console.error("Failed to update profile:", error)

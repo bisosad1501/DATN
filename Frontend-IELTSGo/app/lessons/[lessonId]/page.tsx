@@ -137,9 +137,9 @@ export default function LessonDetailPage() {
                 <Badge variant="outline">{contentType}</Badge>
                 {lessonData.is_free && <Badge variant="secondary">FREE</Badge>}
               </div>
-              <h1 className="text-3xl font-bold mb-2">{lessonData.title}</h1>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">{lessonData.title}</h1>
               {lessonData.description && (
-                <p className="text-muted-foreground">{lessonData.description}</p>
+                <p className="text-base text-muted-foreground">{lessonData.description}</p>
               )}
 
               {/* Exercise Info in Header */}

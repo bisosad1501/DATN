@@ -191,7 +191,7 @@ export default function CourseDetailPage() {
   return (
     <AppLayout>
       <div className="bg-gradient-to-b from-primary/5 to-background">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-8">
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div className="flex gap-3 mb-4">
@@ -203,8 +203,8 @@ export default function CourseDetailPage() {
                 </Badge>
               </div>
 
-              <h1 className="text-4xl font-bold mb-4">{course.title}</h1>
-              <p className="text-lg text-muted-foreground mb-6">{course.short_description || course.description}</p>
+              <h1 className="text-3xl font-bold tracking-tight mb-4">{course.title}</h1>
+              <p className="text-base text-muted-foreground mb-6">{course.short_description || course.description}</p>
 
               <div className="flex items-center gap-6 mb-6">
                 <div className="flex items-center gap-2">

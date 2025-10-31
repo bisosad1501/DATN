@@ -114,7 +114,7 @@ export default function ExerciseDetailPage() {
 
   return (
     <AppLayout>
-      <div className="container max-w-6xl mx-auto py-8 px-4">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Back to Lesson Button - Only show if exercise is linked to a lesson */}
         {exercise.lesson_id && (
           <Button
@@ -144,9 +144,9 @@ export default function ExerciseDetailPage() {
             )}
           </div>
 
-          <h1 className="text-3xl font-bold mb-2">{exercise.title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{exercise.title}</h1>
           {exercise.description && (
-            <p className="text-muted-foreground text-lg">{exercise.description}</p>
+            <p className="text-base text-muted-foreground">{exercise.description}</p>
           )}
         </div>
 

@@ -147,6 +147,7 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 			courseProtected.GET("/my-courses", proxy.ReverseProxy(cfg.Services.CourseService))
 			courseProtected.GET("/:id/progress", proxy.ReverseProxy(cfg.Services.CourseService))
 			courseProtected.POST("/:id/reviews", proxy.ReverseProxy(cfg.Services.CourseService)) // Create course review
+			courseProtected.PUT("/:id/reviews", proxy.ReverseProxy(cfg.Services.CourseService))  // Update course review
 		}
 	}
 

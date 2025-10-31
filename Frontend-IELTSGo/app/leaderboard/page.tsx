@@ -117,11 +117,11 @@ export default function LeaderboardPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6 md:py-10 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header Section */}
-        <div className="mb-8 space-y-3">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Bảng Xếp Hạng</h1>
-          <p className="text-muted-foreground text-base md:text-lg max-w-2xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Bảng Xếp Hạng</h1>
+          <p className="text-base text-muted-foreground max-w-2xl">
             Theo dõi thứ hạng của bạn và cạnh tranh với cộng đồng học viên IELTS
           </p>
         </div>

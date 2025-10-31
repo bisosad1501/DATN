@@ -49,6 +49,7 @@ func SetupRoutes(
 		reviews.Use(authMiddleware.AuthRequired())
 		{
 			reviews.POST("", handler.CreateReview) // Create course review
+			reviews.PUT("", handler.UpdateReview)  // Update course review
 		}
 
 		// Protected video tracking endpoints

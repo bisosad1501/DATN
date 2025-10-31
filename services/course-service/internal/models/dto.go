@@ -167,6 +167,14 @@ type CreateReviewRequest struct {
 	Comment *string `json:"comment"`
 }
 
+// UpdateReviewRequest represents course review update request
+// All fields are optional - user can update rating, title, or comment independently
+type UpdateReviewRequest struct {
+	Rating  *int    `json:"rating" binding:"omitempty,min=1,max=5"`
+	Title   *string `json:"title"`
+	Comment *string `json:"comment"`
+}
+
 // TrackVideoProgressRequest represents video watch progress tracking
 type TrackVideoProgressRequest struct {
 	VideoID        uuid.UUID  `json:"video_id" binding:"required"`

@@ -275,4 +275,25 @@ export const coursesApi = {
     const response = await apiClient.post(`/courses/${courseId}/reviews`, review)
     return response.data
   },
+
+  // Update course review
+  updateCourseReview: async (
+    courseId: string,
+    review: {
+      rating?: number
+      title?: string
+      comment?: string
+    }
+  ): Promise<any> => {
+    const response = await apiClient.put(`/courses/${courseId}/reviews`, review)
+    return response.data
+  },
+
+  // Get user's review for a course (to check if user has already reviewed)
+  getUserReview: async (courseId: string): Promise<any> => {
+    // This will be handled by checking the reviews list and finding the current user's review
+    // We'll implement this in the frontend component
+    const response = await apiClient.get(`/courses/${courseId}/reviews`)
+    return response.data
+  },
 }

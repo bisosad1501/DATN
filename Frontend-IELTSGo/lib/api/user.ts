@@ -27,7 +27,23 @@ export const userApi = {
     bio?: string
     target_band_score?: number
   }): Promise<any> => {
-    const response = await apiClient.put<ApiResponse<any>>("/user/profile", data)
+    // Build request payload - only include fields that are provided
+    const payload: any = {}
+    
+    if (data.full_name !== undefined) {
+      payload.full_name = data.full_name.trim() || null
+    }
+    
+    if (data.bio !== undefined) {
+      // Send null if empty string, otherwise send the value
+      payload.bio = data.bio.trim() || null
+    }
+    
+    if (data.target_band_score !== undefined && data.target_band_score !== null) {
+      payload.target_band_score = Number(data.target_band_score)
+    }
+    
+    const response = await apiClient.put<ApiResponse<any>>("/user/profile", payload)
     return response.data.data
   },
 }

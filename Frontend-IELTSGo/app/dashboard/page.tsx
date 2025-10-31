@@ -120,8 +120,8 @@ function DashboardContent() {
         {/* Header with Time Range Filter */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.fullName?.split(" ")[0] || "Student"}!</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back, {user?.fullName?.split(" ")[0] || "Student"}!</h1>
+            <p className="text-base text-muted-foreground">
               Track your learning journey and performance
               {user?.targetBandScore && ` • Target: Band ${user.targetBandScore}`}
             </p>
