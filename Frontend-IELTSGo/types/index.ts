@@ -56,14 +56,36 @@ export interface GoogleAuthResponse {
   error?: ErrorData
 }
 
+// User Preferences - matches backend UserPreferences struct
 export interface UserPreferences {
-  language: "en" | "vi"
+  user_id: string
+  email_notifications: boolean
+  push_notifications: boolean
+  study_reminders: boolean
+  weekly_report: boolean
   theme: "light" | "dark" | "auto"
-  fontSize: "small" | "medium" | "large"
-  timezone: string
-  autoPlayNextLesson: boolean
-  showAnswerExplanations: boolean
-  playbackSpeed: number
+  font_size: "small" | "medium" | "large"
+  auto_play_next_lesson: boolean
+  show_answer_explanation: boolean
+  playback_speed: number // 0.75, 1.0, 1.25, 1.5, 2.0
+  profile_visibility: "public" | "friends" | "private"
+  show_study_stats: boolean
+  updated_at: string
+}
+
+// Update Preferences Request - all fields optional for partial updates
+export interface UpdatePreferencesRequest {
+  email_notifications?: boolean
+  push_notifications?: boolean
+  study_reminders?: boolean
+  weekly_report?: boolean
+  theme?: "light" | "dark" | "auto"
+  font_size?: "small" | "medium" | "large"
+  auto_play_next_lesson?: boolean
+  show_answer_explanation?: boolean
+  playback_speed?: number
+  profile_visibility?: "public" | "friends" | "private"
+  show_study_stats?: boolean
 }
 
 // Course Types (matching backend)

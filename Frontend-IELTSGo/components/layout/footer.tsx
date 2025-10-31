@@ -22,24 +22,24 @@ const FOOTER_LINKS = {
 
 export function Footer() {
   return (
-    <footer className="border-t bg-background">
-      <div className="container px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+    <footer className="border-t border-border/40 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 lg:gap-8">
           {/* Brand section */}
-          <div className="lg:col-span-2">
-            <Logo className="mb-4" />
-            <p className="text-sm text-muted-foreground max-w-xs">
+          <div className="lg:col-span-2 space-y-3">
+            <Logo className="mb-3" />
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {APP_CONFIG.description}. Học IELTS hiệu quả với phương pháp hiện đại và giáo viên chuyên nghiệp.
             </p>
           </div>
 
           {/* Links sections */}
-          <div>
-            <h3 className="font-semibold mb-4">Sản phẩm</h3>
-            <ul className="space-y-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold mb-2">Sản phẩm</h3>
+            <ul className="space-y-1.5">
               {FOOTER_LINKS.product.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
                     {link.title}
                   </Link>
                 </li>
@@ -47,12 +47,12 @@ export function Footer() {
             </ul>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-4">Công ty</h3>
-            <ul className="space-y-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold mb-2">Công ty</h3>
+            <ul className="space-y-1.5">
               {FOOTER_LINKS.company.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
                     {link.title}
                   </Link>
                 </li>
@@ -60,12 +60,12 @@ export function Footer() {
             </ul>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-4">Pháp lý</h3>
-            <ul className="space-y-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold mb-2">Pháp lý</h3>
+            <ul className="space-y-1.5">
               {FOOTER_LINKS.legal.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
                     {link.title}
                   </Link>
                 </li>
@@ -75,7 +75,7 @@ export function Footer() {
         </div>
 
         {/* Bottom section */}
-        <div className="mt-12 pt-8 border-t">
+        <div className="mt-10 sm:mt-12 pt-6 border-t border-border/40">
           <p className="text-center text-sm text-muted-foreground">
             © {new Date().getFullYear()} {APP_CONFIG.name}. All rights reserved.
           </p>

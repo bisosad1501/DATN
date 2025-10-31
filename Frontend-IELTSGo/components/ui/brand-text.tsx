@@ -22,10 +22,23 @@ export function BrandText({ className = "", variant = "default", size = "md" }: 
     xl: "text-xl",
   }
   
+  // If className contains text size classes (text-xs, text-sm, text-base, text-lg, text-xl, text-2xl, etc.),
+  // prioritize className over size prop. Otherwise use size prop.
+  const hasTextSizeClass = className.match(/\btext-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)\b/)
+  const sizeClass = hasTextSizeClass ? "" : sizeClasses[size]
+  
+  // For large text sizes (4xl+), inner spans should inherit font-size to avoid CSS override
+  // Note: text-2xl and text-3xl are considered normal sizes and should keep default behavior
+  const isLargeText = hasTextSizeClass && /text-(4xl|5xl|6xl|7xl|8xl|9xl)/.test(className)
+  const innerSpanStyle = isLargeText ? { fontSize: 'inherit', lineHeight: 'inherit' } : undefined
+  
   return (
-    <span className={cn("font-heading font-bold", sizeClasses[size], className)}>
-      <span className={ieltsColor}>IELTS</span>
-      <span className={goColor}>Go</span>
+    <span 
+      className={cn("font-heading font-bold inline-flex items-center", sizeClass, className)} 
+      style={{ lineHeight: 'inherit' }}
+    >
+      <span className={ieltsColor} style={innerSpanStyle}>IELTS</span>
+      <span className={goColor} style={innerSpanStyle}>Go</span>
     </span>
   )
 }

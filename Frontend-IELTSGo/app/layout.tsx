@@ -1,20 +1,23 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Poppins } from "next/font/google"
+import { Noto_Sans, Noto_Sans_Display } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/contexts/auth-context"
+import { PreferencesProvider } from "@/lib/contexts/preferences-context"
+import { ThemeProvider } from "@/components/theme-provider"
 import "@/lib/utils/console-filter"
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+const notoSans = Noto_Sans({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
   display: "swap",
 })
 
-const poppins = Poppins({
-  subsets: ["latin"],
+const notoSansDisplay = Noto_Sans_Display({
+  subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-heading",
   display: "swap",
 })
 
@@ -31,9 +34,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
+    <html lang="vi" className={`${notoSans.variable} ${notoSansDisplay.variable}`} suppressHydrationWarning>
       <body className="antialiased" suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <AuthProvider>
+            <PreferencesProvider>{children}</PreferencesProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

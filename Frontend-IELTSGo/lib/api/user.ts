@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient"
+import type { UserPreferences, UpdatePreferencesRequest } from "@/types"
 
 interface ApiResponse<T> {
   success: boolean
@@ -44,6 +45,18 @@ export const userApi = {
     }
     
     const response = await apiClient.put<ApiResponse<any>>("/user/profile", payload)
+    return response.data.data
+  },
+
+  // Get user preferences
+  getPreferences: async (): Promise<UserPreferences> => {
+    const response = await apiClient.get<ApiResponse<UserPreferences>>("/user/preferences")
+    return response.data.data
+  },
+
+  // Update user preferences
+  updatePreferences: async (data: UpdatePreferencesRequest): Promise<UserPreferences> => {
+    const response = await apiClient.put<ApiResponse<UserPreferences>>("/user/preferences", data)
     return response.data.data
   },
 }

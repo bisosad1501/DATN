@@ -462,7 +462,12 @@ func (s *UserService) UpdatePreferences(userID uuid.UUID, req *models.UpdatePref
 		prefs.ShowAnswerExplanation = *req.ShowAnswerExplanation
 	}
 	if req.PlaybackSpeed != nil {
-		prefs.PlaybackSpeed = *req.PlaybackSpeed
+		// Validate playback speed range (0.75 - 2.0)
+		speed := *req.PlaybackSpeed
+		if speed < 0.75 || speed > 2.0 {
+			return nil, fmt.Errorf("playback_speed must be between 0.75 and 2.0")
+		}
+		prefs.PlaybackSpeed = speed
 	}
 	if req.ProfileVisibility != nil {
 		prefs.ProfileVisibility = *req.ProfileVisibility

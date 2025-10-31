@@ -52,10 +52,10 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-6">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-sm">
+      <div className="container mx-auto flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left section */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-shrink-0">
           {showMenuButton && (
             <Button variant="ghost" size="icon" onClick={onMenuClick} className="lg:hidden">
               <Menu className="h-5 w-5" />
@@ -67,14 +67,16 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
 
         {/* Center section - Desktop navigation */}
         {!hideNavItems && (
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-4 flex-1 justify-center max-w-2xl">
             {MAIN_NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary",
-                  pathname === item.href ? "text-primary" : "text-muted-foreground",
+                  "text-sm font-medium transition-colors duration-200 px-3 py-1.5 rounded-md",
+                  pathname === item.href 
+                    ? "text-primary bg-primary/5" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                 )}
               >
                 {item.title}
@@ -84,7 +86,7 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
         )}
 
         {/* Right section */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-shrink-0">
           {isAuthenticated ? (
             <>
               {/* Notifications */}
@@ -140,10 +142,10 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
             </>
           ) : (
             <>
-              <Button variant="ghost" asChild className="hidden md:inline-flex">
+              <Button variant="ghost" asChild className="hidden md:inline-flex text-sm sm:text-base">
                 <Link href="/login">Sign in</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="text-sm sm:text-base">
                 <Link href="/register">Get started</Link>
               </Button>
             </>

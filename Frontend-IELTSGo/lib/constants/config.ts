@@ -12,8 +12,8 @@ export const THEME_CONFIG = {
     cream: "#FEF7EC",
   },
   fonts: {
-    heading: "Poppins",
-    body: "Inter",
+    heading: "Noto Sans Display",
+    body: "Noto Sans",
   },
 } as const
 
