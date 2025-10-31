@@ -51,33 +51,33 @@
 }
 
 .dark {
-  /* IELTSGo Brand Colors - Dark Mode */
-  --background: oklch(0.12 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  /* IELTSGo Brand Colors - Dark Mode - Improved contrast */
+  --background: oklch(0.15 0 0); /* Increased from 0.12 for better visibility */
+  --foreground: oklch(0.98 0 0); /* Slightly brighter for better readability */
+  --card: oklch(0.22 0 0); /* Increased from 0.18 for better card visibility */
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.22 0 0);
+  --popover-foreground: oklch(0.98 0 0);
 
   /* Primary: IELTSGo Red #ED372A */
   --primary: oklch(0.55 0.22 25);
   --primary-foreground: oklch(1 0 0);
 
   /* Secondary: Lighter for dark mode */
-  --secondary: oklch(0.25 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.28 0 0); /* Increased from 0.25 */
+  --secondary-foreground: oklch(0.98 0 0);
 
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted: oklch(0.28 0 0); /* Increased from 0.25 */
+  --muted-foreground: oklch(0.75 0 0); /* Increased from 0.708 for better contrast */
 
   /* Accent: Darker cream for dark mode */
-  --accent: oklch(0.25 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.28 0 0);
+  --accent-foreground: oklch(0.98 0 0);
 
   --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.25 0 0);
-  --input: oklch(0.25 0 0);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.30 0 0); /* Increased from 0.25 for better visibility */
+  --input: oklch(0.22 0 0); /* Increased from 0.25 to match card, better visibility */
   --ring: oklch(0.55 0.22 25);
   --chart-1: oklch(0.55 0.22 25);
   --chart-2: oklch(0.696 0.17 162.48);

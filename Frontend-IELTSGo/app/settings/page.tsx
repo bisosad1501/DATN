@@ -115,8 +115,8 @@ function SettingsContent() {
         <div className="space-y-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Settings</h1>
-            <p className="text-base text-muted-foreground">Manage your account settings and preferences</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 text-foreground">Settings</h1>
+            <p className="text-base text-muted-foreground dark:text-muted-foreground">Manage your account settings and preferences</p>
           </div>
 
           {/* Success Message */}
@@ -148,8 +148,8 @@ function SettingsContent() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="email_notifications" className="text-base">Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                      <Label htmlFor="email_notifications" className="text-base text-foreground dark:text-foreground">Email Notifications</Label>
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive notifications via email</p>
                     </div>
                     <Switch
                       id="email_notifications"
@@ -164,8 +164,8 @@ function SettingsContent() {
 
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="push_notifications" className="text-base">Push Notifications</Label>
-                      <p className="text-sm text-muted-foreground">Receive push notifications</p>
+                      <Label htmlFor="push_notifications" className="text-base text-foreground dark:text-foreground">Push Notifications</Label>
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive push notifications</p>
                     </div>
                     <Switch
                       id="push_notifications"
@@ -180,8 +180,8 @@ function SettingsContent() {
 
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="study_reminders" className="text-base">Study Reminders</Label>
-                      <p className="text-sm text-muted-foreground">Get reminded about your study schedule</p>
+                      <Label htmlFor="study_reminders" className="text-base text-foreground dark:text-foreground">Study Reminders</Label>
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Get reminded about your study schedule</p>
                     </div>
                     <Switch
                       id="study_reminders"
@@ -196,8 +196,8 @@ function SettingsContent() {
 
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="weekly_report" className="text-base">Weekly Report</Label>
-                      <p className="text-sm text-muted-foreground">Receive weekly progress reports</p>
+                      <Label htmlFor="weekly_report" className="text-base text-foreground dark:text-foreground">Weekly Report</Label>
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive weekly progress reports</p>
                     </div>
                     <Switch
                       id="weekly_report"
@@ -221,7 +221,7 @@ function SettingsContent() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="theme" className="text-base">Theme</Label>
+                    <Label htmlFor="theme" className="text-base text-foreground dark:text-foreground">Theme</Label>
                     <Select
                       value={preferences.theme}
                       onValueChange={(value: "light" | "dark" | "auto") =>
@@ -237,15 +237,15 @@ function SettingsContent() {
                         <SelectItem value="auto">Auto (System)</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">Choose your preferred color theme</p>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">Choose your preferred color theme</p>
                   </div>
 
                   <Separator />
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="font_size" className="text-base font-medium">Font Size</Label>
-                      <span className="text-sm text-muted-foreground">
+                      <Label htmlFor="font_size" className="text-base font-medium text-foreground dark:text-foreground">Font Size</Label>
+                      <span className="text-sm text-muted-foreground dark:text-muted-foreground">
                         {preferences.font_size === "small" && "14px"}
                         {preferences.font_size === "medium" && "16px (Default)"}
                         {preferences.font_size === "large" && "18px"}
@@ -281,7 +281,7 @@ function SettingsContent() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       Adjust the text size for better readability. All text elements will scale proportionally.
                     </p>
                   </div>

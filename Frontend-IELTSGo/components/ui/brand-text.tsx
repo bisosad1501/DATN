@@ -8,12 +8,17 @@ interface BrandTextProps {
 
 /**
  * Component hiển thị text "IELTSGo" với màu sắc đúng brand:
- * - IELTS: màu đen (#101615)
+ * - IELTS: màu đen (#101615) trong light mode, màu trắng trong dark mode
  * - Go: màu đỏ (#ED372A)
  */
 export function BrandText({ className = "", variant = "default", size = "md" }: BrandTextProps) {
-  const ieltsColor = variant === "white" ? "text-white" : "text-[#101615]"
-  const goColor = variant === "white" ? "text-white/90" : "text-[#ED372A]"
+  // In dark mode, use white/s Foreground colors. In light mode, use brand colors.
+  const ieltsColor = variant === "white" 
+    ? "text-white" 
+    : "text-[#101615] dark:text-foreground"
+  const goColor = variant === "white" 
+    ? "text-white/90" 
+    : "text-[#ED372A] dark:text-primary"
   
   const sizeClasses = {
     sm: "text-sm",

@@ -4,15 +4,14 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { FormField } from "@/components/ui/form-field"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, BookOpen, PenTool, BarChart3, Sparkles, CheckCircle2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BrandText } from "@/components/ui/brand-text"
+import { Logo } from "@/components/layout/logo"
 
 export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth()
@@ -97,39 +96,74 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Image */}
-      <div className="hidden lg:flex flex-1 bg-accent items-center justify-center p-8">
-        <div className="max-w-md text-center space-y-6">
-          <h2 className="text-4xl font-bold text-foreground">Start Your IELTS Journey Today</h2>
-          <p className="text-lg text-muted-foreground">
-            Get personalized learning paths, practice exercises, and expert guidance to achieve your target band score.
-          </p>
-          <div className="space-y-4 pt-8 text-left">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-primary font-bold">✓</span>
+      {/* Left side - Promotional Content */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent via-accent/80 to-primary/5 items-center justify-center p-8 relative overflow-hidden">
+        {/* Enhanced Decorative shapes */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent/30 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
+        
+        {/* Floating sparkles */}
+        <div className="absolute top-40 left-32 text-primary/20">
+          <Sparkles className="h-8 w-8 animate-pulse" />
+        </div>
+        <div className="absolute bottom-32 right-40 text-primary/15">
+          <Sparkles className="h-6 w-6 animate-pulse delay-500" />
+        </div>
+        
+        <div className="max-w-2xl text-center space-y-10 relative z-10 px-6">
+          {/* Header with gradient text effect */}
+          <div className="space-y-4">
+            <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground">
+              Bắt đầu hành trình IELTS ngay hôm nay
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
+              Nhận lộ trình học tập cá nhân hóa, bài tập thực hành và hướng dẫn chuyên sâu để đạt được điểm số mục tiêu.
+            </p>
+          </div>
+          
+          {/* Enhanced Features with icons */}
+          <div className="space-y-4 pt-6 text-left max-w-xl mx-auto">
+            <div className="group flex items-start gap-4 p-5 rounded-xl bg-card/40 backdrop-blur-md border-2 border-border/40 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1">
+              <div className="p-2.5 rounded-lg bg-primary/15 group-hover:bg-primary/25 transition-colors flex-shrink-0 group-hover:scale-110">
+                <BookOpen className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold">Comprehensive Courses</h3>
-                <p className="text-sm text-muted-foreground">Access 500+ lessons covering all IELTS skills</p>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                  Khóa học toàn diện
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Truy cập 500+ bài học bao phủ tất cả kỹ năng IELTS
+                </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-primary font-bold">✓</span>
+            <div className="group flex items-start gap-4 p-5 rounded-xl bg-card/40 backdrop-blur-md border-2 border-border/40 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1">
+              <div className="p-2.5 rounded-lg bg-primary/15 group-hover:bg-primary/25 transition-colors flex-shrink-0 group-hover:scale-110">
+                <PenTool className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold">Practice Exercises</h3>
-                <p className="text-sm text-muted-foreground">Test your skills with real IELTS-style questions</p>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                  Bài tập thực hành
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Kiểm tra kỹ năng với câu hỏi theo phong cách IELTS thực tế
+                </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-primary font-bold">✓</span>
+            <div className="group flex items-start gap-4 p-5 rounded-xl bg-card/40 backdrop-blur-md border-2 border-border/40 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1">
+              <div className="p-2.5 rounded-lg bg-primary/15 group-hover:bg-primary/25 transition-colors flex-shrink-0 group-hover:scale-110">
+                <BarChart3 className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold">Track Progress</h3>
-                <p className="text-sm text-muted-foreground">Monitor your improvement with detailed analytics</p>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                  Theo dõi tiến độ
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Giám sát sự tiến bộ với phân tích chi tiết
+                </p>
               </div>
             </div>
           </div>
@@ -137,17 +171,23 @@ export default function RegisterPage() {
       </div>
 
       {/* Right side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
-          <div className="text-center">
-            <Link href="/" className="inline-block">
-              <Image src="/images/logo.png" alt="IELTSGo" width={80} height={80} className="mx-auto" />
-            </Link>
-            <h1 className="mt-6 text-3xl font-bold">
-              Join <BrandText className="text-3xl" />
-            </h1>
-            <p className="mt-2 text-muted-foreground">Create your account and start learning today</p>
+      <div className="flex-1 flex items-center justify-center p-8 bg-background relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-0 left-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/30 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+        
+        <div className="w-full max-w-md space-y-8 relative z-10">
+          {/* Logo and Welcome Message */}
+          <div className="text-center space-y-4">
+            <Logo className="justify-center" />
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Tạo tài khoản
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Bắt đầu hành trình IELTS của bạn ngay hôm nay
+              </p>
+            </div>
           </div>
 
           {/* Error Alert */}
@@ -159,7 +199,7 @@ export default function RegisterPage() {
           )}
 
           {/* Register Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5 bg-card/50 backdrop-blur-sm p-6 rounded-lg border border-border/50 shadow-sm">
             <FormField
               label="Full Name"
               name="fullName"
@@ -208,14 +248,14 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="targetBandScore" className="text-sm font-medium">
-                Target Band Score (Optional)
+                Điểm số mục tiêu (Tùy chọn)
               </Label>
               <Select
                 value={formData.targetBandScore}
                 onValueChange={(value) => setFormData({ ...formData, targetBandScore: value })}
               >
                 <SelectTrigger id="targetBandScore">
-                  <SelectValue placeholder="Select your target score" />
+                  <SelectValue placeholder="Chọn điểm số mục tiêu của bạn" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5.5">5.5</SelectItem>
@@ -231,27 +271,27 @@ export default function RegisterPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create account"}
+              {isLoading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              By creating an account, you agree to our{" "}
+              Bằng việc tạo tài khoản, bạn đồng ý với{" "}
               <Link href="/terms" className="text-primary hover:underline">
-                Terms of Service
+                Điều khoản dịch vụ
               </Link>{" "}
-              and{" "}
+              và{" "}
               <Link href="/privacy" className="text-primary hover:underline">
-                Privacy Policy
+                Chính sách bảo mật
               </Link>
             </p>
           </form>
 
           {/* Login Link */}
-          <div className="text-center">
+          <div className="text-center pt-2">
             <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
+              Đã có tài khoản?{" "}
               <Link href="/login" className="text-primary hover:underline font-medium">
-                Sign in
+                Đăng nhập ngay
               </Link>
             </p>
           </div>

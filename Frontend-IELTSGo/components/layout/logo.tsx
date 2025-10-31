@@ -7,19 +7,20 @@ interface LogoProps {
   collapsed?: boolean
   className?: string
   variant?: "default" | "white"
+  /** Nếu true, không bọc trong Link (dùng khi đã có Link bên ngoài hoặc không cần link) */
+  noLink?: boolean
 }
 
 /**
- * Logo component - đơn giản như các hệ thống thực tế
- * Icon và text, kích thước cố định hợp lý, scale đơn giản với font-size-multiplier
+ * Logo component - Centralized logo component for easy maintenance
+ * - Icon: hình tròn, scale với font-size-multiplier
+ * - Text: BrandText component tự động adapt dark mode
+ * - Chỉ cần sửa ở đây để thay đổi toàn bộ hệ thống
  */
-export function Logo({ collapsed = false, className = "", variant = "default" }: LogoProps) {
-  return (
-    <Link 
-      href="/" 
-      className={`inline-flex items-center gap-3 ${className} group hover:opacity-90 transition-opacity`}
-    >
-      {/* Icon: Logo mới - hình tròn, cùng size với avatar */}
+export function Logo({ collapsed = false, className = "", variant = "default", noLink = false }: LogoProps) {
+  const logoContent = (
+    <>
+      {/* Icon: Logo hình tròn, cùng size với avatar */}
       <Image 
         src="/images/logo.png" 
         alt={`${APP_CONFIG.name} Logo`} 
@@ -32,13 +33,30 @@ export function Logo({ collapsed = false, className = "", variant = "default" }:
         }}
         priority
       />
-      {/* Text: BrandText - size lớn hơn để nổi bật */}
+      {/* Text: BrandText - tự động adapt dark mode */}
       {!collapsed && (
         <BrandText 
           variant={variant} 
           className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight whitespace-nowrap" 
         />
       )}
+    </>
+  )
+
+  if (noLink) {
+    return (
+      <div className={`inline-flex items-center gap-3 ${className}`}>
+        {logoContent}
+      </div>
+    )
+  }
+
+  return (
+    <Link 
+      href="/" 
+      className={`inline-flex items-center gap-3 ${className} group hover:opacity-90 transition-opacity`}
+    >
+      {logoContent}
     </Link>
   )
 }
