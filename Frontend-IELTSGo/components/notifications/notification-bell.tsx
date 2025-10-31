@@ -122,7 +122,12 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-96 p-0 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <DropdownMenuContent 
+        align="end" 
+        className="w-[400px] p-0 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+        sideOffset={8}
+        style={{ maxHeight: 'calc(100vh - 100px)' }}
+      >
         <NotificationList
           onMarkAllAsRead={handleMarkAllAsRead}
           onNotificationRead={() => setUnreadCount((prev) => Math.max(0, prev - 1))}

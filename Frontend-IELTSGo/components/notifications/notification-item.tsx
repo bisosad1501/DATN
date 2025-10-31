@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
-import { X, ChevronDown, ChevronUp } from "lucide-react"
+import { X } from "lucide-react"
 import type { Notification } from "@/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -18,14 +18,40 @@ interface NotificationItemProps {
 export function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
+  const [needsTruncation, setNeedsTruncation] = useState(false)
+  const messageRef = useRef<HTMLParagraphElement>(null)
   const isRead = notification.read ?? notification.isRead ?? notification.is_read ?? false
   const createdAt = notification.createdAt || notification.created_at
   
-  // Check if message is long (more than 100 characters)
-  const isLongMessage = notification.message && notification.message.length > 100
-  const displayMessage = isExpanded || !isLongMessage 
-    ? notification.message 
-    : notification.message.substring(0, 100) + "..."
+  // Check if message actually needs truncation by comparing heights
+  // Wait for DOM to render before checking
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    const checkTruncation = () => {
+      if (messageRef.current && !isExpanded) {
+        // Temporarily remove line-clamp to get full height
+        const originalClasses = messageRef.current.className
+        messageRef.current.classList.remove('line-clamp-2')
+        const fullHeight = messageRef.current.scrollHeight
+        
+        // Restore line-clamp
+        messageRef.current.className = originalClasses
+        
+        // Get line height and calculate max height for 2 lines
+        const lineHeight = parseFloat(getComputedStyle(messageRef.current).lineHeight) || 20
+        const maxHeight = lineHeight * 2 + 2 // 2 lines with small buffer
+        
+        // Only show "Xem thêm" if content actually exceeds 2 lines
+        setNeedsTruncation(fullHeight > maxHeight)
+      } else {
+        setNeedsTruncation(false)
+      }
+    }
+    
+    // Small delay to ensure DOM is rendered
+    const timeoutId = setTimeout(checkTruncation, 10)
+    return () => clearTimeout(timeoutId)
+  }, [notification.message, isExpanded])
 
   const handleClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking expand button or delete button
@@ -69,41 +95,92 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
   return (
     <div
       className={cn(
-        "group relative flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800",
+        "group relative flex items-start gap-3 px-4 py-3.5 hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer",
+        "transition-all duration-200 border-b border-gray-100/80 dark:border-gray-800/50 last:border-b-0",
         !isRead && "bg-primary/5 dark:bg-primary/10"
       )}
       onClick={handleClick}
     >
       {/* Unread indicator - subtle left border với màu chủ đạo */}
       {!isRead && (
-        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
       )}
 
-      {/* Content - no icon, clean text layout */}
+      {/* Content - clean text layout */}
       <div className="flex-1 min-w-0 pt-0.5">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className={cn(
-              "text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2",
-              !isRead && "font-semibold"
+              "text-sm font-semibold text-gray-900 dark:text-gray-100 leading-5 mb-1.5",
+              !isRead && "text-gray-900 dark:text-gray-50"
             )}>
               {notification.title}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {displayMessage}
-              {isLongMessage && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsExpanded(!isExpanded)
-                  }}
-                  className="ml-1 text-primary hover:underline font-medium"
-                >
-                  {isExpanded ? "Thu gọn" : "Xem thêm"}
-                </button>
-              )}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+            <div className="space-y-1.5">
+              <div className="relative">
+                {/* Message with gradient fade (professional approach like Udemy/Coursera) */}
+                <div className="relative">
+                  <p 
+                    ref={messageRef}
+                    className={cn(
+                      "text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words",
+                      "transition-all duration-300 ease-in-out",
+                      !isExpanded && needsTruncation && "line-clamp-2"
+                    )}
+                  >
+                    {notification.message}
+                  </p>
+                  
+                  {/* Gradient fade overlay when truncated (subtle, professional) */}
+                  {/* Matches notification background: white/gray-50 for read, primary/5 for unread */}
+                  {!isExpanded && needsTruncation && (
+                    <>
+                      {/* Light mode - white background */}
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none dark:hidden"
+                        style={{
+                          background: isRead 
+                            ? 'linear-gradient(to bottom, transparent, white)' 
+                            : 'linear-gradient(to bottom, transparent, rgba(237, 55, 42, 0.05))',
+                        }}
+                      />
+                      {/* Dark mode - gray-900 background */}
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none hidden dark:block"
+                        style={{
+                          background: isRead
+                            ? 'linear-gradient(to bottom, transparent, rgb(17 24 39))'
+                            : 'linear-gradient(to bottom, transparent, rgba(237, 55, 42, 0.1))',
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+                
+                {/* Subtle inline "Xem thêm" button (professional style) */}
+                {needsTruncation && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsExpanded(!isExpanded)
+                    }}
+                    className={cn(
+                      "inline-flex items-center text-xs text-primary/70 hover:text-primary",
+                      "transition-all duration-200 font-normal",
+                      "mt-1 -ml-0.5 px-0.5 py-0",
+                      "focus:outline-none focus:underline"
+                    )}
+                  >
+                    {isExpanded ? (
+                      <span className="underline">Thu gọn</span>
+                    ) : (
+                      <span>... Xem thêm</span>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2.5">
               {formatTime()}
             </p>
           </div>
@@ -113,8 +190,9 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
             variant="ghost"
             size="icon"
             className={cn(
-              "h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
-              "hover:bg-transparent"
+              "h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200",
+              "text-gray-400 hover:text-gray-700 dark:hover:text-gray-200",
+              "hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
             )}
             onClick={(e) => {
               e.stopPropagation()

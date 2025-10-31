@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { isToday, isYesterday, isThisWeek } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface NotificationListProps {
   onMarkAllAsRead: () => void
@@ -179,42 +180,52 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead, newNotif
   }
 
   return (
-    <div className="flex flex-col bg-white dark:bg-gray-900">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+    <div className="flex flex-col bg-white dark:bg-gray-900 h-full">
+      {/* Header - sticky */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10 shrink-0">
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Thông báo</h3>
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={onMarkAllAsRead}
-          className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 h-auto py-1 px-2"
+          disabled={notifications.length === 0}
+          className={cn(
+            "text-xs font-medium h-auto py-1.5 px-3 rounded-md transition-colors duration-200",
+            "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100",
+            "hover:bg-gray-100 dark:hover:bg-gray-800",
+            "disabled:opacity-40 disabled:cursor-not-allowed"
+          )}
         >
           Đọc tất cả
         </Button>
       </div>
 
-      {/* Notifications list */}
-      <ScrollArea className="h-[500px]">
-        {groupedNotifications.map((group) => (
-          <div key={group.label} className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-            {/* Date header */}
-            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                {group.label}
-              </h4>
+      {/* Notifications list - fixed max height with scroll */}
+      <ScrollArea className="max-h-[500px] min-h-[200px]">
+        <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
+          {groupedNotifications.map((group) => (
+            <div key={group.label}>
+              {/* Date header */}
+              <div className="px-5 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-gray-800/50 sticky top-0 z-5 backdrop-blur-sm">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {group.label}
+                </h4>
+              </div>
+              
+              {/* Notification items */}
+              <div>
+                {group.notifications.map((notification) => (
+                  <NotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    onMarkAsRead={handleMarkAsRead}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
             </div>
-            
-            {/* Notification items */}
-            {group.notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onMarkAsRead={handleMarkAsRead}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        ))}
+          ))}
+        </div>
       </ScrollArea>
     </div>
   )

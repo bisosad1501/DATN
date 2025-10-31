@@ -41,8 +41,9 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
   }
 
   const getUserInitials = () => {
-    if (!user?.fullName) return "U"
+    if (!user?.fullName || !user.fullName.trim()) return "U"
     return user.fullName
+      .trim()
       .split(" ")
       .map((n) => n[0])
       .join("")
@@ -104,7 +105,9 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.fullName}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {user?.fullName || "Người dùng"}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                     </div>
                   </DropdownMenuLabel>

@@ -128,6 +128,18 @@ func (r *UserRepository) UpdateProfile(userID uuid.UUID, req *models.UpdateProfi
 	args := []interface{}{userID}
 	paramCount := 1
 
+	// full_name takes priority if provided directly
+	if req.FullName != nil {
+		paramCount++
+		query += fmt.Sprintf(", full_name = $%d", paramCount)
+		args = append(args, *req.FullName)
+	} else if req.FirstName != nil && req.LastName != nil {
+		// Auto-generate full_name if both first and last name are provided (and full_name not provided)
+		paramCount++
+		query += fmt.Sprintf(", full_name = $%d", paramCount)
+		args = append(args, fmt.Sprintf("%s %s", *req.FirstName, *req.LastName))
+	}
+
 	if req.FirstName != nil {
 		paramCount++
 		query += fmt.Sprintf(", first_name = $%d", paramCount)
@@ -137,13 +149,6 @@ func (r *UserRepository) UpdateProfile(userID uuid.UUID, req *models.UpdateProfi
 		paramCount++
 		query += fmt.Sprintf(", last_name = $%d", paramCount)
 		args = append(args, *req.LastName)
-
-		// Auto-generate full_name if both first and last name are provided
-		if req.FirstName != nil {
-			paramCount++
-			query += fmt.Sprintf(", full_name = $%d", paramCount)
-			args = append(args, fmt.Sprintf("%s %s", *req.FirstName, *req.LastName))
-		}
 	}
 	if req.DateOfBirth != nil {
 		paramCount++

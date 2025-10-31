@@ -89,15 +89,13 @@ export function ReviewList({ courseId, refreshTrigger }: ReviewListProps) {
                           .slice(0, 2)
                           .join("")
                           .toUpperCase()
-                      : (review.user_email 
-                          ? review.user_email.slice(0, 2).toUpperCase() 
-                          : "U")}
+                      : "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-sm">
-                      {review.user_name || review.user_email?.split('@')[0] || "Người dùng ẩn danh"}
+                      {review.user_name || "Người dùng ẩn danh"}
                     </span>
                     <span className="text-sm text-muted-foreground">•</span>
                     <span className="text-sm text-muted-foreground">

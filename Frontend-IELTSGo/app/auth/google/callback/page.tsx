@@ -71,12 +71,34 @@ export default function GoogleCallbackPage() {
           localStorage.setItem("access_token", accessToken)
           localStorage.setItem("refresh_token", refreshToken)
 
+          // Get full profile from user service to get actual fullName
+          let fullName = ""
+          let bio = ""
+          let avatar = ""
+          let targetBandScore: number | undefined
+          try {
+            // Import userApi dynamically to avoid circular dependency
+            const { userApi } = await import("@/lib/api/user")
+            const profile = await userApi.getProfile()
+            fullName = (profile.full_name && profile.full_name.trim()) || ""
+            bio = profile.bio || ""
+            avatar = profile.avatar_url || ""
+            targetBandScore = profile.target_band_score
+          } catch (error) {
+            console.warn("Failed to fetch profile after Google login:", error)
+            // Don't fallback to email - leave fullName empty
+            fullName = ""
+          }
+
           // Store user data
           const userData: User = {
             id: userId,
             email: email,
             role: role as "student" | "instructor" | "admin",
-            fullName: email.split("@")[0],
+            fullName: fullName || "",
+            bio: bio || undefined,
+            avatar: avatar || undefined,
+            targetBandScore: targetBandScore,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }
@@ -136,12 +158,34 @@ export default function GoogleCallbackPage() {
           localStorage.setItem("access_token", response.data.access_token)
           localStorage.setItem("refresh_token", response.data.refresh_token)
 
+          // Get full profile from user service to get actual fullName
+          let fullName = ""
+          let bio = ""
+          let avatar = ""
+          let targetBandScore: number | undefined
+          try {
+            // Import userApi dynamically to avoid circular dependency
+            const { userApi } = await import("@/lib/api/user")
+            const profile = await userApi.getProfile()
+            fullName = (profile.full_name && profile.full_name.trim()) || ""
+            bio = profile.bio || ""
+            avatar = profile.avatar_url || ""
+            targetBandScore = profile.target_band_score
+          } catch (error) {
+            console.warn("Failed to fetch profile after Google token exchange:", error)
+            // Don't fallback to email - leave fullName empty
+            fullName = ""
+          }
+
           // Store user data
           const userData: User = {
             id: response.data.user_id,
             email: response.data.email,
             role: response.data.role,
-            fullName: response.data.email.split("@")[0],
+            fullName: fullName || "",
+            bio: bio || undefined,
+            avatar: avatar || undefined,
+            targetBandScore: targetBandScore,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }

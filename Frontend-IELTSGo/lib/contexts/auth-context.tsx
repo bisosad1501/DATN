@@ -35,10 +35,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Validate token
           const validation = await authApi.validateToken()
           if (validation.success && validation.data?.valid) {
-            // Get user data from token
+            // Get user data from localStorage first (for faster initial load)
             const userData = localStorage.getItem("user_data")
             if (userData) {
-              setUser(JSON.parse(userData))
+              const parsedUser = JSON.parse(userData)
+              setUser(parsedUser)
+            }
+            
+            // Then fetch fresh profile from backend to get actual fullName
+            try {
+              const profile = await userApi.getProfile()
+              const existingUserData = localStorage.getItem("user_data")
+              if (existingUserData) {
+                const existingUser = JSON.parse(existingUserData)
+                const updatedUser: User = {
+                  ...existingUser,
+                  fullName: (profile.full_name && profile.full_name.trim()) || existingUser.fullName || "",
+                  bio: profile.bio || existingUser.bio || undefined,
+                  avatar: profile.avatar_url || existingUser.avatar || undefined,
+                  targetBandScore: profile.target_band_score || existingUser.targetBandScore,
+                }
+                localStorage.setItem("user_data", JSON.stringify(updatedUser))
+                setUser(updatedUser)
+              }
+            } catch (error) {
+              console.warn("Failed to fetch profile on load, using cached data:", error)
             }
           } else {
             // Token invalid, clear storage
@@ -72,12 +93,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("access_token", response.data.access_token)
       localStorage.setItem("refresh_token", response.data.refresh_token)
       
+      // Get full profile from user service to get actual fullName
+      let fullName = ""
+      let bio = ""
+      let avatar = ""
+      let targetBandScore: number | undefined
+      try {
+        const profile = await userApi.getProfile()
+        fullName = (profile.full_name && profile.full_name.trim()) || ""
+        bio = profile.bio || ""
+        avatar = profile.avatar_url || ""
+        targetBandScore = profile.target_band_score
+      } catch (error) {
+        console.warn("Failed to fetch profile after login:", error)
+        // Don't fallback to email - leave fullName empty if not available
+        fullName = ""
+      }
+      
       // Store user data
       const userData: User = {
         id: response.data.user_id,
         email: response.data.email,
         role: response.data.role,
-        fullName: response.data.email.split("@")[0], // Temporary until we get full name from user service
+        fullName: fullName || "",
+        bio: bio || undefined,
+        avatar: avatar || undefined,
+        targetBandScore: targetBandScore,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -129,12 +170,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("access_token", response.data.access_token)
       localStorage.setItem("refresh_token", response.data.refresh_token)
       
+      // Get full profile from user service to get actual fullName (may have been set during registration)
+      let fullName = data.fullName || ""
+      let bio = ""
+      let avatar = ""
+      let targetBandScore: number | undefined = data.targetBandScore
+      try {
+        // Wait a bit for profile creation to complete
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const profile = await userApi.getProfile()
+        fullName = (profile.full_name && profile.full_name.trim()) || data.fullName || ""
+        bio = profile.bio || ""
+        avatar = profile.avatar_url || ""
+        targetBandScore = profile.target_band_score || data.targetBandScore
+      } catch (error) {
+        console.warn("Failed to fetch profile after registration:", error)
+        // Use provided fullName, don't fallback to email
+        fullName = data.fullName || ""
+      }
+      
       // Store user data
       const userData: User = {
         id: response.data.user_id,
         email: response.data.email,
         role: response.data.role,
-        fullName: response.data.email.split("@")[0],
+        fullName: fullName || "",
+        bio: bio || undefined,
+        avatar: avatar || undefined,
+        targetBandScore: targetBandScore,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -186,15 +249,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userData = localStorage.getItem("user_data")
           if (userData) {
             const existingUser = JSON.parse(userData)
+            // Only use full_name from backend if it exists and is not empty
+            // Don't fallback to email - keep existing fullName or leave empty
             const updatedUser: User = {
               ...existingUser,
-              fullName: profile.full_name || existingUser.fullName,
-              bio: profile.bio || existingUser.bio,
-              avatar: profile.avatar_url || existingUser.avatar,
+              fullName: (profile.full_name && profile.full_name.trim()) 
+                ? profile.full_name.trim() 
+                : (existingUser.fullName || ""),
+              bio: profile.bio || existingUser.bio || undefined,
+              avatar: profile.avatar_url || existingUser.avatar || undefined,
               targetBandScore: profile.target_band_score || existingUser.targetBandScore,
             }
             localStorage.setItem("user_data", JSON.stringify(updatedUser))
             setUser(updatedUser)
+          } else {
+            // No existing user data, create from profile
+            const profile = await userApi.getProfile()
+            const existingUserData = localStorage.getItem("user_data")
+            const existingUser = existingUserData ? JSON.parse(existingUserData) : null
+            const newUser: User = {
+              id: existingUser?.id || "",
+              email: profile.email || existingUser?.email || "",
+              role: profile.role || existingUser?.role || "student",
+              fullName: (profile.full_name && profile.full_name.trim()) || "",
+              bio: profile.bio || undefined,
+              avatar: profile.avatar_url || undefined,
+              targetBandScore: profile.target_band_score,
+              createdAt: profile.created_at || existingUser?.createdAt || new Date().toISOString(),
+              updatedAt: profile.updated_at || existingUser?.updatedAt || new Date().toISOString(),
+            }
+            localStorage.setItem("user_data", JSON.stringify(newUser))
+            setUser(newUser)
           }
         } catch (error) {
           // Fallback to localStorage if API fails
