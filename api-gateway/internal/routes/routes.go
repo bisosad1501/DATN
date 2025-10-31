@@ -233,6 +233,9 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 	notificationGroup := v1.Group("/notifications")
 	notificationGroup.Use(authMiddleware.ValidateToken())
 	{
+		// SSE stream (must be before /:id to avoid route conflict)
+		notificationGroup.GET("/stream", proxy.ReverseProxy(cfg.Services.NotificationService))
+		
 		notificationGroup.GET("", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.GET("/unread-count", proxy.ReverseProxy(cfg.Services.NotificationService))
 		notificationGroup.GET("/:id", proxy.ReverseProxy(cfg.Services.NotificationService))

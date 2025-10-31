@@ -10,9 +10,9 @@ import type {
 } from "@/types"
 
 export interface CourseFilters {
-  level?: string
-  skill_type?: string
-  enrollment_type?: string
+  level?: string | string[]
+  skill_type?: string | string[]
+  enrollment_type?: string | string[]
   is_featured?: boolean
   search?: string
 }
@@ -42,9 +42,19 @@ export const coursesApi = {
     const params = new URLSearchParams()
 
     // Backend uses: skill_type, level, enrollment_type, is_featured, search, page, limit
-    if (filters?.level) params.append("level", filters.level)
-    if (filters?.skill_type) params.append("skill_type", filters.skill_type)
-    if (filters?.enrollment_type) params.append("enrollment_type", filters.enrollment_type)
+    // Support comma-separated values for OR logic
+    if (filters?.level) {
+      const levelValue = Array.isArray(filters.level) ? filters.level.join(",") : filters.level
+      params.append("level", levelValue)
+    }
+    if (filters?.skill_type) {
+      const skillValue = Array.isArray(filters.skill_type) ? filters.skill_type.join(",") : filters.skill_type
+      params.append("skill_type", skillValue)
+    }
+    if (filters?.enrollment_type) {
+      const enrollmentValue = Array.isArray(filters.enrollment_type) ? filters.enrollment_type.join(",") : filters.enrollment_type
+      params.append("enrollment_type", enrollmentValue)
+    }
     if (filters?.is_featured !== undefined) params.append("is_featured", String(filters.is_featured))
     if (filters?.search) params.append("search", filters.search)
 

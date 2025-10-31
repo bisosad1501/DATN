@@ -32,9 +32,27 @@ type Claims struct {
 }
 
 // Authenticate validates JWT token and extracts user info
+// Supports both direct JWT validation and X-User-ID header from API Gateway
 func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token from Authorization header
+		// Try to get user_id from X-User-ID header (set by API Gateway)
+		if userIDHeader := c.GetHeader("X-User-ID"); userIDHeader != "" {
+			userID, err := uuid.Parse(userIDHeader)
+			if err == nil {
+				c.Set("user_id", userID)
+				// Try to get email and role from headers too
+				if email := c.GetHeader("X-User-Email"); email != "" {
+					c.Set("email", email)
+				}
+				if role := c.GetHeader("X-User-Role"); role != "" {
+					c.Set("role", role)
+				}
+				c.Next()
+				return
+			}
+		}
+
+		// Fallback: Get token from Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, models.ErrorResponse{

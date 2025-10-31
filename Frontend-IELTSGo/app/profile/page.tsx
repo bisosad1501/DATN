@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { AppLayout } from "@/components/layout/app-layout"
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Camera, CheckCircle2 } from "lucide-react"
+import { userApi } from "@/lib/api/user"
 
 export default function ProfilePage() {
   return (
@@ -25,10 +26,12 @@ export default function ProfilePage() {
 }
 
 function ProfileContent() {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, refreshUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
     email: user?.email || "",
@@ -81,6 +84,60 @@ function ProfileContent() {
       setErrors({ general: error.response?.data?.message || "Failed to update profile" })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors({ avatar: "File size must be less than 2MB" })
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setErrors({ avatar: "File must be an image" })
+      return
+    }
+
+    setIsUploadingAvatar(true)
+    setErrors({})
+
+    try {
+      // Convert file to base64 data URL
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64String = reader.result as string
+        try {
+          // Upload avatar URL to backend
+          await userApi.uploadAvatar(base64String)
+          
+          // Update user state
+          if (user) {
+            const updatedUser = { ...user, avatar: base64String }
+            localStorage.setItem("user_data", JSON.stringify(updatedUser))
+            refreshUser()
+          }
+          
+          setSuccessMessage("Avatar updated successfully!")
+          setTimeout(() => setSuccessMessage(""), 3000)
+        } catch (error: any) {
+          setErrors({ avatar: error.response?.data?.error?.message || "Failed to upload avatar" })
+        } finally {
+          setIsUploadingAvatar(false)
+        }
+      }
+      reader.onerror = () => {
+        setErrors({ avatar: "Failed to read file" })
+        setIsUploadingAvatar(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error: any) {
+      setErrors({ avatar: "Failed to process file" })
+      setIsUploadingAvatar(false)
     }
   }
 
@@ -161,10 +218,31 @@ function ProfileContent() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <Button variant="outline" size="sm">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        id="avatar-upload"
+                        accept="image/jpeg,image/png,image/gif"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                        disabled={isUploadingAvatar}
+                      />
+                      <label
+                        htmlFor="avatar-upload"
+                        className={`
+                          inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all
+                          border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground
+                          h-8 rounded-md gap-1.5 px-3
+                          cursor-pointer
+                          ${isUploadingAvatar ? 'opacity-50 pointer-events-none' : ''}
+                        `}
+                      >
                         <Camera className="mr-2 h-4 w-4" />
-                        Change photo
-                      </Button>
+                        {isUploadingAvatar ? "Uploading..." : "Change photo"}
+                      </label>
+                      {errors.avatar && (
+                        <p className="text-xs text-destructive mt-1">{errors.avatar}</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-2">JPG, PNG or GIF. Max size 2MB.</p>
                     </div>
                   </div>

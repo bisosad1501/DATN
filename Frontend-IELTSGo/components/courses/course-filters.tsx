@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { Search, SlidersHorizontal, X } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, X, Filter, Gift, Crown, Star, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import type { CourseFilters } from "@/lib/api/courses"
 
 interface CourseFiltersProps {
@@ -18,58 +19,90 @@ interface CourseFiltersProps {
 }
 
 const SKILL_OPTIONS = [
-  { value: "listening", label: "Listening" },
-  { value: "reading", label: "Reading" },
-  { value: "writing", label: "Writing" },
-  { value: "speaking", label: "Speaking" },
-  { value: "general", label: "General" },
+  { value: "listening", label: "Listening", color: "bg-blue-500" },
+  { value: "reading", label: "Reading", color: "bg-green-500" },
+  { value: "writing", label: "Writing", color: "bg-orange-500" },
+  { value: "speaking", label: "Speaking", color: "bg-purple-500" },
+  { value: "general", label: "General", color: "bg-gray-500" },
 ]
 
 const LEVEL_OPTIONS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
+  { value: "beginner", label: "Beginner", color: "bg-emerald-500" },
+  { value: "intermediate", label: "Intermediate", color: "bg-yellow-500" },
+  { value: "advanced", label: "Advanced", color: "bg-red-500" },
 ]
 
 const ENROLLMENT_TYPE_OPTIONS = [
-  { value: "free", label: "Free" },
-  { value: "premium", label: "Premium" },
+  { value: "free", label: "Free", icon: Gift },
+  { value: "premium", label: "Premium", icon: Crown },
 ]
 
 export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: CourseFiltersProps) {
   const [searchValue, setSearchValue] = useState(filters.search || "")
   const [isOpen, setIsOpen] = useState(false)
 
+  // Sync searchValue when filters.search changes externally
+  useEffect(() => {
+    setSearchValue(filters.search || "")
+  }, [filters.search])
+
   const handleSkillChange = (skill: string) => {
-    // Backend uses single skill_type, not array
-    onFiltersChange({ ...filters, skill_type: filters.skill_type === skill ? undefined : skill })
+    const currentSkills = Array.isArray(filters.skill_type) ? filters.skill_type : (filters.skill_type ? [filters.skill_type] : [])
+    const newSkills = currentSkills.includes(skill)
+      ? currentSkills.filter((s) => s !== skill)
+      : [...currentSkills, skill]
+    onFiltersChange({ ...filters, skill_type: newSkills.length > 0 ? (newSkills.length === 1 ? newSkills[0] : newSkills) : undefined })
   }
 
   const handleLevelChange = (level: string) => {
-    // Backend uses single level, not array
-    onFiltersChange({ ...filters, level: filters.level === level ? undefined : level })
+    const currentLevels = Array.isArray(filters.level) ? filters.level : (filters.level ? [filters.level] : [])
+    const newLevels = currentLevels.includes(level)
+      ? currentLevels.filter((l) => l !== level)
+      : [...currentLevels, level]
+    onFiltersChange({ ...filters, level: newLevels.length > 0 ? (newLevels.length === 1 ? newLevels[0] : newLevels) : undefined })
   }
   
   const handleEnrollmentTypeChange = (type: string) => {
-    onFiltersChange({ ...filters, enrollment_type: filters.enrollment_type === type ? undefined : type })
+    const currentTypes = Array.isArray(filters.enrollment_type) ? filters.enrollment_type : (filters.enrollment_type ? [filters.enrollment_type] : [])
+    const newTypes = currentTypes.includes(type)
+      ? currentTypes.filter((t) => t !== type)
+      : [...currentTypes, type]
+    onFiltersChange({ ...filters, enrollment_type: newTypes.length > 0 ? (newTypes.length === 1 ? newTypes[0] : newTypes) : undefined })
   }
 
   const handleClearFilters = () => {
-    onFiltersChange({})
+    // Clear search first
     setSearchValue("")
     onSearch("")
+    // Then clear all other filters - explicitly set all fields to undefined
+    onFiltersChange({
+      search: undefined,
+      skill_type: undefined,
+      level: undefined,
+      enrollment_type: undefined,
+      is_featured: undefined,
+    })
+    // Close sheet if open
+    if (isOpen) {
+      setIsOpen(false)
+    }
   }
 
   const activeFilterCount =
-    (filters.skill_type ? 1 : 0) + (filters.level ? 1 : 0) + (filters.enrollment_type ? 1 : 0) + (filters.is_featured ? 1 : 0)
+    (filters.search ? 1 : 0) +
+    (Array.isArray(filters.skill_type) ? filters.skill_type.length : (filters.skill_type ? 1 : 0)) + 
+    (Array.isArray(filters.level) ? filters.level.length : (filters.level ? 1 : 0)) + 
+    (Array.isArray(filters.enrollment_type) ? filters.enrollment_type.length : (filters.enrollment_type ? 1 : 0)) + 
+    (filters.is_featured ? 1 : 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Search Bar */}
       <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <Input
-            placeholder="Search courses..."
+            placeholder="Search courses by title, instructor, or keyword..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyDown={(e) => {
@@ -77,113 +110,235 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                 onSearch(searchValue)
               }
             }}
-            className="pl-10"
+            className="pl-12 h-12 text-base border-2 focus:border-primary transition-all shadow-sm"
           />
         </div>
-        <Button onClick={() => onSearch(searchValue)}>Search</Button>
+        <Button 
+          onClick={() => onSearch(searchValue)} 
+          className="h-12 px-8 text-base font-medium shadow-md hover:shadow-lg transition-shadow"
+        >
+          Search
+        </Button>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="relative bg-transparent">
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
-              Filters
+            <Button 
+              variant="outline" 
+              className="relative h-12 px-5 border-2 hover:border-primary transition-all shadow-sm"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              <span className="font-medium">Filters</span>
               {activeFilterCount > 0 && (
                 <Badge
-                  variant="destructive"
-                  className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center"
+                  className="absolute -top-2 -right-2 w-6 h-6 p-0 flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground shadow-md"
                 >
                   {activeFilterCount}
                 </Badge>
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Filter Courses</SheetTitle>
-              <SheetDescription>Refine your search with these filters</SheetDescription>
-            </SheetHeader>
+          <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
+            <div className="sticky top-0 bg-background z-10 border-b px-6 py-5 shadow-sm">
+              <SheetHeader>
+                <SheetTitle className="text-2xl font-bold tracking-tight">Filter Courses</SheetTitle>
+                <p className="text-sm text-muted-foreground mt-1.5">
+                  Narrow down your search to find the perfect course
+                </p>
+                <p className="text-xs text-muted-foreground mt-2 italic">
+                  Tip: Select multiple options in the same category for "OR" logic (e.g., Listening OR Reading). Different categories use "AND" logic.
+                </p>
+              </SheetHeader>
+            </div>
 
-            <div className="space-y-6 mt-6">
-              <div>
-                <Label className="text-base font-semibold mb-3 block">Skill Type</Label>
-                <div className="space-y-2">
-                  {SKILL_OPTIONS.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`skill-${option.value}`}
-                        checked={filters.skill_type === option.value}
-                        onCheckedChange={() => handleSkillChange(option.value)}
-                      />
+            <div className="px-6 py-6 space-y-8">
+              {/* Skill Type */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-semibold text-foreground">Skill Type</Label>
+                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                </div>
+                <div className="space-y-2.5">
+                  {SKILL_OPTIONS.map((option) => {
+                    const skillArray = Array.isArray(filters.skill_type) ? filters.skill_type : (filters.skill_type ? [filters.skill_type] : [])
+                    const isSelected = skillArray.includes(option.value)
+                    return (
                       <label
+                        key={option.value}
                         htmlFor={`skill-${option.value}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                          "hover:bg-muted/50 hover:border-primary/30",
+                          isSelected && "bg-primary/5 border-primary shadow-sm"
+                        )}
                       >
-                        {option.label}
+                        <Checkbox
+                          id={`skill-${option.value}`}
+                          checked={isSelected}
+                          onCheckedChange={() => handleSkillChange(option.value)}
+                          className="w-5 h-5"
+                        />
+                        <span className={`w-3 h-3 rounded-full ${option.color} shadow-sm`}></span>
+                        <span className={cn(
+                          "flex-1 text-sm font-medium transition-colors",
+                          isSelected && "text-primary"
+                        )}>
+                          {option.label}
+                        </span>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
                       </label>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
-              <div>
-                <Label className="text-base font-semibold mb-3 block">Level</Label>
-                <div className="space-y-2">
-                  {LEVEL_OPTIONS.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`level-${option.value}`}
-                        checked={filters.level === option.value}
-                        onCheckedChange={() => handleLevelChange(option.value)}
-                      />
+              <Separator className="my-6" />
+
+              {/* Level */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-semibold text-foreground">Difficulty Level</Label>
+                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                </div>
+                <div className="space-y-2.5">
+                  {LEVEL_OPTIONS.map((option) => {
+                    const levelArray = Array.isArray(filters.level) ? filters.level : (filters.level ? [filters.level] : [])
+                    const isSelected = levelArray.includes(option.value)
+                    return (
                       <label
+                        key={option.value}
                         htmlFor={`level-${option.value}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                          "hover:bg-muted/50 hover:border-primary/30",
+                          isSelected && "bg-primary/5 border-primary shadow-sm"
+                        )}
                       >
-                        {option.label}
+                        <Checkbox
+                          id={`level-${option.value}`}
+                          checked={isSelected}
+                          onCheckedChange={() => handleLevelChange(option.value)}
+                          className="w-5 h-5"
+                        />
+                        <span className={`w-3 h-3 rounded-full ${option.color} shadow-sm`}></span>
+                        <span className={cn(
+                          "flex-1 text-sm font-medium transition-colors",
+                          isSelected && "text-primary"
+                        )}>
+                          {option.label}
+                        </span>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
                       </label>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
-              <div>
-                <Label className="text-base font-semibold mb-3 block">Enrollment Type</Label>
-                <div className="space-y-2">
-                  {ENROLLMENT_TYPE_OPTIONS.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`enrollment-${option.value}`}
-                        checked={filters.enrollment_type === option.value}
-                        onCheckedChange={() => handleEnrollmentTypeChange(option.value)}
-                      />
+              <Separator className="my-6" />
+
+              {/* Enrollment Type */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-semibold text-foreground">Enrollment Type</Label>
+                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                </div>
+                <div className="space-y-2.5">
+                  {ENROLLMENT_TYPE_OPTIONS.map((option) => {
+                    const typeArray = Array.isArray(filters.enrollment_type) ? filters.enrollment_type : (filters.enrollment_type ? [filters.enrollment_type] : [])
+                    const isSelected = typeArray.includes(option.value)
+                    const IconComponent = option.icon
+                    return (
                       <label
+                        key={option.value}
                         htmlFor={`enrollment-${option.value}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                          "hover:bg-muted/50 hover:border-primary/30",
+                          isSelected && "bg-primary/5 border-primary shadow-sm"
+                        )}
                       >
-                        {option.label}
+                        <Checkbox
+                          id={`enrollment-${option.value}`}
+                          checked={isSelected}
+                          onCheckedChange={() => handleEnrollmentTypeChange(option.value)}
+                          className="w-5 h-5"
+                        />
+                        <IconComponent className={cn(
+                          "w-4 h-4 transition-colors",
+                          isSelected ? "text-primary" : "text-muted-foreground"
+                        )} />
+                        <span className={cn(
+                          "flex-1 text-sm font-medium transition-colors",
+                          isSelected && "text-primary"
+                        )}>
+                          {option.label}
+                        </span>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
                       </label>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="featured"
-                  checked={filters.is_featured || false}
-                  onCheckedChange={(checked) => onFiltersChange({ ...filters, is_featured: checked as boolean })}
-                />
-                <label htmlFor="featured" className="text-sm font-medium cursor-pointer">
-                  Featured courses only
+              <Separator className="my-6" />
+
+              {/* Featured */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold text-foreground">Special Options</Label>
+                <label
+                  htmlFor="featured"
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                    "hover:bg-muted/50 hover:border-primary/30",
+                    filters.is_featured && "bg-primary/5 border-primary shadow-sm"
+                  )}
+                >
+                  <Checkbox
+                    id="featured"
+                    checked={filters.is_featured || false}
+                    onCheckedChange={(checked) => onFiltersChange({ ...filters, is_featured: checked as boolean })}
+                    className="w-5 h-5"
+                  />
+                  <Star className={cn(
+                    "w-4 h-4 transition-colors",
+                    filters.is_featured ? "text-primary fill-primary" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(
+                    "flex-1 text-sm font-medium transition-colors",
+                    filters.is_featured && "text-primary"
+                  )}>
+                    Featured courses only
+                  </span>
                 </label>
               </div>
+            </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={handleClearFilters}>
+            {/* Footer Actions */}
+            <div className="sticky bottom-0 bg-background border-t px-6 py-4 shadow-lg">
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-11 font-medium" 
+                  onClick={handleClearFilters}
+                  disabled={activeFilterCount === 0}
+                >
                   <X className="w-4 h-4 mr-2" />
                   Clear All
                 </Button>
-                <Button className="flex-1" onClick={() => setIsOpen(false)}>
+                <Button 
+                  className="flex-1 h-11 font-medium shadow-md hover:shadow-lg transition-shadow" 
+                  onClick={() => setIsOpen(false)}
+                >
                   Apply Filters
+                  {activeFilterCount > 0 && (
+                    <Badge className="ml-2 bg-primary-foreground text-primary">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
                 </Button>
               </div>
             </div>
@@ -191,39 +346,118 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
         </Sheet>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          {filters.skill_type && (
-            <Badge variant="secondary" className="gap-1">
-              {SKILL_OPTIONS.find((s) => s.value === filters.skill_type)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => handleSkillChange(filters.skill_type!)} />
+      {/* Active Filters */}
+      {activeFilterCount > 0 && (
+        <div className="flex items-center gap-2 flex-wrap py-2">
+          <span className="text-sm font-medium text-muted-foreground mr-1">Active filters:</span>
+          {filters.search && (
+            <Badge 
+              variant="secondary" 
+              className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="max-w-[150px] truncate">{filters.search}</span>
+              <button
+                onClick={() => {
+                  setSearchValue("")
+                  onSearch("")
+                }}
+                className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
+                aria-label="Remove search filter"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </Badge>
           )}
-          {filters.level && (
-            <Badge variant="secondary" className="gap-1">
-              {LEVEL_OPTIONS.find((l) => l.value === filters.level)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => handleLevelChange(filters.level!)} />
-            </Badge>
-          )}
-          {filters.enrollment_type && (
-            <Badge variant="secondary" className="gap-1">
-              {ENROLLMENT_TYPE_OPTIONS.find((e) => e.value === filters.enrollment_type)?.label}
-              <X className="w-3 h-3 cursor-pointer" onClick={() => handleEnrollmentTypeChange(filters.enrollment_type!)} />
-            </Badge>
-          )}
+          {(Array.isArray(filters.skill_type) ? filters.skill_type : (filters.skill_type ? [filters.skill_type] : [])).map((skill) => {
+            const option = SKILL_OPTIONS.find((s) => s.value === skill)
+            return option ? (
+              <Badge 
+                key={skill}
+                variant="secondary" 
+                className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${option.color} shadow-sm`}></span>
+                {option.label}
+                <button
+                  onClick={() => handleSkillChange(skill)}
+                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
+                  aria-label="Remove skill filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </Badge>
+            ) : null
+          })}
+          {(Array.isArray(filters.level) ? filters.level : (filters.level ? [filters.level] : [])).map((level) => {
+            const option = LEVEL_OPTIONS.find((l) => l.value === level)
+            return option ? (
+              <Badge 
+                key={level}
+                variant="secondary" 
+                className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${option.color} shadow-sm`}></span>
+                {option.label}
+                <button
+                  onClick={() => handleLevelChange(level)}
+                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
+                  aria-label="Remove level filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </Badge>
+            ) : null
+          })}
+          {(Array.isArray(filters.enrollment_type) ? filters.enrollment_type : (filters.enrollment_type ? [filters.enrollment_type] : [])).map((type) => {
+            const option = ENROLLMENT_TYPE_OPTIONS.find((e) => e.value === type)
+            if (!option) return null
+            const IconComponent = option.icon
+            return (
+              <Badge 
+                key={type}
+                variant="secondary" 
+                className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
+              >
+                <IconComponent className="w-3.5 h-3.5" />
+                {option.label}
+                <button
+                  onClick={() => handleEnrollmentTypeChange(type)}
+                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
+                  aria-label="Remove enrollment type filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </Badge>
+            )
+          })}
           {filters.is_featured && (
-            <Badge variant="secondary" className="gap-1">
+            <Badge 
+              variant="secondary" 
+              className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
+            >
+              <Star className="w-3.5 h-3.5 fill-primary text-primary" />
               Featured
-              <X className="w-3 h-3 cursor-pointer" onClick={() => onFiltersChange({ ...filters, is_featured: false })} />
+              <button
+                onClick={() => onFiltersChange({ ...filters, is_featured: false })}
+                className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
+                aria-label="Remove featured filter"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </Badge>
           )}
-          {activeFilterCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleClearFilters} className="h-7">
-              Clear all
-            </Button>
-          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleClearFilters} 
+            className="h-8 px-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+          >
+            <X className="w-3.5 h-3.5 mr-1.5" />
+            Clear all
+          </Button>
         </div>
-      </div>
+      )}
     </div>
   )
 }

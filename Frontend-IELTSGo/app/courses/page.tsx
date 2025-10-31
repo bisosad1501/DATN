@@ -38,12 +38,30 @@ export default function CoursesPage() {
   }, [filters, page])
 
   const handleFiltersChange = (newFilters: CourseFilters) => {
-    setFilters(newFilters)
+    // Remove undefined and empty values to ensure clean filter state
+    const cleanFilters: CourseFilters = {}
+    if (newFilters.search && newFilters.search.trim()) {
+      cleanFilters.search = newFilters.search.trim()
+    }
+    if (newFilters.skill_type) {
+      cleanFilters.skill_type = newFilters.skill_type
+    }
+    if (newFilters.level) {
+      cleanFilters.level = newFilters.level
+    }
+    if (newFilters.enrollment_type) {
+      cleanFilters.enrollment_type = newFilters.enrollment_type
+    }
+    if (newFilters.is_featured !== undefined && newFilters.is_featured !== false) {
+      cleanFilters.is_featured = newFilters.is_featured
+    }
+    // Always set to clean object (even if empty) to clear all filters
+    setFilters(cleanFilters)
     setPage(1)
   }
 
   const handleSearch = (search: string) => {
-    setFilters({ ...filters, search })
+    setFilters((prev) => ({ ...prev, search: search || undefined }))
     setPage(1)
   }
 

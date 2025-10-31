@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { authApi } from "@/lib/api/auth"
+import { userApi } from "@/lib/api/user"
 import type { User, LoginCredentials, RegisterData } from "@/types"
 
 interface AuthContextType {
@@ -15,6 +16,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
+  updateProfile: (data: { fullName?: string; bio?: string; targetBandScore?: number }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -160,6 +162,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("access_token")
       localStorage.removeItem("refresh_token")
       localStorage.removeItem("user_data")
+      
+      // Disconnect SSE connection
+      try {
+        const { sseManager } = await import("@/lib/api/sse-manager")
+        sseManager.destroy()
+      } catch (error) {
+        console.error("Failed to disconnect SSE on logout:", error)
+      }
+      
       setUser(null)
       router.push("/login")
     }
@@ -169,13 +180,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const validation = await authApi.validateToken()
       if (validation.success && validation.data?.valid) {
-        const userData = localStorage.getItem("user_data")
-        if (userData) {
-          setUser(JSON.parse(userData))
+        // Try to get updated profile from user service
+        try {
+          const profile = await userApi.getProfile()
+          const userData = localStorage.getItem("user_data")
+          if (userData) {
+            const existingUser = JSON.parse(userData)
+            const updatedUser: User = {
+              ...existingUser,
+              fullName: profile.full_name || existingUser.fullName,
+              bio: profile.bio || existingUser.bio,
+              avatar: profile.avatar_url || existingUser.avatar,
+              targetBandScore: profile.target_band_score || existingUser.targetBandScore,
+            }
+            localStorage.setItem("user_data", JSON.stringify(updatedUser))
+            setUser(updatedUser)
+          }
+        } catch (error) {
+          // Fallback to localStorage if API fails
+          const userData = localStorage.getItem("user_data")
+          if (userData) {
+            setUser(JSON.parse(userData))
+          }
         }
       }
     } catch (error) {
       console.error("Failed to refresh user:", error)
+      throw error
+    }
+  }
+
+  const updateProfile = async (data: { fullName?: string; bio?: string; targetBandScore?: number }) => {
+    try {
+      await userApi.updateProfile({
+        full_name: data.fullName,
+        bio: data.bio,
+        target_band_score: data.targetBandScore,
+      })
+      await refreshUser()
+    } catch (error) {
+      console.error("Failed to update profile:", error)
       throw error
     }
   }
@@ -191,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         refreshUser,
+        updateProfile,
       }}
     >
       {children}

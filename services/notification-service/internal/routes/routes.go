@@ -22,6 +22,9 @@ func SetupRoutes(r *gin.Engine, handler *handlers.NotificationHandler, internalH
 	student := v1.Group("/notifications")
 	student.Use(authMiddleware.Authenticate())
 	{
+		// Realtime SSE stream (must be before other routes to avoid path conflicts)
+		student.GET("/stream", handler.StreamNotifications) // Server-Sent Events stream
+		
 		// Notification CRUD
 		student.GET("", handler.GetMyNotifications)          // List with pagination and filters
 		student.GET("/unread-count", handler.GetUnreadCount) // Get unread count (must be before /:id)

@@ -37,9 +37,20 @@ func (h *ExerciseHandler) GetExercises(c *gin.Context) {
 	// Parse query params
 	query.Page, _ = strconv.Atoi(c.DefaultQuery("page", "1"))
 	query.Limit, _ = strconv.Atoi(c.DefaultQuery("limit", "20"))
-	query.SkillType = c.Query("skill_type")
-	query.Difficulty = c.Query("difficulty")
-	query.ExerciseType = c.Query("exercise_type")
+	
+	// Support comma-separated values for OR logic (e.g., skill_type=listening,reading)
+	skillTypeParam := c.Query("skill_type")
+	if skillTypeParam != "" {
+		query.SkillType = skillTypeParam // Will be parsed in repository
+	}
+	difficultyParam := c.Query("difficulty")
+	if difficultyParam != "" {
+		query.Difficulty = difficultyParam // Will be parsed in repository
+	}
+	exerciseTypeParam := c.Query("exercise_type")
+	if exerciseTypeParam != "" {
+		query.ExerciseType = exerciseTypeParam // Will be parsed in repository
+	}
 	query.Search = c.Query("search")
 
 	if isFree := c.Query("is_free"); isFree != "" {

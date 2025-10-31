@@ -3,9 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/bisosad1501/ielts-platform/notification-service/internal/models"
 	"github.com/bisosad1501/ielts-platform/notification-service/internal/service"
@@ -14,11 +16,15 @@ import (
 )
 
 type NotificationHandler struct {
-	service *service.NotificationService
+	service     *service.NotificationService
+	broadcaster *service.NotificationBroadcaster
 }
 
-func NewNotificationHandler(service *service.NotificationService) *NotificationHandler {
-	return &NotificationHandler{service: service}
+func NewNotificationHandler(service *service.NotificationService, broadcaster *service.NotificationBroadcaster) *NotificationHandler {
+	return &NotificationHandler{
+		service:     service,
+		broadcaster: broadcaster,
+	}
 }
 
 // GetMyNotifications retrieves notifications for the authenticated user
@@ -773,4 +779,95 @@ func convertToScheduledNotificationResponse(s *models.ScheduledNotification) mod
 	}
 
 	return resp
+}
+
+// ============================================
+// Server-Sent Events (SSE) Handler for Realtime Notifications
+// ============================================
+
+// StreamNotifications streams notifications via Server-Sent Events (SSE)
+// GET /api/v1/notifications/stream
+// Note: SSE doesn't support custom headers, so token can be passed via query param
+// API Gateway will handle Authorization header and forward user_id in context
+func (h *NotificationHandler) StreamNotifications(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	
+	// Fallback: Try to get from query param if not in context (for direct SSE connection)
+	var uid uuid.UUID
+	if exists {
+		uid = userID.(uuid.UUID)
+	} else {
+		// Try to parse from query param (for development/testing)
+		if userIDStr := c.Query("user_id"); userIDStr != "" {
+			var err error
+			uid, err = uuid.Parse(userIDStr)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+					Error:   "unauthorized",
+					Message: "Invalid user ID",
+				})
+				return
+			}
+		} else {
+			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+				Error:   "unauthorized",
+				Message: "User ID not found",
+			})
+			return
+		}
+	}
+
+	// Set headers for SSE
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
+
+	// Subscribe to broadcaster
+	ch := h.broadcaster.Subscribe(uid)
+	defer h.broadcaster.Unsubscribe(uid, ch)
+
+	// Send initial connection message
+	c.SSEvent("connected", gin.H{
+		"message": "Connected to notification stream",
+		"user_id": uid.String(),
+	})
+	c.Writer.Flush()
+
+	// Heartbeat ticker to keep connection alive (every 30 seconds)
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Keep connection alive and send notifications
+	for {
+		select {
+		case data, ok := <-ch:
+			if !ok {
+				// Channel closed
+				c.SSEvent("closed", gin.H{"message": "Connection closed"})
+				c.Writer.Flush()
+				return
+			}
+
+			// Parse notification and send as SSE event
+			var notification models.Notification
+			if err := json.Unmarshal(data, &notification); err == nil {
+				// Convert to response format
+				notifResp := h.convertToNotificationResponse(&notification)
+				c.SSEvent("notification", notifResp)
+				c.Writer.Flush()
+			} else {
+				log.Printf("[SSE] Failed to unmarshal notification: %v", err)
+			}
+
+		case <-ticker.C:
+			// Send heartbeat to keep connection alive
+			c.SSEvent("heartbeat", gin.H{"timestamp": time.Now().Unix()})
+			c.Writer.Flush()
+
+		case <-c.Request.Context().Done():
+			// Client disconnected
+			return
+		}
+	}
 }

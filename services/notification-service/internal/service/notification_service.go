@@ -13,11 +13,15 @@ import (
 )
 
 type NotificationService struct {
-	repo *repository.NotificationRepository
+	repo        *repository.NotificationRepository
+	broadcaster *NotificationBroadcaster
 }
 
-func NewNotificationService(repo *repository.NotificationRepository) *NotificationService {
-	return &NotificationService{repo: repo}
+func NewNotificationService(repo *repository.NotificationRepository, broadcaster *NotificationBroadcaster) *NotificationService {
+	return &NotificationService{
+		repo:        repo,
+		broadcaster: broadcaster,
+	}
 }
 
 // CreateNotification creates a new notification after checking permissions
@@ -100,6 +104,11 @@ func (s *NotificationService) CreateNotification(req *models.CreateNotificationR
 
 	// Log the creation
 	s.logNotificationEvent(&notification.ID, notification.UserID, "created", "success", &notification.Type, nil)
+
+	// Broadcast to connected clients (realtime)
+	if notification.IsSent && s.broadcaster != nil {
+		s.broadcaster.Broadcast(notification.UserID, notification)
+	}
 
 	return notification, nil
 }

@@ -27,22 +27,59 @@ func (r *ExerciseRepository) GetExercises(query *models.ExerciseListQuery) ([]mo
 	args := []interface{}{}
 	argCount := 0
 
+	// Parse comma-separated values for OR logic within same category
+	// Example: skill_type=listening,reading -> skill_type IN ('listening', 'reading')
 	if query.SkillType != "" {
-		argCount++
-		where = append(where, fmt.Sprintf("skill_type = $%d", argCount))
-		args = append(args, query.SkillType)
+		skillTypes := strings.Split(strings.TrimSpace(query.SkillType), ",")
+		if len(skillTypes) == 1 {
+			// Single value
+			argCount++
+			where = append(where, fmt.Sprintf("skill_type = $%d", argCount))
+			args = append(args, strings.TrimSpace(skillTypes[0]))
+		} else {
+			// Multiple values - use IN clause for OR logic
+			placeholders := []string{}
+			for _, skillType := range skillTypes {
+				argCount++
+				placeholders = append(placeholders, fmt.Sprintf("$%d", argCount))
+				args = append(args, strings.TrimSpace(skillType))
+			}
+			where = append(where, fmt.Sprintf("skill_type IN (%s)", strings.Join(placeholders, ", ")))
+		}
 	}
 
 	if query.Difficulty != "" {
-		argCount++
-		where = append(where, fmt.Sprintf("difficulty = $%d", argCount))
-		args = append(args, query.Difficulty)
+		difficulties := strings.Split(strings.TrimSpace(query.Difficulty), ",")
+		if len(difficulties) == 1 {
+			argCount++
+			where = append(where, fmt.Sprintf("difficulty = $%d", argCount))
+			args = append(args, strings.TrimSpace(difficulties[0]))
+		} else {
+			placeholders := []string{}
+			for _, difficulty := range difficulties {
+				argCount++
+				placeholders = append(placeholders, fmt.Sprintf("$%d", argCount))
+				args = append(args, strings.TrimSpace(difficulty))
+			}
+			where = append(where, fmt.Sprintf("difficulty IN (%s)", strings.Join(placeholders, ", ")))
+		}
 	}
 
 	if query.ExerciseType != "" {
-		argCount++
-		where = append(where, fmt.Sprintf("exercise_type = $%d", argCount))
-		args = append(args, query.ExerciseType)
+		exerciseTypes := strings.Split(strings.TrimSpace(query.ExerciseType), ",")
+		if len(exerciseTypes) == 1 {
+			argCount++
+			where = append(where, fmt.Sprintf("exercise_type = $%d", argCount))
+			args = append(args, strings.TrimSpace(exerciseTypes[0]))
+		} else {
+			placeholders := []string{}
+			for _, exerciseType := range exerciseTypes {
+				argCount++
+				placeholders = append(placeholders, fmt.Sprintf("$%d", argCount))
+				args = append(args, strings.TrimSpace(exerciseType))
+			}
+			where = append(where, fmt.Sprintf("exercise_type IN (%s)", strings.Join(placeholders, ", ")))
+		}
 	}
 
 	if query.IsFree != nil {

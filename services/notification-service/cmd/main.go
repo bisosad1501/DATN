@@ -36,8 +36,9 @@ func main() {
 
 	// Initialize layers
 	notificationRepo := repository.NewNotificationRepository(db.DB)
-	notificationService := service.NewNotificationService(notificationRepo)
-	notificationHandler := handlers.NewNotificationHandler(notificationService)
+	broadcaster := service.NewNotificationBroadcaster()
+	notificationService := service.NewNotificationService(notificationRepo, broadcaster)
+	notificationHandler := handlers.NewNotificationHandler(notificationService, broadcaster)
 	internalHandler := handlers.NewInternalHandler(notificationService)
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret, cfg.InternalAPIKey)
 

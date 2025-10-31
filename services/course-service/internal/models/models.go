@@ -157,9 +157,10 @@ type CourseReview struct {
 	ApprovedAt   *time.Time `json:"approved_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
-	// User info (from JOIN)
-	UserName  *string `json:"user_name,omitempty"`
-	UserEmail *string `json:"user_email,omitempty"`
+    // User info (from JOIN)
+    UserName      *string `json:"user_name,omitempty"`
+    UserEmail     *string `json:"user_email,omitempty"`
+    UserAvatarURL *string `json:"user_avatar_url,omitempty"`
 }
 
 // VideoSubtitle represents subtitle files for videos

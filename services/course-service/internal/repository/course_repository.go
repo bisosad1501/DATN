@@ -23,7 +23,6 @@ func NewCourseRepository(db *sql.DB) *CourseRepository {
 func (r *CourseRepository) GetCourses(query *models.CourseListQuery) ([]models.Course, error) {
 	var conditions []string
 	var args []interface{}
-	argCount := 1
 
 	baseQuery := `
 		SELECT c.id, c.title, c.slug, c.description, c.short_description, c.skill_type, c.level, 
@@ -39,34 +38,62 @@ func (r *CourseRepository) GetCourses(query *models.CourseListQuery) ([]models.C
 		WHERE c.status = 'published'
 	`
 
+	// Parse comma-separated values for OR logic within same category
 	if query.SkillType != "" {
-		conditions = append(conditions, fmt.Sprintf("skill_type = $%d", argCount))
-		args = append(args, query.SkillType)
-		argCount++
+		skillTypes := strings.Split(strings.TrimSpace(query.SkillType), ",")
+		if len(skillTypes) == 1 {
+			// Single value
+			args = append(args, strings.TrimSpace(skillTypes[0]))
+			conditions = append(conditions, fmt.Sprintf("skill_type = $%d", len(args)))
+		} else {
+			// Multiple values - use IN clause for OR logic
+			placeholders := []string{}
+			for _, skillType := range skillTypes {
+				args = append(args, strings.TrimSpace(skillType))
+				placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+			}
+			conditions = append(conditions, fmt.Sprintf("skill_type IN (%s)", strings.Join(placeholders, ", ")))
+		}
 	}
 
 	if query.Level != "" {
-		conditions = append(conditions, fmt.Sprintf("level = $%d", argCount))
-		args = append(args, query.Level)
-		argCount++
+		levels := strings.Split(strings.TrimSpace(query.Level), ",")
+		if len(levels) == 1 {
+			args = append(args, strings.TrimSpace(levels[0]))
+			conditions = append(conditions, fmt.Sprintf("level = $%d", len(args)))
+		} else {
+			placeholders := []string{}
+			for _, level := range levels {
+				args = append(args, strings.TrimSpace(level))
+				placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+			}
+			conditions = append(conditions, fmt.Sprintf("level IN (%s)", strings.Join(placeholders, ", ")))
+		}
 	}
 
 	if query.EnrollmentType != "" {
-		conditions = append(conditions, fmt.Sprintf("enrollment_type = $%d", argCount))
-		args = append(args, query.EnrollmentType)
-		argCount++
+		enrollmentTypes := strings.Split(strings.TrimSpace(query.EnrollmentType), ",")
+		if len(enrollmentTypes) == 1 {
+			args = append(args, strings.TrimSpace(enrollmentTypes[0]))
+			conditions = append(conditions, fmt.Sprintf("enrollment_type = $%d", len(args)))
+		} else {
+			placeholders := []string{}
+			for _, enrollmentType := range enrollmentTypes {
+				args = append(args, strings.TrimSpace(enrollmentType))
+				placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+			}
+			conditions = append(conditions, fmt.Sprintf("enrollment_type IN (%s)", strings.Join(placeholders, ", ")))
+		}
 	}
 
 	if query.IsFeatured != nil {
-		conditions = append(conditions, fmt.Sprintf("is_featured = $%d", argCount))
 		args = append(args, *query.IsFeatured)
-		argCount++
+		conditions = append(conditions, fmt.Sprintf("is_featured = $%d", len(args)))
 	}
 
 	if query.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(title ILIKE $%d OR description ILIKE $%d)", argCount, argCount))
 		args = append(args, "%"+query.Search+"%")
-		argCount++
+		conditions = append(conditions, fmt.Sprintf("(title ILIKE $%d OR description ILIKE $%d)", len(args), len(args)))
 	}
 
 	if len(conditions) > 0 {
@@ -87,8 +114,16 @@ func (r *CourseRepository) GetCourses(query *models.CourseListQuery) ([]models.C
 
 	baseQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 
+	// Debug logging
+	log.Printf("[GetCourses] Query: %s", baseQuery)
+	log.Printf("[GetCourses] Args: %v", args)
+	log.Printf("[GetCourses] Args count: %d", len(args))
+
 	rows, err := r.db.Query(baseQuery, args...)
 	if err != nil {
+		log.Printf("[GetCourses] SQL Error: %v", err)
+		log.Printf("[GetCourses] Query: %s", baseQuery)
+		log.Printf("[GetCourses] Args: %v", args)
 		return nil, err
 	}
 	defer rows.Close()
@@ -433,7 +468,8 @@ func (r *CourseRepository) GetEnrollment(userID, courseID uuid.UUID) (*models.Co
 // GetUserEnrollments retrieves all enrollments for a user with REAL-TIME progress calculation
 func (r *CourseRepository) GetUserEnrollments(userID uuid.UUID) ([]models.CourseEnrollment, error) {
 	// 📊 SOURCE OF TRUTH: Use study_sessions from user_db (same as Dashboard)
-	query := fmt.Sprintf(`
+	// ✅ FIX: Use parameterized query properly - CTEs can reference outer query parameters
+	query := `
 		WITH course_lesson_counts AS (
 			-- Get total lesson count for each course
 			SELECT 
@@ -452,14 +488,14 @@ func (r *CourseRepository) GetUserEnrollments(userID uuid.UUID) ([]models.Course
 			FROM lesson_progress lp
 			JOIN lessons l ON l.id = lp.lesson_id
 			JOIN modules m ON m.id = l.module_id
-			WHERE lp.user_id = '%s'
+			WHERE lp.user_id = $1
 			GROUP BY m.course_id
 		)
 		SELECT 
 			e.id, e.user_id, e.course_id, e.enrollment_date, e.enrollment_type,
 			e.payment_id, e.amount_paid, e.currency,
 			-- 📊 CORRECT progress calculation: SUM(progress of ALL lessons) / total_lessons
-			-- This includes lessons not yet viewed (0%%)
+			-- This includes lessons not yet viewed (0%)
 			COALESCE(
 				ROUND(
 					(SUM(COALESCE(lp.progress_percentage, 0)) / NULLIF(clc.total_lessons, 0))::numeric, 2
@@ -483,9 +519,49 @@ func (r *CourseRepository) GetUserEnrollments(userID uuid.UUID) ([]models.Course
 				 e.certificate_issued, e.certificate_url, e.expires_at, e.last_accessed_at,
 				 e.created_at, e.updated_at, clc.total_lessons, cst.total_minutes
 		ORDER BY e.enrollment_date DESC
-	`, userID.String())
+	`
 
 	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var enrollments []models.CourseEnrollment
+	for rows.Next() {
+		var enrollment models.CourseEnrollment
+		err := rows.Scan(
+			&enrollment.ID, &enrollment.UserID, &enrollment.CourseID,
+			&enrollment.EnrollmentDate, &enrollment.EnrollmentType,
+			&enrollment.PaymentID, &enrollment.AmountPaid, &enrollment.Currency,
+			&enrollment.ProgressPercentage, &enrollment.LessonsCompleted,
+			&enrollment.TotalTimeSpentMinutes, &enrollment.Status,
+			&enrollment.CompletedAt, &enrollment.CertificateIssued,
+			&enrollment.CertificateURL, &enrollment.ExpiresAt,
+			&enrollment.LastAccessedAt, &enrollment.CreatedAt, &enrollment.UpdatedAt,
+		)
+		if err != nil {
+			continue
+		}
+		enrollments = append(enrollments, enrollment)
+	}
+
+	return enrollments, nil
+}
+
+// GetCourseEnrollments retrieves all enrollments for a course (for notifications)
+func (r *CourseRepository) GetCourseEnrollments(courseID uuid.UUID) ([]models.CourseEnrollment, error) {
+	query := `
+		SELECT id, user_id, course_id, enrollment_date, enrollment_type,
+			   payment_id, amount_paid, currency, progress_percentage,
+			   lessons_completed, total_time_spent_minutes, status,
+			   completed_at, certificate_issued, certificate_url,
+			   expires_at, last_accessed_at, created_at, updated_at
+		FROM course_enrollments
+		WHERE course_id = $1 AND status = 'active'
+	`
+
+	rows, err := r.db.Query(query, courseID)
 	if err != nil {
 		return nil, err
 	}
@@ -706,24 +782,24 @@ func (r *CourseRepository) GetModuleCourseID(moduleID uuid.UUID) (uuid.UUID, err
 
 // GetCourseReviews retrieves approved reviews for a course
 func (r *CourseRepository) GetCourseReviews(courseID uuid.UUID) ([]models.CourseReview, error) {
-	// Use dblink to get user info from user_db (cross-database JOIN)
-	query := `
-		SELECT 
-			cr.id, cr.user_id, cr.course_id, cr.rating, cr.title, cr.comment, cr.helpful_count, 
-			cr.is_approved, cr.approved_by, cr.approved_at, cr.created_at, cr.updated_at,
-			up.full_name, au.email
-		FROM course_reviews cr
-		LEFT JOIN dblink(
-			'dbname=user_db user=ielts_admin',
-			'SELECT user_id, full_name FROM user_profiles'
-		) AS up(user_id uuid, full_name text) ON cr.user_id = up.user_id
-		LEFT JOIN dblink(
-			'dbname=auth_db user=ielts_admin',
-			'SELECT id, email FROM users'
-		) AS au(id uuid, email text) ON cr.user_id = au.id
-		WHERE cr.course_id = $1 AND cr.is_approved = true
-		ORDER BY cr.created_at DESC
-	`
+    // Use dblink to get user info from user_db and auth_db (cross-database JOIN)
+    query := `
+        SELECT 
+            cr.id, cr.user_id, cr.course_id, cr.rating, cr.title, cr.comment, cr.helpful_count, 
+            cr.is_approved, cr.approved_by, cr.approved_at, cr.created_at, cr.updated_at,
+            up.full_name, au.email, up.avatar_url
+        FROM course_reviews cr
+        LEFT JOIN dblink(
+            'dbname=user_db user=ielts_admin',
+            'SELECT user_id, full_name, avatar_url FROM user_profiles'
+        ) AS up(user_id uuid, full_name text, avatar_url text) ON cr.user_id = up.user_id
+        LEFT JOIN dblink(
+            'dbname=auth_db user=ielts_admin',
+            'SELECT id, email FROM users'
+        ) AS au(id uuid, email text) ON cr.user_id = au.id
+        WHERE cr.course_id = $1 AND cr.is_approved = true
+        ORDER BY cr.created_at DESC
+    `
 
 	rows, err := r.db.Query(query, courseID)
 	if err != nil {
@@ -734,13 +810,13 @@ func (r *CourseRepository) GetCourseReviews(courseID uuid.UUID) ([]models.Course
 	var reviews []models.CourseReview
 	for rows.Next() {
 		var review models.CourseReview
-		err := rows.Scan(
-			&review.ID, &review.UserID, &review.CourseID, &review.Rating,
-			&review.Title, &review.Comment, &review.HelpfulCount,
-			&review.IsApproved, &review.ApprovedBy, &review.ApprovedAt,
-			&review.CreatedAt, &review.UpdatedAt,
-			&review.UserName, &review.UserEmail,
-		)
+        err := rows.Scan(
+            &review.ID, &review.UserID, &review.CourseID, &review.Rating,
+            &review.Title, &review.Comment, &review.HelpfulCount,
+            &review.IsApproved, &review.ApprovedBy, &review.ApprovedAt,
+            &review.CreatedAt, &review.UpdatedAt,
+            &review.UserName, &review.UserEmail, &review.UserAvatarURL,
+        )
 		if err != nil {
 			log.Printf("Error scanning review: %v", err)
 			continue

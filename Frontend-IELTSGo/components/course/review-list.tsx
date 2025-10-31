@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Star } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { coursesApi } from "@/lib/api/courses"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
@@ -20,6 +20,7 @@ interface Review {
   created_at: string
   user_name?: string
   user_email?: string
+  user_avatar_url?: string
 }
 
 interface ReviewListProps {
@@ -77,6 +78,9 @@ export function ReviewList({ courseId, refreshTrigger }: ReviewListProps) {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <Avatar>
+                  {review.user_avatar_url && (
+                    <AvatarImage src={review.user_avatar_url} alt={review.user_name || review.user_email || 'avatar'} />
+                  )}
                   <AvatarFallback>
                     {review.user_name 
                       ? review.user_name

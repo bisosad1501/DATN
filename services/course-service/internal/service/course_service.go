@@ -242,6 +242,35 @@ func (s *CourseService) EnrollCourse(userID uuid.UUID, req *models.EnrollmentReq
 		return nil, fmt.Errorf("failed to create enrollment: %w", err)
 	}
 
+	// Send enrollment notification (non-critical, async)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[Course-Service] PANIC in enrollment notification: %v", r)
+			}
+		}()
+		
+		log.Printf("[Course-Service] Sending enrollment notification for user %s, course %s", userID, course.ID)
+		actionType := "navigate_to_course"
+		err := s.notificationClient.SendNotification(client.SendNotificationRequest{
+			UserID:     userID.String(),
+			Title:      "Đã đăng ký khóa học thành công",
+			Message:    fmt.Sprintf("Bạn đã đăng ký khóa học '%s'. Bắt đầu học ngay để đạt mục tiêu của bạn.", course.Title),
+			Type:       "course_update",
+			Category:   "success",
+			ActionType: &actionType,
+			ActionData: map[string]interface{}{
+				"course_id": course.ID.String(),
+			},
+			Priority: "normal",
+		})
+		if err != nil {
+			log.Printf("[Course-Service] ❌ ERROR: Failed to send enrollment notification: %v", err)
+		} else {
+			log.Printf("[Course-Service] ✅ SUCCESS: Sent enrollment notification for user %s, course %s", userID, course.ID)
+		}
+	}()
+
 	// Return the enrollment (might be existing one due to ON CONFLICT)
 	return s.repo.GetEnrollment(userID, req.CourseID)
 }
@@ -778,6 +807,45 @@ func (s *CourseService) CreateLesson(userID uuid.UUID, userRole string, req *mod
 		return nil, fmt.Errorf("failed to create lesson: %w", err)
 	}
 
+	// Send notification to enrolled users about new lesson (non-critical)
+	go func() {
+		// Get course to get enrolled users
+		course, err := s.repo.GetCourseByID(courseID)
+		if err != nil || course == nil {
+			log.Printf("[Course-Service] WARNING: Failed to get course for new lesson notification: %v", err)
+			return
+		}
+
+		// Get all enrolled users for this course
+		enrollments, err := s.repo.GetCourseEnrollments(courseID)
+		if err != nil {
+			log.Printf("[Course-Service] WARNING: Failed to get enrollments for new lesson notification: %v", err)
+			return
+		}
+
+		// Send notification to each enrolled user
+		actionType := "navigate_to_lesson"
+		for _, enrollment := range enrollments {
+			err = s.notificationClient.SendNotification(client.SendNotificationRequest{
+				UserID:     enrollment.UserID.String(),
+				Title:      "Bài học mới đã được thêm vào khóa học",
+				Message:    fmt.Sprintf("Khóa học '%s' vừa có bài học mới: '%s'. Truy cập để bắt đầu học.", course.Title, lesson.Title),
+				Type:       "course_update",
+				Category:   "info",
+				ActionType: &actionType,
+				ActionData: map[string]interface{}{
+					"course_id": courseID.String(),
+					"lesson_id":  lesson.ID.String(),
+				},
+				Priority: "normal",
+			})
+			if err != nil {
+				log.Printf("[Course-Service] WARNING: Failed to send new lesson notification to user %s: %v", enrollment.UserID, err)
+			}
+		}
+		log.Printf("[Course-Service] ✅ Sent new lesson notifications to %d enrolled users", len(enrollments))
+	}()
+
 	return lesson, nil
 }
 
@@ -842,6 +910,38 @@ func (s *CourseService) CreateReview(userID, courseID uuid.UUID, req *models.Cre
 	if err != nil {
 		return nil, fmt.Errorf("failed to create review: %w", err)
 	}
+
+	// Send notification to course instructor about new review (non-critical)
+	go func() {
+		// Get course to find instructor
+		course, err := s.repo.GetCourseByID(courseID)
+		if err != nil || course == nil {
+			log.Printf("[Course-Service] WARNING: Failed to get course for review notification: %v", err)
+			return
+		}
+
+		// Get reviewer name from user service (optional, can skip if fails)
+		reviewerName := "Một học viên"
+		// TODO: Get reviewer name from user service
+
+		// Send notification to instructor
+		actionType := "navigate_to_course"
+		err = s.notificationClient.SendNotification(client.SendNotificationRequest{
+			UserID:     course.InstructorID.String(),
+			Title:      "Khóa học của bạn vừa nhận đánh giá mới",
+			Message:    fmt.Sprintf("Khóa học '%s' vừa nhận được đánh giá %d sao từ %s. Xem chi tiết đánh giá.", course.Title, req.Rating, reviewerName),
+			Type:       "course_update",
+			Category:   "info",
+			ActionType: &actionType,
+			ActionData: map[string]interface{}{
+				"course_id": courseID.String(),
+			},
+			Priority: "normal",
+		})
+		if err != nil {
+			log.Printf("[Course-Service] WARNING: Failed to send review notification to instructor: %v", err)
+		}
+	}()
 
 	return review, nil
 }
@@ -1053,20 +1153,31 @@ func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesso
 	// 2. Send lesson completion notification with retry
 	log.Printf("[Course-Service] Sending lesson completion notification...")
 
-	// Get enrollment to calculate overall progress
+	// Get enrollment to calculate overall progress and check course completion
 	enrollment, err := s.repo.GetEnrollment(userID, lesson.CourseID)
 	overallProgress := 0
+	isCourseCompleted := false
 	if err == nil && enrollment != nil {
 		overallProgress = int(enrollment.ProgressPercentage)
+		isCourseCompleted = enrollment.Status == "completed" || enrollment.ProgressPercentage >= 100
 	}
 
 	notificationSuccess := false
 	for attempt := 1; attempt <= 2; attempt++ {
-		err = s.notificationClient.SendLessonCompletionNotification(
-			userID.String(),
-			lesson.Title,
-			overallProgress,
-		)
+		actionType := "navigate_to_lesson"
+		err = s.notificationClient.SendNotification(client.SendNotificationRequest{
+			UserID:     userID.String(),
+			Title:      "Bạn đã hoàn thành bài học",
+			Message:    fmt.Sprintf("Chúc mừng! Bạn đã hoàn thành bài học '%s'. Tiến độ khóa học hiện tại: %d%%.", lesson.Title, overallProgress),
+			Type:       "course_update",
+			Category:   "success",
+			ActionType: &actionType,
+			ActionData: map[string]interface{}{
+				"course_id": lesson.CourseID.String(),
+				"lesson_id": lessonID.String(),
+			},
+			Priority: "normal",
+		})
 		if err == nil {
 			log.Printf("[Course-Service] SUCCESS: Sent lesson completion notification (attempt %d)", attempt)
 			notificationSuccess = true
@@ -1080,7 +1191,22 @@ func (s *CourseService) handleLessonCompletion(userID, lessonID uuid.UUID, lesso
 
 	if !notificationSuccess {
 		log.Printf("[Course-Service] ERROR: Failed to send notification after 2 attempts (non-critical)")
-		// Notification failure is non-critical, don't rollback
+	}
+
+	// 3. Check if course is completed and send completion notification
+	if isCourseCompleted && enrollment.Status != "completed" {
+		// Course just completed (first time reaching 100%)
+		go func() {
+			if err := s.notificationClient.SendCourseCompletionNotification(
+				userID.String(),
+				course.Title,
+				course.ID.String(),
+			); err != nil {
+				log.Printf("[Course-Service] WARNING: Failed to send course completion notification: %v", err)
+			} else {
+				log.Printf("[Course-Service] ✅ Sent course completion notification for course %s", course.ID)
+			}
+		}()
 	}
 }
 

@@ -525,13 +525,27 @@ export interface Statistics {
 // Notification Types
 export interface Notification {
   id: string
-  userId: string
-  type: NotificationType
+  userId?: string
+  user_id?: string
+  type: string // achievement, reminder, course_update, exercise_graded, system (not strict NotificationType)
+  category?: "info" | "success" | "warning" | "alert"
   title: string
   message: string
-  isRead: boolean
+  isRead?: boolean
+  is_read?: boolean // Backend format
+  read?: boolean // Alias for isRead
   actionUrl?: string
-  createdAt: string
+  action_type?: string // navigate_to_course, navigate_to_lesson, external_link
+  action_data?: {
+    course_id?: string
+    lesson_id?: string
+    url?: string
+    [key: string]: any
+  }
+  createdAt?: string
+  created_at?: string // Backend format (ISO8601)
+  readAt?: string
+  read_at?: string // Backend format
 }
 
 // Achievement Types

@@ -37,7 +37,7 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
   const instructorName = course.instructor_name
 
   return (
-    <Card className="group overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="group overflow-hidden hover:shadow-lg transition-shadow p-0">
       <Link href={`/courses/${course.id}`}>
         <div className="relative aspect-video overflow-hidden bg-muted">
           {thumbnail ? (
@@ -46,6 +46,7 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
               alt={course.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">

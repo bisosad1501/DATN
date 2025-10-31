@@ -232,17 +232,19 @@ export default function CourseDetailPage() {
             </div>
 
             <div className="lg:col-span-1">
-              <Card className="sticky top-4">
-                <div className="relative aspect-video">
-                  {course.thumbnail ? (
+              <Card className="sticky top-4 overflow-hidden group p-0">
+                <div className="relative aspect-video overflow-hidden bg-muted">
+                  {course.thumbnail_url || course.thumbnail ? (
                     <Image
-                      src={course.thumbnail || "/placeholder.svg"}
+                      src={course.thumbnail_url || course.thumbnail || "/placeholder.svg"}
                       alt={course.title}
                       fill
-                      className="object-cover rounded-t-lg"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                      priority
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 rounded-t-lg">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">
                       <BookOpen className="w-16 h-16 text-muted-foreground" />
                     </div>
                   )}
