@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Camera, CheckCircle2, Edit2, Save, X } from "lucide-react"
 import { userApi } from "@/lib/api/user"
+import { authApi } from "@/lib/api/auth"
 
 export default function ProfilePage() {
   return (
@@ -177,8 +178,8 @@ function ProfileContent() {
     }
     if (!passwordData.newPassword) {
       newErrors.newPassword = "New password is required"
-    } else if (passwordData.newPassword.length < 6) {
-      newErrors.newPassword = "Password must be at least 6 characters"
+    } else if (passwordData.newPassword.length < 8) {
+      newErrors.newPassword = "Password must be at least 8 characters"
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
@@ -191,12 +192,35 @@ function ProfileContent() {
 
     setIsLoading(true)
     try {
-      // Call password change API here
-      setSuccessMessage("Password changed successfully!")
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      setTimeout(() => setSuccessMessage(""), 3000)
+      const response = await authApi.changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      )
+      
+      if (response.success) {
+        setSuccessMessage("Password changed successfully!")
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+        setTimeout(() => setSuccessMessage(""), 3000)
+      } else {
+        setErrors({ general: response.message || "Failed to change password" })
+      }
     } catch (error: any) {
-      setErrors({ general: error.response?.data?.message || "Failed to change password" })
+      const errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.message 
+        || error.message 
+        || "Failed to change password"
+      
+      // Handle specific error codes from backend
+      if (error.response?.data?.error?.code === "CHANGE_PASSWORD_FAILED") {
+        const message = error.response.data.error.message
+        if (message.includes("invalid old password")) {
+          setErrors({ currentPassword: "Current password is incorrect" })
+        } else {
+          setErrors({ general: message })
+        }
+      } else {
+        setErrors({ general: errorMessage })
+      }
     } finally {
       setIsLoading(false)
     }

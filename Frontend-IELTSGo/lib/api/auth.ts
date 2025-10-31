@@ -22,7 +22,15 @@ export const authApi = {
 
   // Logout
   logout: async (): Promise<void> => {
-    await apiClient.post("/auth/logout")
+    // Get refresh token from localStorage
+    const refreshToken = localStorage.getItem("refresh_token")
+    if (!refreshToken) {
+      // If no refresh token, just return (already logged out or never had one)
+      return
+    }
+    await apiClient.post("/auth/logout", {
+      refresh_token: refreshToken,
+    })
   },
 
   // Validate token (check if user is authenticated)

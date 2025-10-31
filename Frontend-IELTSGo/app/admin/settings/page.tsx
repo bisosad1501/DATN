@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Server, Database, Shield, Bell, Mail } from "lucide-react"
+import { Settings, Server, Database, Shield, Bell, Mail, Eye, EyeOff } from "lucide-react"
 import { adminApi } from "@/lib/api/admin"
 import { useToast } from "@/hooks/use-toast"
 
@@ -33,6 +33,7 @@ export default function AdminSettingsPage() {
     cache: "connected",
   })
   const { toast } = useToast()
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false)
 
   // General Settings
   const [generalSettings, setGeneralSettings] = useState({
@@ -338,11 +339,28 @@ export default function AdminSettingsPage() {
 
                 <div className="space-y-2">
                   <Label>SMTP Password</Label>
-                  <Input
-                    type="password"
-                    value={emailSettings.smtpPassword}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtpPassword: e.target.value })}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showSmtpPassword ? "text" : "password"}
+                      value={emailSettings.smtpPassword}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, smtpPassword: e.target.value })}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                      aria-label={showSmtpPassword ? "Hide password" : "Show password"}
+                    >
+                      {showSmtpPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
