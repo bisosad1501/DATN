@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -103,10 +104,10 @@ export default function LessonDetailPage() {
   if (!lesson) {
     return (
       <AppLayout>
-        <div className="container mx-auto px-4 py-12 text-center">
+        <PageContainer className="py-12 text-center">
           <h1 className="text-2xl font-bold mb-4">Lesson Not Found</h1>
           <Button onClick={() => router.back()}>Go Back</Button>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -116,7 +117,7 @@ export default function LessonDetailPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <PageContainer maxWidth="5xl">
         {/* Header */}
         <div className="mb-6">
           <Button 
@@ -342,7 +343,7 @@ export default function LessonDetailPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

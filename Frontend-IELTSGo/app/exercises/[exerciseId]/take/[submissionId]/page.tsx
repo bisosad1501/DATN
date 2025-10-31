@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -180,7 +181,7 @@ export default function TakeExercisePage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-4 max-w-5xl">
+      <PageContainer maxWidth="5xl" className="py-4">
         {/* Header with Timer */}
         <Card className="mb-4">
           <CardContent className="py-4">
@@ -449,7 +450,7 @@ export default function TakeExercisePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -447,10 +448,10 @@ export default function LessonPlayerPage() {
   if (!lesson) {
     return (
       <AppLayout showSidebar={false} showFooter={false}>
-        <div className="container mx-auto px-4 py-20 text-center">
+        <PageContainer className="py-20 text-center">
           <h1 className="text-2xl font-bold mb-4">Lesson not found</h1>
           <Button onClick={() => router.push(`/courses/${params.courseId}`)}>Back to Course</Button>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -494,7 +495,7 @@ export default function LessonPlayerPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
+      <PageContainer className="py-6">
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {/* Video Content - Show if videos exist, regardless of content_type */}
@@ -759,7 +760,7 @@ export default function LessonPlayerPage() {
             </Card>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
     </AppLayout>
   )

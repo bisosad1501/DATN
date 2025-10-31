@@ -1,6 +1,7 @@
 "use client"
 
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -93,7 +94,7 @@ function ProgressContent() {
 
   return (
     <AppLayout showSidebar={true} showFooter={false}>
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">Progress Analytics</h1>
@@ -221,7 +222,7 @@ function ProgressContent() {
             </Tabs>
           </>
         )}
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

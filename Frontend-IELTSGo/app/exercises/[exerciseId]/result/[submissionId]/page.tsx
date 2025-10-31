@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -47,12 +48,12 @@ export default function ExerciseResultPage() {
   if (!result) {
     return (
       <AppLayout>
-        <div className="container mx-auto px-4 py-8 text-center">
+        <PageContainer className="text-center">
           <p className="text-lg text-muted-foreground">Results not found</p>
           <Button className="mt-4" onClick={() => router.push("/exercises/list")}>
             Back to Exercises
           </Button>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -68,7 +69,7 @@ export default function ExerciseResultPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <PageContainer maxWidth="4xl">
         {/* Result Header */}
         <Card className="mb-8">
           <CardHeader className="text-center">
@@ -255,7 +256,7 @@ export default function ExerciseResultPage() {
             Try Again
           </Button>
         </div>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

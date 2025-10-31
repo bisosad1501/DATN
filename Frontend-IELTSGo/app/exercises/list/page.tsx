@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { ExerciseCard } from "@/components/exercises/exercise-card"
 import { ExerciseFiltersComponent } from "@/components/exercises/exercise-filters"
 import { Button } from "@/components/ui/button"
@@ -84,7 +85,7 @@ export default function ExercisesListPage() {
 
   return (
     <AppLayout showFooter={true}>
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer>
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">IELTS Exercises</h1>
           <p className="text-base text-muted-foreground">
@@ -145,7 +146,7 @@ export default function ExercisesListPage() {
             )}
           </>
         )}
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

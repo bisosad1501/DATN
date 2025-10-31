@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/contexts/auth-context"
 import { usePreferences } from "@/lib/contexts/preferences-context"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -111,7 +112,7 @@ function SettingsContent() {
 
   return (
     <AppLayout showSidebar={false} showFooter>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <PageContainer maxWidth="4xl">
         <div className="space-y-6">
           {/* Header */}
           <div className="mb-8">
@@ -434,7 +435,7 @@ function SettingsContent() {
             </Card>
           )}
         </div>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

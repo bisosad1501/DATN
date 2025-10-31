@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -77,7 +78,7 @@ export default function ExerciseHistoryPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">My Exercise History</h1>
@@ -300,7 +301,7 @@ export default function ExerciseHistoryPage() {
             </Button>
           </div>
         )}
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

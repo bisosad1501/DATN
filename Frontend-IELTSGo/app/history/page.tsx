@@ -1,6 +1,7 @@
 "use client"
 
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
 import { useState, useEffect } from "react"
@@ -51,7 +52,7 @@ function HistoryContent() {
 
   return (
     <AppLayout showSidebar={true} showFooter={false}>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <PageContainer maxWidth="4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Study History</h1>
           <p className="text-muted-foreground">Complete log of your learning activities</p>
@@ -77,7 +78,7 @@ function HistoryContent() {
             )}
           </>
         )}
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

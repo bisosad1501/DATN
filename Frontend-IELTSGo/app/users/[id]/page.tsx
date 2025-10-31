@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { socialApi } from "@/lib/api/notifications"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -151,16 +152,16 @@ export default function UserProfilePage() {
   if (loading || !profile) {
     return (
       <AppLayout showSidebar showFooter>
-        <div className="container mx-auto py-8 px-4">
+        <PageContainer>
           <div className="text-center">Loading profile...</div>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
 
   return (
     <AppLayout showSidebar showFooter>
-      <div className="container mx-auto py-8 px-4">
+      <PageContainer>
         {/* Profile Header */}
         <Card className="mb-6">
           <CardContent className="pt-6">
@@ -295,7 +296,7 @@ export default function UserProfilePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

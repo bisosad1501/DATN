@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -51,7 +52,7 @@ export default function MyExercisesPage() {
   if (!user) {
     return (
       <AppLayout>
-        <div className="container mx-auto px-4 py-12 text-center">
+        <PageContainer className="py-12 text-center">
           <h1 className="text-2xl font-bold mb-4">Please Sign In</h1>
           <p className="text-muted-foreground mb-6">
             You need to be signed in to view your exercises
@@ -112,7 +113,7 @@ export default function MyExercisesPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <PageContainer maxWidth="7xl">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">My Exercises</h1>
@@ -458,7 +459,7 @@ export default function MyExercisesPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

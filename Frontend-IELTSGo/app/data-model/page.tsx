@@ -49,7 +49,7 @@ export default function DataModelPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <PageContainer maxWidth="7xl">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
@@ -402,7 +402,7 @@ export default function DataModelPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

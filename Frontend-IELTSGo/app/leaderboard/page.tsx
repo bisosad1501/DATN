@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { leaderboardApi } from "@/lib/api/notifications"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -117,7 +118,7 @@ export default function LeaderboardPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <PageContainer maxWidth="6xl">
         {/* Header Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">Bảng Xếp Hạng</h1>
@@ -427,7 +428,7 @@ export default function LeaderboardPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { StatCard } from "@/components/dashboard/stat-card"
@@ -53,14 +54,14 @@ function DashboardContent() {
   if (loading) {
     return (
       <AppLayout showSidebar={true} showFooter={false}>
-        <div className="container mx-auto px-4 py-8">
+        <PageContainer>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
               <p className="text-muted-foreground">Loading dashboard...</p>
             </div>
           </div>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -116,7 +117,7 @@ function DashboardContent() {
 
   return (
     <AppLayout showSidebar={true} showFooter={false}>
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer>
         {/* Header with Time Range Filter */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
@@ -293,7 +294,7 @@ function DashboardContent() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

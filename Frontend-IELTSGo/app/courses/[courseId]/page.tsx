@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -156,10 +157,10 @@ export default function CourseDetailPage() {
   if (!course) {
     return (
       <AppLayout>
-        <div className="container mx-auto px-4 py-20 text-center">
+        <PageContainer className="py-20 text-center">
           <h1 className="text-2xl font-bold mb-4">Course not found</h1>
           <Button onClick={() => router.push("/courses")}>Back to Courses</Button>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -191,7 +192,7 @@ export default function CourseDetailPage() {
   return (
     <AppLayout>
       <div className="bg-gradient-to-b from-primary/5 to-background">
-        <div className="container mx-auto px-4 py-8">
+        <PageContainer>
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <div className="flex gap-3 mb-4">
@@ -314,10 +315,10 @@ export default function CourseDetailPage() {
               </Card>
             </div>
           </div>
-        </div>
+        </PageContainer>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
+      <PageContainer>
         <Tabs defaultValue="curriculum" className="w-full">
           <TabsList className="grid w-full max-w-3xl grid-cols-3">
             <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
@@ -562,7 +563,7 @@ export default function CourseDetailPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -114,7 +115,7 @@ export default function ExerciseDetailPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <PageContainer maxWidth="6xl">
         {/* Back to Lesson Button - Only show if exercise is linked to a lesson */}
         {exercise.lesson_id && (
           <Button
@@ -370,7 +371,7 @@ export default function ExerciseDetailPage() {
             </Card>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </AppLayout>
   )
 }
