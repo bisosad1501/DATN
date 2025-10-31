@@ -174,10 +174,55 @@
 
   /* Apply base font size to body - all rem values will scale relative to html font-size */
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-size: 1rem; /* This will scale based on html font-size */
     line-height: 1.5;
+    
+    /* Unified background pattern for all pages - more visible and wow */
+    position: relative;
+    background-color: var(--background);
+    /* Enhanced dot pattern with better visibility */
+    background-image: 
+      radial-gradient(circle at 1px 1px, oklch(0.922 0 0 / 0.25) 1px, transparent 0),
+      linear-gradient(to bottom right, var(--background) 0%, oklch(0.98 0.02 80 / 0.15) 50%, oklch(0.55 0.22 25 / 0.08) 100%);
+    background-size: 40px 40px, 100% 100%;
+    background-position: 0 0, 0 0;
+    background-repeat: repeat, no-repeat;
+    background-attachment: fixed;
+  }
+  
+  /* Dark mode background adjustments - more vibrant */
+  .dark body {
+    background-color: var(--background);
+    background-image: 
+      radial-gradient(circle at 1px 1px, oklch(0.4 0 0 / 0.3) 1px, transparent 0),
+      linear-gradient(to bottom right, var(--background) 0%, oklch(0.98 0.02 80 / 0.12) 50%, oklch(0.55 0.22 25 / 0.1) 100%);
+    background-size: 40px 40px, 100% 100%;
+  }
+  
+  /* Enhanced overlay gradient for depth and visual interest */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: 
+      radial-gradient(ellipse 1000px 800px at top left, oklch(0.55 0.22 25 / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 1200px 900px at bottom right, oklch(0.98 0.02 80 / 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse 800px 600px at top right, oklch(0.55 0.22 25 / 0.05) 0%, transparent 40%);
+    opacity: 1;
+  }
+  
+  .dark body::before {
+    background-image: 
+      radial-gradient(ellipse 1000px 800px at top left, oklch(0.55 0.22 25 / 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 1200px 900px at bottom right, oklch(0.98 0.02 80 / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 800px 600px at top right, oklch(0.55 0.22 25 / 0.06) 0%, transparent 40%);
   }
 
   /* Text elements use rem for proper scaling */

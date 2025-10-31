@@ -462,7 +462,7 @@ export default function LessonPlayerPage() {
 
   return (
     <AppLayout showSidebar={false} showFooter={false}>
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative">
       {/* Header */}
       <div className="border-b bg-white sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-3">

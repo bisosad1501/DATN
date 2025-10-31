@@ -40,7 +40,7 @@ export default function ExerciseBuilderPage() {
   const selectedQuestion = selectedQuestionIndex !== null ? exercise.questions[selectedQuestionIndex] : null
 
   return (
-    <div className="min-h-screen bg-accent">
+    <div className="min-h-screen relative">
       {/* Top Bar */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4">

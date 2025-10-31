@@ -95,7 +95,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
       {/* Left side - Promotional Content */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent via-accent/80 to-primary/5 items-center justify-center p-8 relative overflow-hidden">
         {/* Enhanced Decorative shapes */}
@@ -171,7 +171,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Right side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background relative overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden z-10">
         {/* Decorative background elements */}
         <div className="absolute top-0 left-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/30 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />

@@ -125,7 +125,7 @@ export default function CourseBuilderPage() {
   const selectedLesson = selectedModule?.lessons?.find((l) => l.id === selectedLessonId)
 
   return (
-    <div className="min-h-screen bg-accent">
+    <div className="min-h-screen relative">
       {/* Top Bar */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4">

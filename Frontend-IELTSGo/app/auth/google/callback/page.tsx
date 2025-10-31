@@ -224,7 +224,7 @@ export default function GoogleCallbackPage() {
   }, [searchParams, router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center relative z-10">
       <div className="max-w-md w-full mx-4">
         <div className="bg-card border border-border rounded-lg p-8 shadow-lg">
           <div className="flex flex-col items-center space-y-4">

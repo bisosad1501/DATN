@@ -15,7 +15,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
       {/* Desktop sidebar - fixed position */}
       <div className="hidden lg:block fixed inset-y-0 left-0 z-30">
         <AdminSidebar />
@@ -31,7 +31,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </>
       )}
 
-      <main className="flex-1 w-full lg:ml-[280px]">
+      <main className="flex-1 w-full lg:ml-[280px] relative z-10">
         {/* Mobile header */}
         <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between h-16 px-4 border-b bg-background">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>

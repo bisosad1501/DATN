@@ -17,13 +17,13 @@ export function AppLayout({ children, showSidebar = false, showFooter = true }: 
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
       <Navbar 
         onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
         showMenuButton={showSidebar}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 relative z-10">
         {showSidebar && (
           <>
             {/* Desktop sidebar */}
@@ -43,7 +43,7 @@ export function AppLayout({ children, showSidebar = false, showFooter = true }: 
           </>
         )}
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 relative z-10">{children}</main>
       </div>
 
       {showFooter && <Footer />}
