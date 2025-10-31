@@ -356,6 +356,11 @@ export interface Submission {
   updated_at: string
 }
 
+export interface SubmissionWithExercise {
+  submission: Submission
+  exercise: Exercise
+}
+
 export interface SubmissionAnswer {
   id: string
   attempt_id: string

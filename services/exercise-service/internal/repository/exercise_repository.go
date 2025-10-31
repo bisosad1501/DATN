@@ -551,8 +551,18 @@ func (r *ExerciseRepository) CompleteSubmission(submissionID uuid.UUID) error {
 		return err
 	}
 
-	// Calculate score
-	score := totalPointsEarned
+	// Calculate score - use percentage if totalPoints not available or is 0
+	// Score should represent percentage (0-100) for consistency
+	var score float64
+	if totalPoints > 0 && totalPointsEarned > 0 {
+		// Calculate percentage from points earned
+		score = (totalPointsEarned / totalPoints) * 100
+	} else if totalQuestions > 0 {
+		// Fallback: calculate percentage from correct answers
+		score = (float64(correctCount) / float64(totalQuestions)) * 100
+	} else {
+		score = 0.0
+	}
 
 	// Calculate IELTS band score (0-9 scale)
 	// Mapping: 0-4 correct = 0-3, 5-12 = 3.5-4.5, 13-20 = 5-6, 21-28 = 6.5-7.5, 29-35 = 8-8.5, 36-40 = 9

@@ -95,10 +95,10 @@ export const exercisesApi = {
   },
 
   // Get user's submissions
-  getMySubmissions: async (page = 1, limit = 20): Promise<{ submissions: any[]; total: number }> => {
+  getMySubmissions: async (page = 1, limit = 20): Promise<{ submissions: import("@/types").SubmissionWithExercise[]; total: number }> => {
     const response = await apiClient.get<{
       success: boolean
-      data: { submissions: any[]; total: number }
+      data: { submissions: import("@/types").SubmissionWithExercise[]; total: number }
     }>(`/submissions/my?page=${page}&limit=${limit}`)
     return response.data.data
   },
