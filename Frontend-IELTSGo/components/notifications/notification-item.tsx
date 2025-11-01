@@ -97,7 +97,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
     // Small delay to ensure DOM is rendered
     const timeoutId = setTimeout(checkTruncation, 10)
     return () => clearTimeout(timeoutId)
-  }, [notification.message, isExpanded])
+  }, [translatedMessage, isExpanded])
 
   const handleClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking expand button or delete button
