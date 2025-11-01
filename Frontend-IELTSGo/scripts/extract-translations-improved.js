@@ -306,3 +306,5 @@ if (require.main === module) {
 
 module.exports = { extractStrings, scanDirectory, detectNamespace };
 
+
+

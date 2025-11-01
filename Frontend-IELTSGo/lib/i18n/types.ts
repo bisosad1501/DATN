@@ -52,3 +52,5 @@ export type KeysOfNamespace<T extends TranslationNamespace> = ExtractKeys<
 
 export type { Locale, TranslationStructure, TranslationKeys }
 
+
+

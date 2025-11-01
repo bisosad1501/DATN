@@ -16,3 +16,5 @@ WHERE locale IS NULL;
 -- Add comment
 COMMENT ON COLUMN user_preferences.locale IS 'User interface language: vi (Vietnamese), en (English)';
 
+
+
