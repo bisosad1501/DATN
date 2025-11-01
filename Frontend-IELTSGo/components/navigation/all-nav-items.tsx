@@ -51,9 +51,22 @@ export function useUserNavItems() {
   ] as const
 }
 
-export function useSidebarNavItems() {
+type SidebarNavItem = 
+  | {
+      title: string
+      href: string
+      icon: string
+    }
+  | {
+      type: "separator"
+      label: string
+    }
+
+export function useSidebarNavItems(): SidebarNavItem[] {
   const t = useTranslations('common')
-  const tDashboard = useTranslations('dashboard')
+  const tGoals = useTranslations('goals')
+  const tReminders = useTranslations('reminders')
+  const tAchievements = useTranslations('achievements')
   
   return [
     {
@@ -72,6 +85,29 @@ export function useSidebarNavItems() {
       icon: "CheckSquare",
     },
     {
+      type: "separator",
+      label: t('study_tools') || "Study Tools",
+    },
+    {
+      title: tGoals('title'),
+      href: "/goals",
+      icon: "Target",
+    },
+    {
+      title: tReminders('title'),
+      href: "/reminders",
+      icon: "Clock",
+    },
+    {
+      title: tAchievements('title'),
+      href: "/achievements",
+      icon: "Award",
+    },
+    {
+      type: "separator",
+      label: t('social') || "Social",
+    },
+    {
       title: t('leaderboard'),
       href: "/leaderboard",
       icon: "Trophy",
@@ -81,7 +117,7 @@ export function useSidebarNavItems() {
       href: "/notifications",
       icon: "Bell",
     },
-  ] as const
+  ]
 }
 
 export function useInstructorNavItems() {
