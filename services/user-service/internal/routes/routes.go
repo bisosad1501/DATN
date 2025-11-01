@@ -39,6 +39,8 @@ func SetupRoutes(handler *handlers.UserHandler, internalHandler *handlers.Intern
 		{
 			// Profile management
 			user.GET("/profile", handler.GetProfile)
+			// Remove follower (user removes someone from their followers list)
+			user.DELETE("/followers/:id", handler.RemoveFollower)
 			user.PUT("/profile", handler.UpdateProfile)
 			user.POST("/profile/avatar", handler.UpdateAvatar)
 

@@ -102,8 +102,8 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
               {/* User menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10">
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+                    <Avatar className="h-10 w-10 cursor-pointer">
                       <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.fullName} />
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {getUserInitials()}
@@ -113,12 +113,23 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user?.fullName || "Người dùng"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                    </div>
+                    {user ? (
+                      <Link 
+                        href={`/users/${user.id}`}
+                        className="flex flex-col space-y-1 hover:opacity-80 transition-opacity cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="text-sm font-medium leading-none">
+                          {user.fullName || "Người dùng"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                      </Link>
+                    ) : (
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">Người dùng</p>
+                        <p className="text-xs leading-none text-muted-foreground">-</p>
+                      </div>
+                    )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -127,12 +138,14 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
                       {t('dashboard')}
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      {t('profile')}
-                    </Link>
-                  </DropdownMenuItem>
+                  {user && (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/users/${user.id}`} className="cursor-pointer flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        {t('my_profile') || "Hồ sơ của tôi"}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />

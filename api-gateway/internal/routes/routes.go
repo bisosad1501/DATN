@@ -113,6 +113,8 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 		userGroup.GET("/profile", proxy.ReverseProxy(cfg.Services.UserService))
 		userGroup.PUT("/profile", proxy.ReverseProxy(cfg.Services.UserService))
 		userGroup.POST("/profile/avatar", proxy.ReverseProxy(cfg.Services.UserService))
+		// Remove follower (user removes someone from their followers list)
+		userGroup.DELETE("/followers/:id", proxy.ReverseProxy(cfg.Services.UserService))
 		userGroup.GET("/progress", proxy.ReverseProxy(cfg.Services.UserService))
 		userGroup.GET("/progress/history", proxy.ReverseProxy(cfg.Services.UserService))
 		userGroup.GET("/statistics", proxy.ReverseProxy(cfg.Services.UserService))

@@ -233,7 +233,7 @@ function ProfileContent() {
 
   return (
     <AppLayout showSidebar={false} showFooter>
-      <PageContainer maxWidth="4xl">
+      <PageContainer maxWidth="7xl">
         <div className="space-y-6">
           {/* Header */}
           <div className="mb-8">
@@ -262,7 +262,7 @@ function ProfileContent() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>{t('profile_information')}</CardTitle>
-                      <CardDescription>{t('update_your_personal_information_and_profi')}</CardDescription>
+                      <CardDescription className="mt-1">{t('update_your_personal_information_and_profi')}</CardDescription>
                     </div>
                     {!isEditing && (
                       <Button
@@ -280,8 +280,8 @@ function ProfileContent() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Avatar */}
-                  <div className="flex items-center gap-6">
-                    <Avatar className="h-24 w-24">
+                  <div className="flex items-center gap-6 pb-6 border-b">
+                    <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
                       <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.fullName} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                         {getUserInitials()}

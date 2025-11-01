@@ -1361,6 +1361,26 @@ func (h *UserHandler) FollowUser(c *gin.Context) {
 			})
 			return
 		}
+		if err.Error() == "cannot follow private profile" {
+			c.JSON(http.StatusForbidden, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "CANNOT_FOLLOW_PRIVATE",
+					Message: "Cannot follow a private profile",
+				},
+			})
+			return
+		}
+		if err.Error() == "cannot follow friends-only profile" {
+			c.JSON(http.StatusForbidden, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "CANNOT_FOLLOW_FRIENDS_ONLY",
+					Message: "Cannot follow a friends-only profile",
+				},
+			})
+			return
+		}
 		log.Printf("❌ Error following user: %v", err)
 		c.JSON(http.StatusInternalServerError, models.Response{
 			Success: false,
@@ -1449,6 +1469,86 @@ func (h *UserHandler) UnfollowUser(c *gin.Context) {
 	})
 }
 
+// RemoveFollower removes a follower from user's followers list
+// DELETE /api/v1/user/followers/:id
+func (h *UserHandler) RemoveFollower(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "UNAUTHORIZED",
+				Message: "Authentication required",
+			},
+		})
+		return
+	}
+
+	followingID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	followerIDStr := c.Param("id")
+	followerID, err := uuid.Parse(followerIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid follower ID format",
+			},
+		})
+		return
+	}
+
+	err = h.service.RemoveFollower(followingID, followerID)
+	if err != nil {
+		if err.Error() == "cannot remove yourself" {
+			c.JSON(http.StatusBadRequest, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "CANNOT_REMOVE_SELF",
+					Message: "You cannot remove yourself",
+				},
+			})
+			return
+		}
+		if err.Error() == "follower relationship not found" {
+			c.JSON(http.StatusNotFound, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "FOLLOWER_NOT_FOUND",
+					Message: "This user is not following you",
+				},
+			})
+			return
+		}
+		log.Printf("❌ Error removing follower: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "REMOVE_FOLLOWER_FAILED",
+				Message: "Failed to remove follower",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Message: "Follower removed successfully",
+	})
+}
+
 // GetFollowers gets the list of followers for a user
 // GET /api/v1/users/:id/followers
 func (h *UserHandler) GetFollowers(c *gin.Context) {
@@ -1465,6 +1565,20 @@ func (h *UserHandler) GetFollowers(c *gin.Context) {
 		return
 	}
 
+	// Get requesting user ID (if authenticated)
+	var requestingUserID *uuid.UUID
+	if userIDStr, exists := c.Get("user_id"); exists {
+		uid, err := uuid.Parse(userIDStr.(string))
+		if err == nil {
+			requestingUserID = &uid
+		}
+	} else if userIDHeader := c.GetHeader("X-User-ID"); userIDHeader != "" {
+		uid, err := uuid.Parse(userIDHeader)
+		if err == nil {
+			requestingUserID = &uid
+		}
+	}
+
 	pageStr := c.DefaultQuery("page", "1")
 	pageSizeStr := c.DefaultQuery("pageSize", "20")
 	
@@ -1478,8 +1592,18 @@ func (h *UserHandler) GetFollowers(c *gin.Context) {
 		pageSize = 20
 	}
 
-	followers, total, err := h.service.GetFollowers(userID, page, pageSize)
+	followers, total, err := h.service.GetFollowers(userID, requestingUserID, page, pageSize)
 	if err != nil {
+		if err.Error() == "followers list is private" || err.Error() == "followers list is only visible to friends" {
+			c.JSON(http.StatusForbidden, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "FOLLOWERS_LIST_PRIVATE",
+					Message: err.Error(),
+				},
+			})
+			return
+		}
 		log.Printf("❌ Error getting followers: %v", err)
 		c.JSON(http.StatusInternalServerError, models.Response{
 			Success: false,
@@ -1524,6 +1648,20 @@ func (h *UserHandler) GetFollowing(c *gin.Context) {
 		return
 	}
 
+	// Get requesting user ID (if authenticated)
+	var requestingUserID *uuid.UUID
+	if userIDStr, exists := c.Get("user_id"); exists {
+		uid, err := uuid.Parse(userIDStr.(string))
+		if err == nil {
+			requestingUserID = &uid
+		}
+	} else if userIDHeader := c.GetHeader("X-User-ID"); userIDHeader != "" {
+		uid, err := uuid.Parse(userIDHeader)
+		if err == nil {
+			requestingUserID = &uid
+		}
+	}
+
 	pageStr := c.DefaultQuery("page", "1")
 	pageSizeStr := c.DefaultQuery("pageSize", "20")
 	
@@ -1537,8 +1675,18 @@ func (h *UserHandler) GetFollowing(c *gin.Context) {
 		pageSize = 20
 	}
 
-	following, total, err := h.service.GetFollowing(userID, page, pageSize)
+	following, total, err := h.service.GetFollowing(userID, requestingUserID, page, pageSize)
 	if err != nil {
+		if err.Error() == "following list is private" || err.Error() == "following list is only visible to friends" {
+			c.JSON(http.StatusForbidden, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "FOLLOWING_LIST_PRIVATE",
+					Message: err.Error(),
+				},
+			})
+			return
+		}
 		log.Printf("❌ Error getting following: %v", err)
 		c.JSON(http.StatusInternalServerError, models.Response{
 			Success: false,

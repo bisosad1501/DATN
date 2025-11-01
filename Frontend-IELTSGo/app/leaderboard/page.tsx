@@ -21,6 +21,7 @@ import { Loader2, Trophy, Medal, Award, Clock, Target, TrendingUp, Sparkles } fr
 import { useAuth } from "@/lib/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
+import Link from "next/link"
 
 type Period = "daily" | "weekly" | "monthly" | "all-time"
 
@@ -190,7 +191,10 @@ export default function LeaderboardPage() {
                   </div>
 
                   {/* User Info */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Link 
+                    href={`/users/${userRank.user_id}`}
+                    className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+                  >
                     <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                       <AvatarImage src={userRank.avatar_url || "/placeholder.svg"} />
                       <AvatarFallback className="bg-primary/10 text-primary font-semibold">
@@ -208,7 +212,7 @@ export default function LeaderboardPage() {
                         {userRank.total_points.toLocaleString()} điểm
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 </div>
 
                 {/* Stats */}
@@ -305,17 +309,27 @@ export default function LeaderboardPage() {
                           </div>
 
                           {/* Avatar */}
-                          <Avatar className="h-11 w-11 border border-border shadow-sm flex-shrink-0">
-                            <AvatarImage src={entry.avatar_url || "/placeholder.svg"} />
-                            <AvatarFallback className="bg-muted text-foreground font-medium">
-                              {entry.full_name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <Link 
+                            href={`/users/${entry.user_id}`}
+                            className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Avatar className="h-11 w-11 border border-border shadow-sm cursor-pointer">
+                              <AvatarImage src={entry.avatar_url || "/placeholder.svg"} />
+                              <AvatarFallback className="bg-muted text-foreground font-medium">
+                                {entry.full_name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
 
                           {/* User Info & Progress */}
-                          <div className="flex-1 min-w-0">
+                          <Link 
+                            href={`/users/${entry.user_id}`}
+                            className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-sm truncate">{entry.full_name}</p>
+                              <p className="font-medium text-sm truncate cursor-pointer">{entry.full_name}</p>
                               {isUser && (
                                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
                                   {t('you')}
@@ -335,7 +349,7 @@ export default function LeaderboardPage() {
                                 style={{ width: `${progressPercent}%` }}
                               />
                             </div>
-                          </div>
+                          </Link>
 
                           {/* Stats */}
                           <div className="hidden md:flex items-center gap-6 flex-shrink-0">

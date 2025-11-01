@@ -94,10 +94,17 @@ func (s *UserService) GetPublicProfile(targetUserID uuid.UUID, requestingUserID 
 		return nil, fmt.Errorf("profile is private")
 	}
 
-	// TODO: Check "friends" visibility (requires friendship check)
+	// Check "friends" visibility - user can view if target user is following them (one-way friendship)
 	if visibility == "friends" && !isOwner {
-		// For now, treat as private if not owner (friendship check not implemented)
-		return nil, fmt.Errorf("profile is only visible to friends")
+		if requestingUserID == nil {
+			// Not authenticated, cannot view friends-only profile
+			return nil, fmt.Errorf("profile is only visible to friends")
+		}
+		// Check if target user is following the requesting user (one-way check)
+		isFriend, err := s.repo.IsFollowing(targetUserID, *requestingUserID)
+		if err != nil || !isFriend {
+			return nil, fmt.Errorf("profile is only visible to friends")
+		}
 	}
 
 	// Convert profile to map and add profile_visibility
@@ -793,6 +800,34 @@ func (s *UserService) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, e
 
 // FollowUser creates a follow relationship
 func (s *UserService) FollowUser(followerID, followingID uuid.UUID) error {
+	// Prevent self-follow
+	if followerID == followingID {
+		return fmt.Errorf("cannot follow yourself")
+	}
+
+	// Check if target user's profile is private
+	prefs, err := s.repo.GetPreferences(followingID)
+	if err == nil && prefs != nil {
+		visibility := prefs.ProfileVisibility
+		if visibility == "" {
+			visibility = "public" // Default to public
+		}
+		
+		// If profile is private, don't allow follow
+		if visibility == "private" {
+			return fmt.Errorf("cannot follow private profile")
+		}
+		
+		// If profile is friends-only, check if followingID is following followerID
+		// (one-way friendship: target user must follow requester first)
+		if visibility == "friends" {
+			isFriend, err := s.repo.IsFollowing(followingID, followerID) // Check if target user follows the requester
+			if err != nil || !isFriend {
+				return fmt.Errorf("cannot follow friends-only profile")
+			}
+		}
+	}
+
 	return s.repo.CreateFollow(followerID, followingID)
 }
 
@@ -801,13 +836,80 @@ func (s *UserService) UnfollowUser(followerID, followingID uuid.UUID) error {
 	return s.repo.DeleteFollow(followerID, followingID)
 }
 
+// RemoveFollower removes a follower from user's followers list (user removes someone who follows them)
+func (s *UserService) RemoveFollower(followingID, followerID uuid.UUID) error {
+	// Prevent removing yourself as a follower (shouldn't happen, but safety check)
+	if followingID == followerID {
+		return fmt.Errorf("cannot remove yourself")
+	}
+	return s.repo.RemoveFollower(followingID, followerID)
+}
+
 // GetFollowers gets the list of followers for a user (paginated)
-func (s *UserService) GetFollowers(userID uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+func (s *UserService) GetFollowers(userID uuid.UUID, requestingUserID *uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+	// Check if requesting user can view this profile's followers
+	isOwner := requestingUserID != nil && *requestingUserID == userID
+	if !isOwner {
+		// For non-owners, check profile visibility
+		prefs, err := s.repo.GetPreferences(userID)
+		if err == nil && prefs != nil {
+			visibility := prefs.ProfileVisibility
+			if visibility == "" {
+				visibility = "public"
+			}
+			
+			// Private profiles: only owner can see followers
+			if visibility == "private" {
+				return nil, 0, fmt.Errorf("followers list is private")
+			}
+			
+			// Friends-only: check if userID follows requestingUserID
+			if visibility == "friends" {
+				if requestingUserID == nil {
+					return nil, 0, fmt.Errorf("followers list is only visible to friends")
+				}
+				isFriend, err := s.repo.IsFollowing(userID, *requestingUserID)
+				if err != nil || !isFriend {
+					return nil, 0, fmt.Errorf("followers list is only visible to friends")
+				}
+			}
+		}
+	}
+	
 	return s.repo.GetFollowers(userID, page, limit)
 }
 
 // GetFollowing gets the list of users a user is following (paginated)
-func (s *UserService) GetFollowing(userID uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+func (s *UserService) GetFollowing(userID uuid.UUID, requestingUserID *uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+	// Check if requesting user can view this profile's following list
+	isOwner := requestingUserID != nil && *requestingUserID == userID
+	if !isOwner {
+		// For non-owners, check profile visibility
+		prefs, err := s.repo.GetPreferences(userID)
+		if err == nil && prefs != nil {
+			visibility := prefs.ProfileVisibility
+			if visibility == "" {
+				visibility = "public"
+			}
+			
+			// Private profiles: only owner can see following list
+			if visibility == "private" {
+				return nil, 0, fmt.Errorf("following list is private")
+			}
+			
+			// Friends-only: check if userID follows requestingUserID
+			if visibility == "friends" {
+				if requestingUserID == nil {
+					return nil, 0, fmt.Errorf("following list is only visible to friends")
+				}
+				isFriend, err := s.repo.IsFollowing(userID, *requestingUserID)
+				if err != nil || !isFriend {
+					return nil, 0, fmt.Errorf("following list is only visible to friends")
+				}
+			}
+		}
+	}
+	
 	return s.repo.GetFollowing(userID, page, limit)
 }
 

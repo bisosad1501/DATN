@@ -15,8 +15,37 @@ export const authApi = {
   },
 
   // Register new user
+  // Backend expects: { email, password, role, fullName, targetBandScore (float64), phone (optional) }
   register: async (data: RegisterData): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>("/auth/register", data)
+    // Prepare payload - ensure types are correct
+    const payload: any = {
+      email: data.email,
+      password: data.password,
+      role: data.role,
+    }
+    
+    // Only include optional fields if they have values
+    if (data.fullName && data.fullName.trim()) {
+      payload.fullName = data.fullName.trim()
+    }
+    
+    if (data.targetBandScore !== undefined && data.targetBandScore !== null) {
+      // Convert to number if it's a number, or parse from string
+      payload.targetBandScore = typeof data.targetBandScore === 'number' 
+        ? data.targetBandScore 
+        : parseFloat(String(data.targetBandScore))
+      
+      // Validate range (0-9)
+      if (isNaN(payload.targetBandScore) || payload.targetBandScore < 0 || payload.targetBandScore > 9) {
+        throw new Error("Target band score must be between 0 and 9")
+      }
+    }
+    
+    if (data.phone && data.phone.trim()) {
+      payload.phone = data.phone.trim()
+    }
+    
+    const response = await apiClient.post<AuthResponse>("/auth/register", payload)
     return response.data
   },
 

@@ -286,43 +286,203 @@ export const leaderboardApi = {
   },
 }
 
+// Types for Social Features
+interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  message?: string
+  error?: {
+    code: string
+    message: string
+    details?: string
+  }
+}
+
+interface UserFollowInfo {
+  user_id: string
+  full_name: string
+  avatar_url?: string | null
+  bio?: string | null
+  level: number
+  points: number
+  followed_at: string
+}
+
+interface FollowersResponse {
+  followers: UserFollowInfo[]
+  pagination: {
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+  }
+}
+
+interface FollowingResponse {
+  following: UserFollowInfo[]
+  pagination: {
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+  }
+}
+
 export const socialApi = {
   // Get user profile
+  // BE Response: { success: true, data: { ...profile with isFollowing, followersCount, followingCount... } }
+  // BE Error 403: Profile is private
+  // BE Error 404: User not found
   getUserProfile: async (userId: string): Promise<any> => {
-    const response = await apiClient.get(`/users/${userId}/profile`)
-    // Backend returns: { success: true, data: { ...profile with profile_visibility... } }
-    return response.data?.data || response.data
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(`/users/${userId}/profile`)
+      if (!response.data.success) {
+        throw new Error(response.data.error?.message || "Failed to get profile")
+      }
+      return response.data.data
+    } catch (error: any) {
+      // Re-throw with status code preserved for better error handling
+      if (error.response?.status === 403) {
+        const customError: any = new Error("Profile is private")
+        customError.response = error.response
+        throw customError
+      }
+      if (error.response?.status === 404) {
+        const customError: any = new Error("User not found")
+        customError.response = error.response
+        throw customError
+      }
+      throw error
+    }
   },
 
   // Get user achievements
+  // BE Response: { success: true, data: [...] }
   getUserAchievements: async (userId: string): Promise<any[]> => {
-    const response = await apiClient.get(`/users/${userId}/achievements`)
-    return response.data
+    const response = await apiClient.get<ApiResponse<any[]>>(`/users/${userId}/achievements`)
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || "Failed to get achievements")
+    }
+    return response.data.data || []
   },
 
   // Follow user
+  // BE Response: { success: true, message: "User followed successfully" }
+  // BE Error: { success: false, error: { code: "CANNOT_FOLLOW_SELF", message: "..." } }
   followUser: async (userId: string): Promise<void> => {
-    await apiClient.post(`/users/${userId}/follow`)
+    console.log("[Social API] Following user:", userId)
+    const response = await apiClient.post<ApiResponse<void>>(`/users/${userId}/follow`)
+    console.log("[Social API] Follow response:", response.data)
+    
+    if (!response.data.success) {
+      const errorCode = response.data.error?.code || "FOLLOW_FAILED"
+      const errorMsg = response.data.error?.message || "Failed to follow user"
+      
+      console.error("[Social API] Follow failed:", { errorCode, errorMsg })
+      
+      // Handle specific error codes
+      if (errorCode === "CANNOT_FOLLOW_SELF") {
+        const error: any = new Error("You cannot follow yourself")
+        error.response = { data: { error: { code: errorCode, message: errorMsg } } }
+        throw error
+      }
+      if (errorCode === "CANNOT_FOLLOW_PRIVATE") {
+        const error: any = new Error("Cannot follow a private profile")
+        error.response = { status: 403, data: { error: { code: errorCode, message: errorMsg } } }
+        throw error
+      }
+      if (errorCode === "CANNOT_FOLLOW_FRIENDS_ONLY") {
+        const error: any = new Error("Cannot follow a friends-only profile")
+        error.response = { status: 403, data: { error: { code: errorCode, message: errorMsg } } }
+        throw error
+      }
+      const error: any = new Error(errorMsg)
+      error.response = { data: { error: { code: errorCode, message: errorMsg } } }
+      throw error
+    }
+    console.log("[Social API] Follow successful")
   },
 
   // Unfollow user
+  // BE Response: { success: true, message: "User unfollowed successfully" }
+  // BE Error: { success: false, error: { code: "NOT_FOLLOWING", message: "..." } } (404)
   unfollowUser: async (userId: string): Promise<void> => {
-    await apiClient.delete(`/users/${userId}/follow`)
+    console.log("[Social API] Unfollowing user:", userId)
+    const response = await apiClient.delete<ApiResponse<void>>(`/users/${userId}/follow`)
+    console.log("[Social API] Unfollow response:", response.data)
+    
+    if (!response.data.success) {
+      const errorCode = response.data.error?.code || "UNFOLLOW_FAILED"
+      const errorMsg = response.data.error?.message || "Failed to unfollow user"
+      
+      console.error("[Social API] Unfollow failed:", { errorCode, errorMsg })
+      
+      // Handle specific error codes
+      if (errorCode === "NOT_FOLLOWING") {
+        const error: any = new Error("You are not following this user")
+        error.response = { status: 404, data: { error: { code: errorCode, message: errorMsg } } }
+        throw error
+      }
+      const error: any = new Error(errorMsg)
+      error.response = { data: { error: { code: errorCode, message: errorMsg } } }
+      throw error
+    }
+    console.log("[Social API] Unfollow successful")
   },
 
   // Get followers
-  getFollowers: async (userId: string, page = 1, pageSize = 20): Promise<PaginatedResponse<any>> => {
-    const response = await apiClient.get<PaginatedResponse<any>>(
+  // BE Response: { success: true, data: { followers: [...], pagination: {...} } }
+  getFollowers: async (userId: string, page = 1, pageSize = 20): Promise<FollowersResponse> => {
+    const response = await apiClient.get<ApiResponse<FollowersResponse>>(
       `/users/${userId}/followers?page=${page}&pageSize=${pageSize}`,
     )
-    return response.data
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || "Failed to get followers")
+    }
+    return response.data.data!
   },
 
   // Get following
-  getFollowing: async (userId: string, page = 1, pageSize = 20): Promise<PaginatedResponse<any>> => {
-    const response = await apiClient.get<PaginatedResponse<any>>(
+  // BE Response: { success: true, data: { following: [...], pagination: {...} } }
+  getFollowing: async (userId: string, page = 1, pageSize = 20): Promise<FollowingResponse> => {
+    const response = await apiClient.get<ApiResponse<FollowingResponse>>(
       `/users/${userId}/following?page=${page}&pageSize=${pageSize}`,
     )
-    return response.data
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || "Failed to get following")
+    }
+    return response.data.data!
+  },
+
+  // Remove follower (remove someone who is following you)
+  // BE Response: { success: true, message: "Follower removed successfully" }
+  // BE Error: { success: false, error: { code: "FOLLOWER_NOT_FOUND", message: "..." } }
+  removeFollower: async (followerId: string): Promise<void> => {
+    console.log("[Social API] Removing follower:", followerId)
+    const response = await apiClient.delete<ApiResponse<void>>(`/user/followers/${followerId}`)
+    console.log("[Social API] Remove follower response:", response.data)
+    
+    if (!response.data.success) {
+      const errorCode = response.data.error?.code || "REMOVE_FOLLOWER_FAILED"
+      const errorMsg = response.data.error?.message || "Failed to remove follower"
+      
+      console.error("[Social API] Remove follower failed:", { errorCode, errorMsg })
+      
+      // Handle specific error codes
+      if (errorCode === "FOLLOWER_NOT_FOUND") {
+        const error: any = new Error("This user is not following you")
+        error.response = { status: 404, data: { error: { code: errorCode, message: errorMsg } } }
+        throw error
+      }
+      if (errorCode === "CANNOT_REMOVE_SELF") {
+        const error: any = new Error("You cannot remove yourself")
+        error.response = { data: { error: { code: errorCode, message: errorMsg } } }
+        throw error
+      }
+      const error: any = new Error(errorMsg)
+      error.response = { data: { error: { code: errorCode, message: errorMsg } } }
+      throw error
+    }
+    console.log("[Social API] Remove follower successful")
   },
 }

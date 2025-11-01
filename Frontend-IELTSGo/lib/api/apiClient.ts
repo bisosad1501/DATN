@@ -85,8 +85,26 @@ apiClient.interceptors.response.use(
          originalRequest.url?.includes("/admin/analytics") ||
          originalRequest.url?.includes("/admin/activities"))
 
-      if (!is404UnimplementedEndpoint) {
+      // Don't log 403 errors for private profiles (expected behavior)
+      const is403PrivateProfile =
+        error.response?.status === 403 &&
+        originalRequest.url?.includes("/users/") &&
+        originalRequest.url?.includes("/profile")
+
+      // Don't log 400 errors for register/login (expected validation errors, will be shown to user)
+      const is400AuthEndpoint =
+        error.response?.status === 400 &&
+        (originalRequest.url?.includes("/auth/register") ||
+         originalRequest.url?.includes("/auth/login"))
+
+      if (!is404UnimplementedEndpoint && !is403PrivateProfile && !is400AuthEndpoint) {
         console.error("[API Error]", error.response?.status, error.message)
+      } else if (is403PrivateProfile) {
+        // Log as info instead of error for private profiles
+        console.log("[API Info] Profile is private (403)")
+      } else if (is400AuthEndpoint) {
+        // Log validation errors as warnings (expected behavior)
+        console.log("[API Validation]", error.response?.status, error.response?.data?.error?.message || error.message)
       }
     }
 

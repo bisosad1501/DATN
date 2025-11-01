@@ -75,9 +75,33 @@ export default function RegisterPage() {
         targetBandScore: formData.targetBandScore ? parseFloat(formData.targetBandScore) : undefined,
       })
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error?.message 
-        || error.message 
-        || t('registration_failed_please_try_again')
+      // Parse error message from backend
+      let errorMessage = t('registration_failed_please_try_again')
+      
+      if (error.response?.data) {
+        // Backend returns: { success: false, error: { code, message, details } }
+        if (error.response.data.error?.message) {
+          errorMessage = error.response.data.error.message
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      // Map common error codes to user-friendly messages
+      const errorCode = error.response?.data?.error?.code
+      if (errorCode === "EMAIL_EXISTS") {
+        errorMessage = t('email_already_registered') || "Email đã được đăng ký"
+      } else if (errorCode === "PHONE_EXISTS") {
+        errorMessage = t('phone_already_registered') || "Số điện thoại đã được đăng ký"
+      } else if (errorCode === "WEAK_PASSWORD") {
+        errorMessage = t('password_must_be_at_least_8') || "Mật khẩu phải có ít nhất 8 ký tự"
+      } else if (errorCode === "VALIDATION_ERROR") {
+        // Show validation error details if available
+        errorMessage = error.response?.data?.error?.message || errorMessage
+      }
+      
       setApiError(errorMessage)
     } finally {
       setIsLoading(false)

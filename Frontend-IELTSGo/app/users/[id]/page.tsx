@@ -11,7 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Award, BookOpen, UserPlus, UserMinus, Trophy, Target, Zap, Lock } from "lucide-react"
+import { Award, BookOpen, UserPlus, UserMinus, Trophy, Target, Zap, Lock, Loader2, Edit2, Eye, EyeOff, UserX } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import Link from "next/link"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { userApi } from "@/lib/api/user"
 import { useTranslations } from '@/lib/i18n'
@@ -52,70 +57,152 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
-  const [profileVisibility, setProfileVisibility] = useState<"public" | "friends" | "private" | null>(null)
+  
+  // Followers/Following modal state
+  const [showFollowModal, setShowFollowModal] = useState(false)
+  const [followersTab, setFollowersTab] = useState<"followers" | "following">("followers")
+  const [followers, setFollowers] = useState<any[]>([])
+  const [following, setFollowing] = useState<any[]>([])
+  const [followersPage, setFollowersPage] = useState(1)
+  const [followingPage, setFollowingPage] = useState(1)
+  const [followersPagination, setFollowersPagination] = useState<any>(null)
+  const [followingPagination, setFollowingPagination] = useState<any>(null)
+  const [loadingFollows, setLoadingFollows] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+  const [profileVisibility, setProfileVisibilityState] = useState<"public" | "friends" | "private">("public")
+  const [updatingVisibility, setUpdatingVisibility] = useState(false)
 
   const isOwnProfile = currentUser?.id === userId
   
   // ✅ Check if profile should be visible
   const isProfileVisible = () => {
     if (isOwnProfile) return true // Always visible to owner
-    if (!profileVisibility) return true // Default to visible if not loaded yet
     if (profileVisibility === "public") return true
     if (profileVisibility === "private") return false
     if (profileVisibility === "friends") {
-      // TODO: Check if currentUser is following this user
-      // For now, assume visible (requires backend API)
-      return true
+      // Friends-only: Only visible if already following (mutual follow required to follow)
+      // If we can see the profile, it means visibility check passed from backend
+      // So we trust the backend response - if profile is loaded, it's visible
+      // If not loaded (403 error), it's not visible
+      return profile !== null // If profile loaded successfully, it's visible
     }
     return true
+  }
+
+  // Load profile visibility preference
+  const loadProfileVisibility = async () => {
+    if (!isOwnProfile) return
+    try {
+      const prefs = await userApi.getPreferences()
+      setProfileVisibilityState(prefs.profile_visibility || "public")
+    } catch (error) {
+      console.error("Failed to load profile visibility:", error)
+      setProfileVisibilityState("public") // Default to public
+    }
+  }
+
+  // Update profile visibility
+  const handleVisibilityChange = async (value: "public" | "friends" | "private") => {
+    if (!isOwnProfile || updatingVisibility) return
+    
+    setUpdatingVisibility(true)
+    const previousVisibility = profileVisibility
+    
+    // Optimistic update
+    setProfileVisibilityState(value)
+    
+    try {
+      await userApi.updatePreferences({
+        profile_visibility: value,
+      })
+      // Success - visibility already updated
+    } catch (error) {
+      console.error("Failed to update profile visibility:", error)
+      // Revert on error
+      setProfileVisibilityState(previousVisibility)
+      alert(t('failed_to_update_visibility'))
+    } finally {
+      setUpdatingVisibility(false)
+    }
   }
 
   useEffect(() => {
     loadProfile()
     loadAchievements()
+    if (isOwnProfile) {
+      loadProfileVisibility()
+    }
   }, [userId])
 
   const loadProfile = async () => {
     try {
       setLoading(true)
+      console.log("[Profile] Loading profile for userId:", userId)
       const data = await socialApi.getUserProfile(userId)
-      setProfile(data)
+      console.log("[Profile] Backend response:", data)
+      
+      // Map BE response to FE UserProfile interface
+      // BE returns: user_id, full_name, email, avatar_url, bio, level, points, 
+      //             courses_completed, exercises_completed, study_time, streak,
+      //             followers_count, following_count, is_following, profile_visibility
+      const mappedProfile = {
+        id: data.user_id || data.id || userId,
+        fullName: data.full_name || data.fullName || "User",
+        email: data.email || "",
+        avatar: data.avatar_url || data.avatar || undefined,
+        bio: data.bio || undefined,
+        level: Number(data.level) || 0,
+        points: Number(data.points) || 0,
+        coursesCompleted: Number(data.courses_completed || data.coursesCompleted) || 0,
+        exercisesCompleted: Number(data.exercises_completed || data.exercisesCompleted) || 0,
+        studyTime: Number(data.study_time || data.studyTime) || 0,
+        streak: Number(data.streak || data.current_streak_days) || 0,
+        followersCount: Number(data.followers_count || data.followersCount) || 0,
+        followingCount: Number(data.following_count || data.followingCount) || 0,
+        isFollowing: Boolean(data.is_following || data.isFollowing) || false,
+      }
+      
+      console.log("[Profile] Mapped profile:", mappedProfile)
+      setProfile(mappedProfile)
       
       // ✅ Load profile visibility preference from backend response
-      // Backend now returns profile_visibility in getUserProfile response
-      if (isOwnProfile) {
-        // Own profile: always visible to owner
-        setProfileVisibility("public")
-      } else {
+      if (!isOwnProfile) {
         // Other user's profile: check visibility from response
         if (data.profile_visibility) {
-          setProfileVisibility(data.profile_visibility)
+          setProfileVisibilityState(data.profile_visibility)
         } else {
           // Default to public if not provided (backward compatibility)
-          console.warn(`[Profile Visibility] Backend did not provide profile_visibility for user ${userId}, defaulting to public`)
-          setProfileVisibility("public")
+          setProfileVisibilityState("public")
         }
       }
-    } catch (error) {
-      console.error("Failed to load profile:", error)
-      // Mock data for demo (fallback)
-      setProfile({
-        id: userId,
-        fullName: "Nguyễn Văn A",
-        email: "nguyenvana@example.com",
-        bio: "IELTS learner aiming for band 8.0. Love practicing speaking and writing!",
-        level: 15,
-        points: 2500,
-        coursesCompleted: 12,
-        exercisesCompleted: 45,
-        studyTime: 3600,
-        streak: 15,
-        followersCount: 234,
-        followingCount: 156,
-        isFollowing: false,
-      })
-      // Default to public on error (fallback behavior)
-      setProfileVisibility("public")
+    } catch (error: any) {
+      // Handle specific error cases - don't log 403 as error (expected for private profiles)
+      if (error?.response?.status === 403 || error?.message?.includes("private")) {
+        // Profile is private - this is expected behavior, not an error
+        setProfileVisibilityState("private")
+        setProfile({
+          id: userId,
+          fullName: "User",
+          email: "",
+          level: 0,
+          points: 0,
+          coursesCompleted: 0,
+          exercisesCompleted: 0,
+          studyTime: 0,
+          streak: 0,
+          followersCount: 0,
+          followingCount: 0,
+          isFollowing: false,
+        })
+      } else if (error?.response?.status === 404 || error?.message?.includes("not found")) {
+        // Profile not found
+        console.warn("User profile not found:", userId)
+        setProfile(null)
+      } else {
+        // Other unexpected errors - log as error
+        console.error("Failed to load profile:", error)
+        setProfile(null)
+      }
     } finally {
       setLoading(false)
     }
@@ -124,51 +211,132 @@ export default function UserProfilePage() {
   const loadAchievements = async () => {
     try {
       const data = await socialApi.getUserAchievements(userId)
-      setAchievements(data)
+      // BE returns: [{ achievement_id, title, description, icon, rarity, unlocked_at }]
+      const mappedAchievements = (data || []).map((achievement: any) => ({
+        id: achievement.achievement_id || achievement.id || "",
+        title: achievement.title || "",
+        description: achievement.description || "",
+        icon: achievement.icon || "🏆",
+        unlockedAt: achievement.unlocked_at || achievement.unlockedAt || new Date().toISOString(),
+        rarity: achievement.rarity || "common",
+      }))
+      setAchievements(mappedAchievements)
     } catch (error) {
       console.error("Failed to load achievements:", error)
-      // Mock data
-      setAchievements([
-        {
-          id: "1",
-          title: "First Steps",
-          description: "Complete your first lesson",
-          icon: "🎯",
-          unlockedAt: "2024-01-15",
-          rarity: "common",
-        },
-        {
-          id: "2",
-          title: "Week Warrior",
-          description: "Maintain a 7-day study streak",
-          icon: "🔥",
-          unlockedAt: "2024-01-20",
-          rarity: "rare",
-        },
-        {
-          id: "3",
-          title: "Perfect Score",
-          description: "Get 100% on an exercise",
-          icon: "💯",
-          unlockedAt: "2024-01-25",
-          rarity: "epic",
-        },
-      ])
+      setAchievements([]) // Empty array on error instead of mock data
     }
   }
 
   const handleFollow = async () => {
-    if (!profile) return
+    if (!profile || isOwnProfile) {
+      console.warn("Cannot follow: no profile or own profile")
+      return
+    }
+    
+    if (followLoading) {
+      console.warn("Follow action already in progress")
+      return
+    }
+    
+    const wasFollowing = profile.isFollowing
+    const previousCount = profile.followersCount
+    
+    console.log("[Follow] Starting:", { wasFollowing, userId, previousCount })
+    
+    setFollowLoading(true)
+    
+    // Optimistic update
+    setProfile({
+      ...profile,
+      isFollowing: !wasFollowing,
+      followersCount: wasFollowing ? Math.max(0, previousCount - 1) : previousCount + 1,
+    })
+    
     try {
-      if (profile.isFollowing) {
+      if (wasFollowing) {
+        console.log("[Follow] Unfollowing user:", userId)
         await socialApi.unfollowUser(userId)
-        setProfile({ ...profile, isFollowing: false, followersCount: profile.followersCount - 1 })
+        console.log("[Follow] Unfollow successful")
       } else {
+        console.log("[Follow] Following user:", userId)
         await socialApi.followUser(userId)
-        setProfile({ ...profile, isFollowing: true, followersCount: profile.followersCount + 1 })
+        console.log("[Follow] Follow successful")
       }
-    } catch (error) {
-      console.error("Failed to follow/unfollow:", error)
+      
+      // Reload profile to get accurate counts from BE
+      console.log("[Follow] Reloading profile...")
+      await loadProfile()
+      console.log("[Follow] Profile reloaded")
+    } catch (error: any) {
+      console.error("[Follow] Error:", error)
+      console.error("[Follow] Error response:", error?.response?.data)
+      
+      // Revert optimistic update on error
+      setProfile({
+        ...profile,
+        isFollowing: wasFollowing,
+        followersCount: previousCount,
+      })
+      
+      // Show error message to user
+      const errorMessage = error?.response?.data?.error?.message 
+        || error?.message 
+        || t('failed_to_update_follow_status')
+      
+      // Use more user-friendly error display
+      if (error?.response?.data?.error?.code === "CANNOT_FOLLOW_SELF") {
+        alert(t('cannot_follow_self'))
+      } else if (error?.response?.data?.error?.code === "CANNOT_FOLLOW_PRIVATE") {
+        alert(t('cannot_follow_private_profile'))
+      } else if (error?.response?.data?.error?.code === "CANNOT_FOLLOW_FRIENDS_ONLY") {
+        alert(t('cannot_follow_friends_only'))
+      } else {
+        alert(errorMessage)
+      }
+    } finally {
+      setFollowLoading(false)
+    }
+  }
+
+  const loadFollowers = async (page = 1) => {
+    try {
+      setLoadingFollows(true)
+      const response = await socialApi.getFollowers(userId, page, 20)
+      setFollowers(response.followers || [])
+      setFollowersPagination(response.pagination)
+      setFollowersPage(page)
+    } catch (error: any) {
+      console.error("Failed to load followers:", error)
+      // Handle 403 Forbidden for private/friends-only lists
+      if (error?.response?.status === 403) {
+        alert(t('followers_list_private'))
+        setShowFollowModal(false)
+      }
+      setFollowers([])
+      setFollowersPagination(null)
+    } finally {
+      setLoadingFollows(false)
+    }
+  }
+
+  const loadFollowing = async (page = 1) => {
+    try {
+      setLoadingFollows(true)
+      const response = await socialApi.getFollowing(userId, page, 20)
+      setFollowing(response.following || [])
+      setFollowingPagination(response.pagination)
+      setFollowingPage(page)
+    } catch (error: any) {
+      console.error("Failed to load following:", error)
+      // Handle 403 Forbidden for private/friends-only lists
+      if (error?.response?.status === 403) {
+        alert(t('following_list_private'))
+        setShowFollowModal(false)
+      }
+      setFollowing([])
+      setFollowingPagination(null)
+    } finally {
+      setLoadingFollows(false)
     }
   }
 
@@ -189,62 +357,165 @@ export default function UserProfilePage() {
 
   if (loading || !profile) {
     return (
-      <AppLayout showSidebar showFooter>
+      <AppLayout showSidebar={false} showFooter>
         <PageContainer>
-          <div className="text-center">{t('loading_profile')}</div>
+          <div className="text-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">{t('loading_profile')}</p>
+          </div>
         </PageContainer>
       </AppLayout>
     )
   }
 
   return (
-    <AppLayout showSidebar showFooter>
-      <PageContainer>
+    <AppLayout showSidebar={false} showFooter>
+      <PageContainer maxWidth="7xl">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">{t('profile')}</h1>
+          <p className="text-base text-muted-foreground mt-2">
+            {isOwnProfile ? t('view_your_public_profile') : t('user_profile')}
+          </p>
+        </div>
+
         {/* Profile Header */}
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6">
-              <Avatar className="h-24 w-24">
+              <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
                 <AvatarImage src={profile.avatar || "/placeholder.svg"} />
                 <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                   {profile.fullName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h1 className="text-2xl font-bold">{profile.fullName}</h1>
-                    <p className="text-muted-foreground">{profile.email}</p>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-2xl font-bold tracking-tight mb-1">{profile.fullName}</h2>
+                    <p className="text-muted-foreground truncate">{profile.email}</p>
                   </div>
-                  {!isOwnProfile && (
-                    <Button onClick={handleFollow} variant={profile.isFollowing ? "outline" : "default"}>
-                      {profile.isFollowing ? (
-                        <>
-                          <UserMinus className="h-4 w-4 mr-2" />
-                          {t('unfollow')}
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          {t('follow')}
-                        </>
-                      )}
+                  {isOwnProfile ? (
+                    <Button asChild variant="outline" size="default" className="h-9 px-4 flex-shrink-0">
+                      <Link href="/profile">
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        <span className="whitespace-nowrap">{t('edit_profile')}</span>
+                      </Link>
                     </Button>
+                  ) : (
+                    // Only show follow button if profile is visible (not private)
+                    isProfileVisible() && (
+                      <Button 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleFollow()
+                        }}
+                        variant={profile.isFollowing ? "outline" : "default"}
+                        disabled={followLoading}
+                        className="h-9 flex-shrink-0"
+                      >
+                        {followLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {t('loading')}...
+                          </>
+                        ) : profile.isFollowing ? (
+                          <>
+                            <UserMinus className="h-4 w-4 mr-2" />
+                            {t('unfollow')}
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            {t('follow')}
+                          </>
+                        )}
+                      </Button>
+                    )
                   )}
                 </div>
-                {profile.bio && <p className="text-sm mb-4">{profile.bio}</p>}
-                <div className="flex gap-6 text-sm">
-                  <div>
-                    <span className="font-semibold">{profile.followersCount}</span>
-                    <span className="text-muted-foreground ml-1">{t('followers')}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold">{profile.followingCount}</span>
-                    <span className="text-muted-foreground ml-1">{t('following')}</span>
-                  </div>
-                  <div>
-                    <Badge variant="secondary">{t('level')} {profile.level}</Badge>
-                  </div>
+                {profile.bio && (
+                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{profile.bio}</p>
+                )}
+                
+                {/* Profile Settings and Stats - Combined section */}
+                <div className="space-y-4 pt-4 border-t">
+                  {/* Profile Visibility Toggle - Only for own profile */}
+                  {isOwnProfile && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        {profileVisibility === "private" ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <Label htmlFor="profile_visibility" className="text-sm font-medium leading-none block mb-1.5">
+                            {t('profile_visibility')}
+                          </Label>
+                          <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
+                            {profileVisibility === "public" && t('profile_visibility_public_desc')}
+                            {profileVisibility === "friends" && t('profile_visibility_friends_desc')}
+                            {profileVisibility === "private" && t('profile_visibility_private_desc')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <Select
+                          value={profileVisibility}
+                          onValueChange={handleVisibilityChange}
+                          disabled={updatingVisibility}
+                        >
+                          <SelectTrigger id="profile_visibility" className="h-9 px-3 w-full sm:w-[200px] flex-shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public">
+                              {t('profile_visibility_public')}
+                            </SelectItem>
+                            <SelectItem value="friends">
+                              {t('profile_visibility_friends')}
+                            </SelectItem>
+                            <SelectItem value="private">
+                              {t('profile_visibility_private')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Only show followers/following counts and buttons if profile is visible */}
+                  {isProfileVisible() && (
+                    <div className="flex flex-wrap items-center gap-6 text-sm">
+                      <button
+                        onClick={() => {
+                          setFollowersTab("followers")
+                          setShowFollowModal(true)
+                          loadFollowers(1)
+                        }}
+                        className="hover:underline cursor-pointer"
+                      >
+                        <span className="font-semibold">{profile.followersCount}</span>
+                        <span className="text-muted-foreground ml-1">{t('followers')}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setFollowersTab("following")
+                          setShowFollowModal(true)
+                          loadFollowing(1)
+                        }}
+                        className="hover:underline cursor-pointer"
+                      >
+                        <span className="font-semibold">{profile.followingCount}</span>
+                        <span className="text-muted-foreground ml-1">{t('following')}</span>
+                      </button>
+                      <div>
+                        <Badge variant="secondary">{t('level')} {profile.level}</Badge>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -256,11 +527,11 @@ export default function UserProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-full bg-yellow-100">
-                    <Trophy className="h-6 w-6 text-yellow-600" />
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/20">
+                    <Trophy className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-2xl font-bold">{profile.points}</p>
                     <p className="text-sm text-muted-foreground">{t('total_points')}</p>
                   </div>
@@ -269,11 +540,11 @@ export default function UserProfilePage() {
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-full bg-blue-100">
-                    <BookOpen className="h-6 w-6 text-blue-600" />
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/20">
+                    <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-2xl font-bold">{profile.coursesCompleted}</p>
                     <p className="text-sm text-muted-foreground">{t('courses_completed')}</p>
                   </div>
@@ -282,11 +553,11 @@ export default function UserProfilePage() {
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-full bg-green-100">
-                    <Target className="h-6 w-6 text-green-600" />
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
+                    <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-2xl font-bold">{profile.exercisesCompleted}</p>
                     <p className="text-sm text-muted-foreground">{t('exercises_done')}</p>
                   </div>
@@ -295,11 +566,11 @@ export default function UserProfilePage() {
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-full bg-orange-100">
-                    <Zap className="h-6 w-6 text-orange-600" />
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/20">
+                    <Zap className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-2xl font-bold">{profile.streak}</p>
                     <p className="text-sm text-muted-foreground">{t('day_streak')}</p>
                   </div>
@@ -324,30 +595,253 @@ export default function UserProfilePage() {
         {/* Achievements */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
               <Award className="h-5 w-5" />
               {t('achievements')} ({achievements.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {achievements.map((achievement) => (
-                <div key={achievement.id} className={cn("p-4 rounded-lg border-2", getRarityColor(achievement.rarity))}>
-                  <div className="flex items-start gap-3">
-                    <div className="text-3xl">{achievement.icon}</div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-1">{achievement.title}</h4>
-                      <p className="text-sm opacity-80 mb-2">{achievement.description}</p>
-                      <p className="text-xs opacity-60">
-                        {t('unlocked')} {new Date(achievement.unlockedAt).toLocaleDateString()}
-                      </p>
+          <CardContent className="pt-6">
+            {achievements.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">{t('no_achievements')}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {achievements.map((achievement) => (
+                  <div 
+                    key={achievement.id} 
+                    className={cn(
+                      "p-4 rounded-lg border-2 transition-all hover:shadow-md",
+                      getRarityColor(achievement.rarity)
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="text-3xl flex-shrink-0">{achievement.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold mb-1 text-sm">{achievement.title}</h4>
+                        <p className="text-xs opacity-80 mb-2 leading-relaxed">{achievement.description}</p>
+                        <p className="text-xs opacity-60">
+                          {t('unlocked')} {new Date(achievement.unlockedAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {/* Followers/Following Modal */}
+        <Dialog open={showFollowModal} onOpenChange={setShowFollowModal}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {followersTab === "followers" ? t('followers') : t('following')}
+              </DialogTitle>
+            </DialogHeader>
+            <Tabs value={followersTab} onValueChange={(v) => {
+              setFollowersTab(v as "followers" | "following")
+              if (v === "followers") {
+                loadFollowers(1)
+              } else {
+                loadFollowing(1)
+              }
+            }}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="followers">
+                  {t('followers')} {followersPagination && `(${followersPagination.total})`}
+                </TabsTrigger>
+                <TabsTrigger value="following">
+                  {t('following')} {followingPagination && `(${followingPagination.total})`}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="followers" className="mt-4">
+                {loadingFollows ? (
+                  <div className="text-center py-8">{t('loading')}...</div>
+                ) : followers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {t('no_followers') || "No followers yet"}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {followers.map((user) => (
+                      <div
+                        key={user.user_id}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors"
+                      >
+                        <Link
+                          href={`/users/${user.user_id}`}
+                          className="flex items-center gap-3 flex-1"
+                        >
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                            <AvatarFallback>
+                              {user.full_name?.charAt(0).toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="font-semibold">{user.full_name || "User"}</p>
+                            {user.bio && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
+                            )}
+                            <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                              <span>{t('level')} {user.level}</span>
+                              <span>{user.points} {t('points') || "points"}</span>
+                            </div>
+                          </div>
+                        </Link>
+                        {/* Show remove button only if viewing own profile's followers */}
+                        {isOwnProfile && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              if (confirm(t('remove_follower_confirm'))) {
+                                try {
+                                  await socialApi.removeFollower(user.user_id)
+                                  // Reload followers list
+                                  await loadFollowers(followersPage)
+                                  // Reload profile to update count
+                                  await loadProfile()
+                                } catch (error: any) {
+                                  alert(error?.response?.data?.error?.message || error?.message || t('failed_to_remove_follower'))
+                                }
+                              }
+                            }}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Pagination */}
+                    {followersPagination && followersPagination.total_pages > 1 && (
+                      <div className="flex justify-center gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={followersPage === 1}
+                          onClick={() => loadFollowers(followersPage - 1)}
+                        >
+                          {t('previous') || "Previous"}
+                        </Button>
+                        <span className="flex items-center text-sm text-muted-foreground">
+                          {t('page') || "Page"} {followersPage} / {followersPagination.total_pages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={followersPage >= followersPagination.total_pages}
+                          onClick={() => loadFollowers(followersPage + 1)}
+                        >
+                          {t('next') || "Next"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="following" className="mt-4">
+                {loadingFollows ? (
+                  <div className="text-center py-8">{t('loading')}...</div>
+                ) : following.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {t('no_following') || "Not following anyone yet"}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {following.map((user) => (
+                      <div
+                        key={user.user_id}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors"
+                      >
+                        <Link
+                          href={`/users/${user.user_id}`}
+                          className="flex items-center gap-3 flex-1"
+                        >
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                            <AvatarFallback>
+                              {user.full_name?.charAt(0).toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="font-semibold">{user.full_name || "User"}</p>
+                            {user.bio && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">{user.bio}</p>
+                            )}
+                            <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                              <span>{t('level')} {user.level}</span>
+                              <span>{user.points} {t('points') || "points"}</span>
+                            </div>
+                          </div>
+                        </Link>
+                        {/* Show unfollow button only if viewing own profile's following list */}
+                        {isOwnProfile && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              if (confirm(t('unfollow_confirm'))) {
+                                try {
+                                  await socialApi.unfollowUser(user.user_id)
+                                  // Reload following list
+                                  await loadFollowing(followingPage)
+                                  // Reload profile to update count
+                                  await loadProfile()
+                                } catch (error: any) {
+                                  alert(error?.response?.data?.error?.message || error?.message || t('failed_to_unfollow'))
+                                }
+                              }
+                            }}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Pagination */}
+                    {followingPagination && followingPagination.total_pages > 1 && (
+                      <div className="flex justify-center gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={followingPage === 1}
+                          onClick={() => loadFollowing(followingPage - 1)}
+                        >
+                          {t('previous') || "Previous"}
+                        </Button>
+                        <span className="flex items-center text-sm text-muted-foreground">
+                          {t('page') || "Page"} {followingPage} / {followingPagination.total_pages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={followingPage >= followingPagination.total_pages}
+                          onClick={() => loadFollowing(followingPage + 1)}
+                        >
+                          {t('next') || "Next"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
       </PageContainer>
     </AppLayout>
   )

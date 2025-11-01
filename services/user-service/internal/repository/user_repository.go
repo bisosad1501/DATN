@@ -554,6 +554,23 @@ func (r *UserRepository) DeleteFollow(followerID, followingID uuid.UUID) error {
 	return nil
 }
 
+// RemoveFollower removes a follower from user's followers list (user removes someone who follows them)
+func (r *UserRepository) RemoveFollower(followingID, followerID uuid.UUID) error {
+	query := `
+		DELETE FROM user_follows
+		WHERE follower_id = $1 AND following_id = $2
+	`
+	result, err := r.db.DB.Exec(query, followerID, followingID)
+	if err != nil {
+		return fmt.Errorf("failed to remove follower: %w", err)
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("follower relationship not found")
+	}
+	return nil
+}
+
 // IsFollowing checks if a user is following another user
 func (r *UserRepository) IsFollowing(followerID, followingID uuid.UUID) (bool, error) {
 	query := `
