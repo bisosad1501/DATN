@@ -2106,6 +2106,25 @@
 						},
 						{
 							"name": "Get All Achievements",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Achievements retrieved', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    const achievements = Array.isArray(jsonData.data) ? jsonData.data : jsonData.data.achievements || [];",
+											"    console.log('Total achievements available:', achievements.length);",
+											"});"
+										]
+									}
+								}
+							],
 							"request": {
 								"method": "GET",
 								"header": [
@@ -2121,11 +2140,32 @@
 									"host": ["localhost"],
 									"port": "8082",
 									"path": ["api", "v1", "user", "achievements"]
-								}
+								},
+								"description": "Get all available achievements in the system"
 							}
 						},
 						{
 							"name": "Get Earned Achievements",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Earned achievements retrieved', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    const earned = Array.isArray(jsonData.data) ? jsonData.data : (jsonData.data.achievements || jsonData.data || []);",
+											"    const count = Array.isArray(earned) ? earned.length : (jsonData.data.count || 0);",
+											"    console.log('Earned achievements:', count);",
+											"});"
+										]
+									}
+								}
+							],
 							"request": {
 								"method": "GET",
 								"header": [
@@ -2141,7 +2181,8 @@
 									"host": ["localhost"],
 									"port": "8082",
 									"path": ["api", "v1", "user", "achievements", "earned"]
-								}
+								},
+								"description": "Get achievements that the user has earned"
 							}
 						}
 					]
@@ -2179,6 +2220,26 @@
 						},
 						{
 							"name": "Get All Reminders",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Reminders retrieved', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    const reminders = Array.isArray(jsonData.data) ? jsonData.data : (jsonData.data.reminders || []);",
+											"    const count = Array.isArray(reminders) ? reminders.length : (jsonData.data.count || 0);",
+											"    console.log('Total reminders:', count);",
+											"});"
+										]
+									}
+								}
+							],
 							"request": {
 								"method": "GET",
 								"header": [
@@ -2194,11 +2255,29 @@
 									"host": ["localhost"],
 									"port": "8082",
 									"path": ["api", "v1", "user", "reminders"]
-								}
+								},
+								"description": "Get all reminders for the current user"
 							}
 						},
 						{
 							"name": "Update Reminder",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Reminder updated', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"});"
+										]
+									}
+								}
+							],
 							"request": {
 								"method": "PUT",
 								"header": [
@@ -2225,14 +2304,33 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": ""
+											"value": "{{test_reminder_id}}",
+											"description": "Reminder ID"
 										}
 									]
-								}
+								},
+								"description": "Update reminder fields: title, message, reminder_time, days_of_week, is_active"
 							}
 						},
 						{
 							"name": "Delete Reminder",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Reminder deleted', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"});"
+										]
+									}
+								}
+							],
 							"request": {
 								"method": "DELETE",
 								"header": [
@@ -2251,23 +2349,52 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": ""
+											"value": "{{test_reminder_id}}",
+											"description": "Reminder ID"
 										}
 									]
-								}
+								},
+								"description": "Delete a reminder permanently"
 							}
 						},
 						{
 							"name": "Toggle Reminder",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Reminder toggled', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('is_active');",
+											"    console.log('Reminder active:', jsonData.data.is_active);",
+											"});"
+										]
+									}
+								}
+							],
 							"request": {
-								"method": "PATCH",
+								"method": "PUT",
 								"header": [
 									{
 										"key": "Authorization",
 										"value": "Bearer {{access_token}}",
 										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
 									}
 								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
 								"url": {
 									"raw": "http://localhost:8082/api/v1/user/reminders/:id/toggle",
 									"protocol": "http",
@@ -2277,10 +2404,12 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": ""
+											"value": "{{test_reminder_id}}",
+											"description": "Reminder ID"
 										}
 									]
-								}
+								},
+								"description": "Toggle reminder active/inactive status"
 							}
 						}
 					]

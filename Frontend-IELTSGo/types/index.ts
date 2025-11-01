@@ -647,6 +647,85 @@ export interface LeaderboardEntry {
 // Enum Types
 export type SkillType = "LISTENING" | "READING" | "WRITING" | "SPEAKING"
 export type Level = "BEGINNER" | "INTERMEDIATE" | "ADVANCED"
+
+// Study Goals
+export interface StudyGoal {
+  id: string
+  user_id: string
+  goal_type: "daily" | "weekly" | "monthly" | "custom"
+  title: string
+  description?: string
+  target_value: number
+  target_unit: string
+  current_value: number
+  skill_type?: string
+  start_date: string
+  end_date: string
+  status: "not_started" | "in_progress" | "completed"
+  reminder_enabled: boolean
+  created_at: string
+  updated_at: string
+  completion_percentage?: number
+  days_remaining?: number
+  status_message?: string
+}
+
+// Study Reminders
+export interface StudyReminder {
+  id: string
+  user_id: string
+  title: string
+  message?: string
+  reminder_type: "daily" | "weekly" | "custom"
+  reminder_time: string
+  days_of_week?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Study Sessions
+export interface StudySession {
+  id: string
+  user_id: string
+  session_type: "lesson" | "exercise" | "practice_test"
+  skill_type?: string
+  resource_id?: string
+  resource_type?: string
+  started_at: string
+  ended_at?: string
+  duration_minutes?: number
+  is_completed: boolean
+  completion_percentage?: number
+  score?: number
+  device_type?: string
+  created_at: string
+}
+
+// Achievements
+export interface Achievement {
+  id: number
+  code: string
+  name: string
+  description?: string
+  criteria_type: string
+  criteria_value: number
+  icon_url?: string
+  badge_color?: string
+  points: number
+  created_at: string
+}
+
+export interface UserAchievement {
+  id: number
+  user_id: string
+  achievement?: Achievement
+  earned_at: string
+  achievement_id?: number
+  achievement_name?: string
+  achievement_description?: string
+  earned_at_flat?: string
+}
 export type Difficulty = "EASY" | "MEDIUM" | "HARD"
 export type QuestionType =
   | "MULTIPLE_CHOICE"
