@@ -27,7 +27,7 @@ type SendNotificationInternalRequest struct {
 	UserID     uuid.UUID              `json:"user_id" binding:"required"`
 	Title      string                 `json:"title" binding:"required"`
 	Message    string                 `json:"message" binding:"required"`
-	Type       string                 `json:"type" binding:"required,oneof=achievement reminder course_update exercise_graded system"`
+	Type       string                 `json:"type" binding:"required,oneof=achievement reminder course_update exercise_graded system social"`
 	Category   string                 `json:"category" binding:"required,oneof=info success warning alert"`
 	ActionType *string                `json:"action_type,omitempty"`
 	ActionData map[string]interface{} `json:"action_data,omitempty"`
@@ -40,7 +40,7 @@ type SendBulkNotificationInternalRequest struct {
 	UserIDs    []uuid.UUID            `json:"user_ids" binding:"required,min=1"`
 	Title      string                 `json:"title" binding:"required"`
 	Message    string                 `json:"message" binding:"required"`
-	Type       string                 `json:"type" binding:"required,oneof=achievement reminder course_update exercise_graded system"`
+	Type       string                 `json:"type" binding:"required,oneof=achievement reminder course_update exercise_graded system social"`
 	Category   string                 `json:"category" binding:"required,oneof=info success warning alert"`
 	ActionType *string                `json:"action_type,omitempty"`
 	ActionData map[string]interface{} `json:"action_data,omitempty"`
