@@ -169,8 +169,32 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
       } else if (message.includes("Chúc mừng! Bạn đã hoàn thành bài học") && message.includes("Tiến độ khóa học")) {
         messageKey = "notifications.lesson_completed_message"
       }
+      // Pattern matching for English messages (from backend hardcoded or old notifications)
+      else if (message.includes("started following you") || (message.includes("{") && message.includes("started following"))) {
+        messageKey = "notifications.new_follower_message"
+        // Extract name from {Name} pattern
+        if (!params.name) {
+          const match = message.match(/\{([^}]+)\}/)
+          if (match) params.name = match[1]
+        }
+      } else if (message.includes("You have completed the exercise") || (message.includes("completed the exercise") && message.includes("score"))) {
+        messageKey = "notifications.exercise_result_message"
+        // Extract exercise title from '{Title}' or {Title} pattern
+        if (!params.exercise_title) {
+          const match = message.match(/['"]?\{?([^}'"]+)\}?['"]?\s+with a score|exercise ['"]?\{?([^}'"]+)\}?['"]?/)
+          if (match && match[1]) params.exercise_title = match[1]
+          else if (match && match[2]) params.exercise_title = match[2]
+        }
+        // Extract score from {0} or score of {0}
+        if (!params.score) {
+          const match = message.match(/score (?:of )?\{?([\d.]+)\}?/)
+          if (match) params.score = parseFloat(match[1])
+        }
+      } else if (message.includes("Thank you for joining IELTSGo") || message.includes("Start your IELTS learning journey")) {
+        messageKey = "notifications.welcome_message"
+      }
 
-      // Extract dynamic values from message if not in action_data
+      // Extract dynamic values from message if not in action_data (Vietnamese patterns)
       if (!params.course_title && message.includes("khóa học '")) {
         const match = message.match(/khóa học '([^']+)'/)
         if (match) params.course_title = match[1]
@@ -199,8 +223,9 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
         const match = message.match(/(\d+)%/)
         if (match) params.progress = parseInt(match[1])
       }
-      if (!params.score && message.includes("với điểm")) {
-        const match = message.match(/với điểm ([\d.]+)/)
+      // Extract from English patterns
+      if (!params.score && message.includes("with a score")) {
+        const match = message.match(/with a score (?:of )?\{?([\d.]+)\}?/)
         if (match) params.score = parseFloat(match[1])
       }
       if (!params.rating && message.includes("đánh giá") && message.includes("sao")) {
@@ -216,17 +241,82 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
     if (messageKey) {
       try {
         const translated = t(messageKey, params)
-        return translated !== messageKey ? translated : message
+        // Clean up: remove any remaining {} if replacement didn't work perfectly
+        const cleaned = translated.replace(/\{[^}]+\}/g, '').replace(/\s+/g, ' ').trim()
+        return cleaned !== translated && cleaned.length > 0 ? cleaned : (translated !== messageKey ? translated : message)
       } catch {
         return message
       }
     }
 
-    return message
+    // Clean up message even if no translation key found - remove ugly {}
+    const cleanedMessage = message.replace(/\{([^}]+)\}/g, '$1').replace(/\s+/g, ' ').trim()
+    return cleanedMessage !== message ? cleanedMessage : message
   }
 
   const translatedTitle = getTranslatedTitle()
   const translatedMessage = getTranslatedMessage()
+
+  // Format notification message with proper styling (like real-world systems: LinkedIn, Facebook)
+  // Removes ugly {} and formats names/values properly
+  const formatNotificationMessage = (msg: string): React.ReactNode => {
+    let formatted = msg
+    
+    // Remove quotes around titles if they exist
+    formatted = formatted.replace(/'([^']+)'/g, '$1').replace(/"([^"]+)"/g, '$1')
+    
+    // Clean up any remaining {} brackets - extract content and remove brackets
+    formatted = formatted.replace(/\{([^}]+)\}/g, '$1')
+    
+    // Split message into parts for formatting
+    const parts: React.ReactNode[] = []
+    let lastIndex = 0
+    
+    // Find and format names (bold like LinkedIn/Facebook)
+    if (notification.action_data?.follower_name) {
+      const name = notification.action_data.follower_name as string
+      const nameIndex = formatted.indexOf(name)
+      if (nameIndex !== -1) {
+        // Add text before name
+        if (nameIndex > lastIndex) {
+          parts.push(formatted.substring(lastIndex, nameIndex))
+        }
+        // Add bold name
+        parts.push(
+          <span key={`name-${nameIndex}`} className="font-semibold text-gray-900 dark:text-gray-100">
+            {name}
+          </span>
+        )
+        lastIndex = nameIndex + name.length
+      }
+    }
+    
+    // Add remaining text
+    if (lastIndex < formatted.length) {
+      const remaining = formatted.substring(lastIndex)
+      // Format numbers (scores, progress, days) with semibold
+      const numberRegex = /\b(\d+(?:\.\d+)?)\b/g
+      let numberLastIndex = 0
+      let numberMatch
+      
+      while ((numberMatch = numberRegex.exec(remaining)) !== null) {
+        const beforeNumber = remaining.substring(numberLastIndex, numberMatch.index)
+        if (beforeNumber) parts.push(beforeNumber)
+        parts.push(
+          <span key={`number-${numberMatch.index}`} className="font-semibold">
+            {numberMatch[0]}
+          </span>
+        )
+        numberLastIndex = numberMatch.index + numberMatch[0].length
+      }
+      
+      if (numberLastIndex < remaining.length) {
+        parts.push(remaining.substring(numberLastIndex))
+      }
+    }
+    
+    return parts.length > 0 ? parts : formatted
+  }
   
   // Check if message actually needs truncation by comparing heights
   // Wait for DOM to render before checking
@@ -337,7 +427,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
                       !isExpanded && needsTruncation && "line-clamp-2"
                     )}
                   >
-                    {translatedMessage}
+                    {formatNotificationMessage(translatedMessage)}
                   </p>
                   
                   {/* Gradient fade overlay when truncated (subtle, professional) */}
