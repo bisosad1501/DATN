@@ -20,6 +20,7 @@ import Link from "next/link"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { userApi } from "@/lib/api/user"
 import { useTranslations } from '@/lib/i18n'
+import { useToast } from "@/hooks/use-toast"
 
 interface UserProfile {
   id: string
@@ -50,6 +51,7 @@ interface Achievement {
 export default function UserProfilePage() {
 
   const t = useTranslations('common')
+  const { toast } = useToast()
 
   const params = useParams()
   const userId = params.id as string
@@ -120,7 +122,11 @@ export default function UserProfilePage() {
       console.error("Failed to update profile visibility:", error)
       // Revert on error
       setProfileVisibilityState(previousVisibility)
-      alert(t('failed_to_update_visibility'))
+      toast({
+        title: t('error'),
+        description: t('failed_to_update_visibility'),
+        variant: "destructive",
+      })
     } finally {
       setUpdatingVisibility(false)
     }
@@ -285,13 +291,29 @@ export default function UserProfilePage() {
       
       // Use more user-friendly error display
       if (error?.response?.data?.error?.code === "CANNOT_FOLLOW_SELF") {
-        alert(t('cannot_follow_self'))
+        toast({
+          title: t('error'),
+          description: t('cannot_follow_self'),
+          variant: "destructive",
+        })
       } else if (error?.response?.data?.error?.code === "CANNOT_FOLLOW_PRIVATE") {
-        alert(t('cannot_follow_private_profile'))
+        toast({
+          title: t('error'),
+          description: t('cannot_follow_private_profile'),
+          variant: "destructive",
+        })
       } else if (error?.response?.data?.error?.code === "CANNOT_FOLLOW_FRIENDS_ONLY") {
-        alert(t('cannot_follow_friends_only'))
+        toast({
+          title: t('error'),
+          description: t('cannot_follow_friends_only'),
+          variant: "destructive",
+        })
       } else {
-        alert(errorMessage)
+        toast({
+          title: t('error'),
+          description: errorMessage,
+          variant: "destructive",
+        })
       }
     } finally {
       setFollowLoading(false)
@@ -309,7 +331,11 @@ export default function UserProfilePage() {
       console.error("Failed to load followers:", error)
       // Handle 403 Forbidden for private/friends-only lists
       if (error?.response?.status === 403) {
-        alert(t('followers_list_private'))
+        toast({
+          title: t('access_denied'),
+          description: t('followers_list_private'),
+          variant: "destructive",
+        })
         setShowFollowModal(false)
       }
       setFollowers([])
@@ -330,7 +356,11 @@ export default function UserProfilePage() {
       console.error("Failed to load following:", error)
       // Handle 403 Forbidden for private/friends-only lists
       if (error?.response?.status === 403) {
-        alert(t('following_list_private'))
+        toast({
+          title: t('access_denied'),
+          description: t('following_list_private'),
+          variant: "destructive",
+        })
         setShowFollowModal(false)
       }
       setFollowing([])
@@ -799,8 +829,17 @@ export default function UserProfilePage() {
                                   await loadFollowing(followingPage)
                                   // Reload profile to update count
                                   await loadProfile()
+                                  // Show success toast
+                                  toast({
+                                    title: t('unfollowed_successfully'),
+                                    description: t('user_unfollowed_description'),
+                                  })
                                 } catch (error: any) {
-                                  alert(error?.response?.data?.error?.message || error?.message || t('failed_to_unfollow'))
+                                  toast({
+                                    title: t('error'),
+                                    description: error?.response?.data?.error?.message || error?.message || t('failed_to_unfollow'),
+                                    variant: "destructive",
+                                  })
                                 }
                               }
                             }}
