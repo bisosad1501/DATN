@@ -1095,7 +1095,9 @@
     "updating_unread_count_from": "Updating unread count from",
     "calling_connectsse": "Calling connectSSE...",
     "component_unmounting_cleaning_up": "Component unmounting, cleaning up...",
-    "calling_disconnectsse": "Calling disconnectSSE..."
+    "calling_disconnectsse": "Calling disconnectSSE...",
+    "new_follower_title": "New Follower",
+    "new_follower_message": "{{name}} started following you"
   },
   "leaderboard": {
     "leaderboard_title": "Leaderboard",

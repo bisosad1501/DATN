@@ -469,6 +469,15 @@ func (r *NotificationRepository) CanSendNotification(userID uuid.UUID, notifType
 		if !prefs.PushExerciseGraded {
 			return false, nil
 		}
+	case "social":
+		// Social notifications (follow, etc.) - use course_updates preference or default to true
+		// If user wants course updates, they likely want social updates too
+		// But we don't block if preference doesn't exist yet
+		// Default to allow social notifications
+		// Future: Add specific PushSocial preference field
+	case "system":
+		// System notifications are always allowed if push_enabled and in_app_enabled
+		// (no additional check needed)
 	}
 
 	// Check quiet hours with user's timezone

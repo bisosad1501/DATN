@@ -69,6 +69,8 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
         router.push(`/courses/${notification.action_data.course_id}`)
       } else if (notification.action_type === "navigate_to_lesson" && notification.action_data.course_id && notification.action_data.lesson_id) {
         router.push(`/courses/${notification.action_data.course_id}/lessons/${notification.action_data.lesson_id}`)
+      } else if (notification.action_type === "navigate_to_user_profile" && notification.action_data.user_id) {
+        router.push(`/users/${notification.action_data.user_id}`)
       } else if (notification.action_type === "external_link" && notification.action_data.url) {
         window.open(notification.action_data.url, "_blank")
       } else if (notification.actionUrl) {

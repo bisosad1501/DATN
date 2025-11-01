@@ -610,6 +610,7 @@ export interface Notification {
     course_id?: string
     lesson_id?: string
     url?: string
+    user_id?: string
     [key: string]: any
   }
   createdAt?: string

@@ -1103,7 +1103,9 @@
     "updating_unread_count_from": "Đang cập nhật số thông báo chưa đọc từ",
     "calling_connectsse": "Đang gọi connectSSE…",
     "component_unmounting_cleaning_up": "Đang gỡ thành phần, dọn dẹp…",
-    "calling_disconnectsse": "Đang gọi disconnectSSE…"
+    "calling_disconnectsse": "Đang gọi disconnectSSE…",
+    "new_follower_title": "Bạn có người theo dõi mới",
+    "new_follower_message": "{{name}} đã bắt đầu theo dõi bạn"
   },
   "leaderboard": {
     "leaderboard_title": "Bảng Xếp Hạng",

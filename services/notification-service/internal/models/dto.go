@@ -7,7 +7,7 @@ import (
 // CreateNotificationRequest represents request to create notification
 type CreateNotificationRequest struct {
 	UserID       uuid.UUID              `json:"user_id" binding:"required"`
-	Type         string                 `json:"type" binding:"required,oneof=achievement reminder course_update exercise_graded system"`
+	Type         string                 `json:"type" binding:"required,oneof=achievement reminder course_update exercise_graded system social"`
 	Category     string                 `json:"category" binding:"required,oneof=info success warning alert"`
 	Title        string                 `json:"title" binding:"required,max=200"`
 	Message      string                 `json:"message" binding:"required,max=1000"`

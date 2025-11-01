@@ -828,7 +828,57 @@ func (s *UserService) FollowUser(followerID, followingID uuid.UUID) error {
 		}
 	}
 
-	return s.repo.CreateFollow(followerID, followingID)
+	err = s.repo.CreateFollow(followerID, followingID)
+	if err != nil {
+		return err
+	}
+
+	// Send notification to the user being followed (async, non-blocking)
+	if s.notificationClient != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[User-Service] PANIC in follow notification: %v", r)
+				}
+			}()
+
+			// Get follower's profile for notification
+			followerProfile, err := s.repo.GetProfileByUserID(followerID)
+			if err != nil {
+				log.Printf("[User-Service] ⚠️  Failed to get follower profile for notification: %v", err)
+				return
+			}
+
+			// Build follower name
+			followerName := "Một người dùng"
+			if followerProfile != nil && followerProfile.FullName != nil && *followerProfile.FullName != "" {
+				followerName = *followerProfile.FullName
+			}
+
+			// Send notification
+			actionType := "navigate_to_user_profile"
+			notificationErr := s.notificationClient.SendNotification(client.SendNotificationRequest{
+				UserID:     followingID.String(),
+				Title:      "Bạn có người theo dõi mới",
+				Message:    fmt.Sprintf("%s đã bắt đầu theo dõi bạn", followerName),
+				Type:       "social",
+				Category:   "info",
+				ActionType: &actionType,
+				ActionData: map[string]interface{}{
+					"user_id": followerID.String(),
+				},
+				Priority: "normal",
+			})
+
+			if notificationErr != nil {
+				log.Printf("[User-Service] ⚠️  Failed to send follow notification: %v", notificationErr)
+			} else {
+				log.Printf("[User-Service] ✅ Sent follow notification to user %s", followingID.String())
+			}
+		}()
+	}
+
+	return nil
 }
 
 // UnfollowUser removes a follow relationship
