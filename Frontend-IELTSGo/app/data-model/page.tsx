@@ -43,7 +43,7 @@ export default function DataModelPage() {
       setCourseData(course)
       
       // Load sample exercise
-      const exercise = await exercisesApi.getExerciseDetail('11111111-1111-1111-1111-111111111111')
+      const exercise = await exercisesApi.getExerciseById('11111111-1111-1111-1111-111111111111')
       setExerciseData(exercise)
     } catch (error) {
       console.error('[Data Model] Error loading data:', error)
