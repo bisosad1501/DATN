@@ -55,8 +55,9 @@ function HistoryContent() {
   }, [page])
 
   return (
-    <AppLayout showSidebar={true} showFooter={false}>
+    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
       <PageContainer maxWidth="4xl">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{t('study_history')}</h1>
           <p className="text-muted-foreground">{t('complete_log_of_your_learning_activities')}</p>

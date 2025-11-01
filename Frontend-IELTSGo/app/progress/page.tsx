@@ -98,7 +98,7 @@ function ProgressContent() {
   const stats = calculateStats()
 
   return (
-    <AppLayout showSidebar={true} showFooter={false}>
+    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
       <PageContainer>
         {/* Header */}
         <div className="mb-8">

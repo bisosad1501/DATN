@@ -24,7 +24,7 @@ function GoalsContent() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   return (
-    <AppLayout showSidebar={true} showFooter={false}>
+    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
       <PageContainer>
         {/* Header */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">

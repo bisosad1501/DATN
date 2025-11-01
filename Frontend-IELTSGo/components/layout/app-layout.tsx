@@ -48,10 +48,7 @@ export function AppLayout({ children, showSidebar = false, showFooter = true, hi
           </>
         )}
 
-        <main className={cn(
-          "flex-1 relative z-10",
-          showSidebar && "bg-muted/30"
-        )}>
+        <main className="flex-1 relative z-10 bg-background">
           {children}
         </main>
       </div>
