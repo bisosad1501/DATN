@@ -241,19 +241,30 @@ success "Found $GOALS_COUNT goals"
 if [ "$GOALS_COUNT" -gt 0 ]; then
     echo "2. Analyzing goal statuses..."
     
-    # Count by status
-    NOT_STARTED=$(echo $ALL_GOALS | jq '[.data[] | select(.status == "not_started")] | length')
-    IN_PROGRESS=$(echo $ALL_GOALS | jq '[.data[] | select(.status == "in_progress")] | length')
-    COMPLETED=$(echo $ALL_GOALS | jq '[.data[] | select(.status == "completed")] | length')
-    
-    info "  Not Started: $NOT_STARTED"
-    info "  In Progress: $IN_PROGRESS"
-    info "  Completed: $COMPLETED"
-    
-    # Show progress for in-progress goals
-    if [ "$IN_PROGRESS" -gt 0 ]; then
-        echo "3. Showing in-progress goals:"
-        echo $ALL_GOALS | jq -r '.data[] | select(.status == "in_progress") | "  - \(.title): \(.current_value)/\(.target_value) \(.target_unit)"'
+    # Handle array or object response
+    GOALS_DATA=$(echo $ALL_GOALS | jq '.data // empty')
+    if echo $GOALS_DATA | jq -e '. | type == "array"' > /dev/null 2>&1; then
+        # Count by status
+        NOT_STARTED=$(echo $GOALS_DATA | jq '[.[] | select(.status == "not_started")] | length')
+        IN_PROGRESS=$(echo $GOALS_DATA | jq '[.[] | select(.status == "in_progress")] | length')
+        COMPLETED=$(echo $GOALS_DATA | jq '[.[] | select(.status == "completed")] | length')
+        
+        info "  Not Started: $NOT_STARTED"
+        info "  In Progress: $IN_PROGRESS"
+        info "  Completed: $COMPLETED"
+        
+        # Show progress for in-progress goals
+        if [ "$IN_PROGRESS" -gt 0 ]; then
+            echo "3. Showing in-progress goals:"
+            echo $GOALS_DATA | jq -r '.[] | select(.status == "in_progress") | "  - \(.title): \(.current_value)/\(.target_value) \(.target_unit)"'
+        fi
+        
+        # Show sample goals
+        echo "4. Sample goals:"
+        echo $GOALS_DATA | jq -r '.[0:2] | .[] | "  - \(.title) (\(.goal_type)): \(.current_value // 0)/\(.target_value) - \(.status)"'
+    else
+        info "  Goals data structure: $(echo $GOALS_DATA | jq -r 'keys | join(", ")' 2>/dev/null || echo 'unknown')"
+        echo $ALL_GOALS | jq '.data' | head -10
     fi
 fi
 
