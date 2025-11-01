@@ -94,7 +94,17 @@ func SetupRoutes(r *gin.Engine, cfg *config.Config, authMiddleware *middleware.A
 	usersGroup.Use(authMiddleware.OptionalAuth()) // Optional auth for visibility check
 	{
 		usersGroup.GET("/:id/profile", proxy.ReverseProxy(cfg.Services.UserService))
-		usersGroup.GET("/:id/achievements", proxy.ReverseProxy(cfg.Services.UserService)) // If needed for achievements
+		usersGroup.GET("/:id/achievements", proxy.ReverseProxy(cfg.Services.UserService))
+		usersGroup.GET("/:id/followers", proxy.ReverseProxy(cfg.Services.UserService))
+		usersGroup.GET("/:id/following", proxy.ReverseProxy(cfg.Services.UserService))
+	}
+
+	// Protected social routes (auth required)
+	usersProtected := v1.Group("/users")
+	usersProtected.Use(authMiddleware.ValidateToken())
+	{
+		usersProtected.POST("/:id/follow", proxy.ReverseProxy(cfg.Services.UserService))
+		usersProtected.DELETE("/:id/follow", proxy.ReverseProxy(cfg.Services.UserService))
 	}
 
 	userGroup := v1.Group("/user")

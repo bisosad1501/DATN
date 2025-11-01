@@ -73,7 +73,7 @@ instructor_5678@test.com
 13. **Verify Email (Legacy)** - Verify email using long token from email link
 14. **Resend Verification Code** - Send new 6-digit verification code via email
 
-### User Service (8 endpoints)
+### User Service (14+ endpoints)
 1. **Health Check** - Verify service status
 2. **Get Profile** - Get current user profile
 3. **Update Profile** - Update user information
@@ -82,6 +82,22 @@ instructor_5678@test.com
 6. **Update Preferences** - Update user preferences
 7. **Update Progress** - Update learning progress
 8. **Get Progress History** - Get study session history
+
+#### Social Features (6 endpoints)
+9. **Get Public User Profile** - View another user's public profile (optional auth)
+10. **Get Public User Achievements** - View user's public achievements
+11. **Follow User** - Follow another user (auth required)
+12. **Unfollow User** - Unfollow a user (auth required)
+13. **Get User Followers** - Get list of followers (public, paginated)
+14. **Get User Following** - Get list of following users (public, paginated)
+
+#### Social Features - Test Scenarios (5 scenarios, 15+ test cases)
+Comprehensive test scenarios based on verified test results:
+- **Scenario 1: Initial State Check** - Verify empty state
+- **Scenario 2: Follow Flow** - Complete follow workflow with verifications
+- **Scenario 3: Unfollow Flow** - Complete unfollow workflow
+- **Scenario 4: Edge Cases** - Self-follow prevention, unfollow when not following, idempotency
+- **Scenario 5: Pagination** - Pagination parameter validation
 
 ### Course Service (16 endpoints)
 

@@ -2359,6 +2359,892 @@
 							}
 						}
 					]
+				},
+				{
+					"name": "Social Features",
+					"description": "User social features: follow/unfollow, public profiles, achievements",
+					"item": [
+						{
+							"name": "Get Public User Profile",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Public profile retrieved successfully', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('user_id');",
+											"    pm.expect(jsonData.data).to.have.property('followersCount');",
+											"    pm.expect(jsonData.data).to.have.property('followingCount');",
+											"    pm.expect(jsonData.data).to.have.property('isFollowing');",
+											"    ",
+											"    // Auto-save user_id for use in other requests",
+											"    if (jsonData.data.user_id) {",
+											"        pm.environment.set('public_user_id', jsonData.data.user_id);",
+											"        console.log('✓ Saved public_user_id:', jsonData.data.user_id);",
+											"    }",
+											"    ",
+											"    console.log('Profile data:', {",
+											"        user_id: jsonData.data.user_id,",
+											"        followersCount: jsonData.data.followersCount,",
+											"        followingCount: jsonData.data.followingCount,",
+											"        isFollowing: jsonData.data.isFollowing",
+											"    });",
+											"});",
+											"",
+											"pm.test('Response time < 2000ms', function() {",
+											"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text",
+										"disabled": true
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/{{user_id}}/profile",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "users", "{{user_id}}", "profile"],
+									"variable": [
+										{
+											"key": "user_id",
+											"value": "{{public_user_id}}",
+											"description": "User ID to view profile"
+										}
+									]
+								},
+								"description": "Get another user's public profile. Optional auth - if authenticated, shows isFollowing status. Returns followersCount, followingCount, and isFollowing."
+							}
+						},
+						{
+							"name": "Get Public User Achievements",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Achievements retrieved successfully', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.be.an('array');",
+											"    ",
+											"    console.log('Achievements count:', jsonData.data.length);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/{{user_id}}/achievements",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "users", "{{user_id}}", "achievements"],
+									"variable": [
+										{
+											"key": "user_id",
+											"value": "{{public_user_id}}",
+											"description": "User ID to view achievements"
+										}
+									]
+								},
+								"description": "Get public user achievements. No authentication required."
+							}
+						},
+						{
+							"name": "Follow User",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Validate that we're not trying to follow ourselves",
+											"const currentUserId = pm.environment.get('user_id');",
+											"const targetUserId = pm.environment.get('public_user_id');",
+											"",
+											"if (currentUserId && targetUserId && currentUserId === targetUserId) {",
+											"    console.warn('⚠️ Warning: Cannot follow yourself. This will return 400.');",
+											"}"
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('User followed successfully', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.message).to.include('followed');",
+											"    ",
+											"    console.log('✓ Follow response:', jsonData.message);",
+											"});",
+											"",
+											"// Handle edge case: self-follow attempt",
+											"if (pm.response.code === 400) {",
+											"    pm.test('Self-follow correctly rejected', function() {",
+											"        const jsonData = pm.response.json();",
+											"        pm.expect(jsonData.error.code).to.equal('CANNOT_FOLLOW_SELF');",
+											"        console.log('✓ Correctly rejected self-follow');",
+											"    });",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "users", "{{public_user_id}}", "follow"],
+									"variable": [
+										{
+											"key": "public_user_id",
+											"value": "",
+											"description": "User ID to follow"
+										}
+									]
+								},
+								"description": "Follow another user. Requires authentication. Cannot follow yourself."
+							}
+						},
+						{
+							"name": "Unfollow User",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// Unfollow can return 200 (success) or 404 (not following)",
+											"if (pm.response.code === 200) {",
+											"    pm.test('User unfollowed successfully', function() {",
+											"        const jsonData = pm.response.json();",
+											"        pm.expect(jsonData.success).to.be.true;",
+											"        pm.expect(jsonData.message).to.include('unfollowed');",
+											"        console.log('✓ Unfollow response:', jsonData.message);",
+											"    });",
+											"} else if (pm.response.code === 404) {",
+											"    pm.test('Unfollow when not following (404)', function() {",
+											"        const jsonData = pm.response.json();",
+											"        pm.expect(jsonData.error.code).to.equal('NOT_FOLLOWING');",
+											"        console.log('✓ Correctly returns 404 when not following');",
+											"    });",
+											"} else {",
+											"    pm.test('Unexpected status code', function() {",
+											"        pm.expect.fail('Expected 200 or 404, got ' + pm.response.code);",
+											"    });",
+											"}"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "users", "{{public_user_id}}", "follow"],
+									"variable": [
+										{
+											"key": "public_user_id",
+											"value": "",
+											"description": "User ID to unfollow"
+										}
+									]
+								},
+								"description": "Unfollow a user. Requires authentication."
+							}
+						},
+						{
+							"name": "Get User Followers",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Followers retrieved successfully', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('followers');",
+											"    pm.expect(jsonData.data).to.have.property('pagination');",
+											"    pm.expect(jsonData.data.followers).to.be.an('array');",
+											"    ",
+											"    // Validate pagination structure",
+											"    pm.expect(jsonData.data.pagination).to.have.property('page');",
+											"    pm.expect(jsonData.data.pagination).to.have.property('page_size');",
+											"    pm.expect(jsonData.data.pagination).to.have.property('total');",
+											"    pm.expect(jsonData.data.pagination).to.have.property('total_pages');",
+											"    ",
+											"    // Validate follower structure",
+											"    if (jsonData.data.followers.length > 0) {",
+											"        const follower = jsonData.data.followers[0];",
+											"        pm.expect(follower).to.have.property('user_id');",
+											"        pm.expect(follower).to.have.property('full_name');",
+											"        pm.expect(follower).to.have.property('level');",
+											"        pm.expect(follower).to.have.property('points');",
+											"        pm.expect(follower).to.have.property('followed_at');",
+											"    }",
+											"    ",
+											"    console.log('✓ Total followers:', jsonData.data.pagination.total);",
+											"    console.log('✓ Page:', jsonData.data.pagination.page, '/', jsonData.data.pagination.total_pages);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text",
+										"disabled": true
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/{{user_id}}/followers?page=1&pageSize=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "users", "{{user_id}}", "followers"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "pageSize",
+											"value": "20",
+											"description": "Items per page (max 100)"
+										}
+									],
+									"variable": [
+										{
+											"key": "user_id",
+											"value": "{{public_user_id}}",
+											"description": "User ID to get followers"
+										}
+									]
+								},
+								"description": "Get list of users following this user. Public endpoint with pagination. Optional auth."
+							}
+						},
+						{
+							"name": "Get User Following",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Following retrieved successfully', function() {",
+											"    const jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.have.property('following');",
+											"    pm.expect(jsonData.data).to.have.property('pagination');",
+											"    pm.expect(jsonData.data.following).to.be.an('array');",
+											"    ",
+											"    // Validate pagination structure",
+											"    pm.expect(jsonData.data.pagination).to.have.property('page');",
+											"    pm.expect(jsonData.data.pagination).to.have.property('page_size');",
+											"    pm.expect(jsonData.data.pagination).to.have.property('total');",
+											"    pm.expect(jsonData.data.pagination).to.have.property('total_pages');",
+											"    ",
+											"    // Validate following structure",
+											"    if (jsonData.data.following.length > 0) {",
+											"        const following = jsonData.data.following[0];",
+											"        pm.expect(following).to.have.property('user_id');",
+											"        pm.expect(following).to.have.property('full_name');",
+											"        pm.expect(following).to.have.property('level');",
+											"        pm.expect(following).to.have.property('points');",
+											"        pm.expect(following).to.have.property('followed_at');",
+											"    }",
+											"    ",
+											"    console.log('✓ Total following:', jsonData.data.pagination.total);",
+											"    console.log('✓ Page:', jsonData.data.pagination.page, '/', jsonData.data.pagination.total_pages);",
+											"});"
+										]
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}",
+										"type": "text",
+										"disabled": true
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/{{user_id}}/following?page=1&pageSize=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "users", "{{user_id}}", "following"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "pageSize",
+											"value": "20",
+											"description": "Items per page (max 100)"
+										}
+									],
+									"variable": [
+										{
+											"key": "user_id",
+											"value": "{{public_user_id}}",
+											"description": "User ID to get following list"
+										}
+									]
+								},
+								"description": "Get list of users this user is following. Public endpoint with pagination. Optional auth."
+							}
+						}
+					]
+				},
+				{
+					"name": "Social Features - Test Scenarios",
+					"description": "Complete test scenarios for social features based on verified test results",
+					"item": [
+						{
+							"name": "Scenario 1: Initial State Check",
+							"item": [
+								{
+									"name": "1.1 Get Public Profile (Initial)",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Profile retrieved', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    pm.expect(data.followersCount).to.be.a('number');",
+													"    pm.expect(data.followingCount).to.be.a('number');",
+													"    console.log('Initial state - Followers:', data.followersCount, 'Following:', data.followingCount);",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/profile",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "profile"]
+										}
+									}
+								},
+								{
+									"name": "1.2 Get Followers (Empty)",
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/followers?page=1&pageSize=10",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "followers"],
+											"query": [
+												{"key": "page", "value": "1"},
+												{"key": "pageSize", "value": "10"}
+											]
+										}
+									}
+								},
+								{
+									"name": "1.3 Get Following (Empty)",
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{user_id}}/following?page=1&pageSize=10",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{user_id}}", "following"],
+											"query": [
+												{"key": "page", "value": "1"},
+												{"key": "pageSize", "value": "10"}
+											]
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Scenario 2: Follow Flow",
+							"item": [
+								{
+									"name": "2.1 Follow User",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Follow successful', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    pm.expect(pm.response.json().success).to.be.true;",
+													"    console.log('✓ Followed user successfully');",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "follow"]
+										}
+									}
+								},
+								{
+									"name": "2.2 Verify Followers List",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Followers list updated', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    const currentUserId = pm.environment.get('user_id');",
+													"    ",
+													"    pm.expect(data.pagination.total).to.be.at.least(1);",
+													"    ",
+													"    // Check if current user is in followers list",
+													"    const hasCurrentUser = data.followers.some(f => f.user_id === currentUserId);",
+													"    pm.expect(hasCurrentUser).to.be.true;",
+													"    ",
+													"    console.log('✓ Current user found in followers list');",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/followers?page=1&pageSize=10",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "followers"],
+											"query": [
+												{"key": "page", "value": "1"},
+												{"key": "pageSize", "value": "10"}
+											]
+										}
+									}
+								},
+								{
+									"name": "2.3 Verify Following List",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Following list updated', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    const targetUserId = pm.environment.get('public_user_id');",
+													"    ",
+													"    pm.expect(data.pagination.total).to.be.at.least(1);",
+													"    ",
+													"    // Check if target user is in following list",
+													"    const hasTargetUser = data.following.some(f => f.user_id === targetUserId);",
+													"    pm.expect(hasTargetUser).to.be.true;",
+													"    ",
+													"    console.log('✓ Target user found in following list');",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{user_id}}/following?page=1&pageSize=10",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{user_id}}", "following"],
+											"query": [
+												{"key": "page", "value": "1"},
+												{"key": "pageSize", "value": "10"}
+											]
+										}
+									}
+								},
+								{
+									"name": "2.4 Verify isFollowing Flag",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('isFollowing flag is true', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    ",
+													"    pm.expect(data.isFollowing).to.be.true;",
+													"    pm.expect(data.followersCount).to.be.at.least(1);",
+													"    ",
+													"    console.log('✓ isFollowing =', data.isFollowing);",
+													"    console.log('✓ followersCount =', data.followersCount);",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/profile",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "profile"]
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Scenario 3: Unfollow Flow",
+							"item": [
+								{
+									"name": "3.1 Unfollow User",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Unfollow successful', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    pm.expect(pm.response.json().success).to.be.true;",
+													"    console.log('✓ Unfollowed user successfully');",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "follow"]
+										}
+									}
+								},
+								{
+									"name": "3.2 Verify Counts After Unfollow",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Counts reset to zero', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    ",
+													"    pm.expect(data.pagination.total).to.equal(0);",
+													"    console.log('✓ Followers count reset to', data.pagination.total);",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/followers?page=1&pageSize=10",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "followers"],
+											"query": [
+												{"key": "page", "value": "1"},
+												{"key": "pageSize", "value": "10"}
+											]
+										}
+									}
+								},
+								{
+									"name": "3.3 Verify isFollowing After Unfollow",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('isFollowing flag is false', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    ",
+													"    pm.expect(data.isFollowing).to.be.false;",
+													"    pm.expect(data.followersCount).to.equal(0);",
+													"    ",
+													"    console.log('✓ isFollowing =', data.isFollowing);",
+													"    console.log('✓ followersCount =', data.followersCount);",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/profile",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "profile"]
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Scenario 4: Edge Cases",
+							"item": [
+								{
+									"name": "4.1 Self-Follow Prevention",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Self-follow rejected (400)', function() {",
+													"    pm.expect(pm.response.code).to.equal(400);",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.error.code).to.equal('CANNOT_FOLLOW_SELF');",
+													"    console.log('✓ Self-follow correctly prevented');",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{user_id}}/follow",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{user_id}}", "follow"]
+										}
+									}
+								},
+								{
+									"name": "4.2 Unfollow When Not Following",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Unfollow when not following (404)', function() {",
+													"    pm.expect(pm.response.code).to.equal(404);",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.error.code).to.equal('NOT_FOLLOWING');",
+													"    console.log('✓ Correctly returns 404 when not following');",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "follow"]
+										}
+									}
+								},
+								{
+									"name": "4.3 Follow Twice (Idempotency)",
+									"item": [
+										{
+											"name": "4.3.1 Follow First Time",
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Authorization",
+														"value": "Bearer {{access_token}}"
+													}
+												],
+												"url": {
+													"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+													"host": ["{{base_url}}"],
+													"path": ["api", "v1", "users", "{{public_user_id}}", "follow"]
+												}
+											}
+										},
+										{
+											"name": "4.3.2 Follow Second Time (Should not create duplicate)",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test('No duplicate created', function() {",
+															"    pm.expect(pm.response.code).to.equal(200);",
+															"    ",
+															"    // Verify followers count is still 1",
+															"    pm.sendRequest({",
+															"        url: pm.environment.get('base_url') + '/api/v1/users/' + pm.environment.get('public_user_id') + '/followers?page=1&pageSize=10',",
+															"        method: 'GET'",
+															"    }, function(err, res) {",
+															"        if (!err && res.code === 200) {",
+															"            const total = res.json().data.pagination.total;",
+															"            pm.expect(total).to.equal(1);",
+															"            console.log('✓ No duplicate created, total followers:', total);",
+															"        }",
+															"    });",
+															"});"
+														]
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Authorization",
+														"value": "Bearer {{access_token}}"
+													}
+												],
+												"url": {
+													"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/follow",
+													"host": ["{{base_url}}"],
+													"path": ["api", "v1", "users", "{{public_user_id}}", "follow"]
+												}
+											}
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Scenario 5: Pagination",
+							"item": [
+								{
+									"name": "5.1 Test Pagination Parameters",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test('Pagination parameters correct', function() {",
+													"    pm.expect(pm.response.code).to.equal(200);",
+													"    const data = pm.response.json().data;",
+													"    ",
+													"    pm.expect(data.pagination.page).to.equal(1);",
+													"    pm.expect(data.pagination.page_size).to.equal(5);",
+													"    ",
+													"    console.log('✓ Page:', data.pagination.page);",
+													"    console.log('✓ Page size:', data.pagination.page_size);",
+													"    console.log('✓ Total:', data.pagination.total);",
+													"});"
+												]
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{base_url}}/api/v1/users/{{public_user_id}}/followers?page=1&pageSize=5",
+											"host": ["{{base_url}}"],
+											"path": ["api", "v1", "users", "{{public_user_id}}", "followers"],
+											"query": [
+												{"key": "page", "value": "1"},
+												{"key": "pageSize", "value": "5"}
+											]
+										}
+									}
+								}
+							]
+						}
+					]
 				}
 			]
 		},

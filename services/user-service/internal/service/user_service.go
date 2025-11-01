@@ -139,9 +139,19 @@ func (s *UserService) GetPublicProfile(targetUserID uuid.UUID, requestingUserID 
 		studyTimeSeconds := int(progress.TotalStudyHours * 3600)
 		result["studyTime"] = studyTimeSeconds
 		result["streak"] = int(progress.CurrentStreakDays)
-		result["followersCount"] = 0 // TODO: Get from social service if needed
-		result["followingCount"] = 0  // TODO: Get from social service if needed
-		result["isFollowing"] = false  // TODO: Check relationship if requestingUserID provided
+		
+		// Get follow counts
+		followersCount, _ := s.repo.GetFollowersCount(targetUserID)
+		followingCount, _ := s.repo.GetFollowingCount(targetUserID)
+		result["followersCount"] = followersCount
+		result["followingCount"] = followingCount
+		
+		// Check if requesting user is following target user
+		isFollowing := false
+		if requestingUserID != nil {
+			isFollowing, _ = s.repo.IsFollowing(*requestingUserID, targetUserID)
+		}
+		result["isFollowing"] = isFollowing
 	}
 
 	return result, nil
@@ -777,6 +787,33 @@ func (s *UserService) GetLeaderboard(period string, page, limit int) ([]models.L
 // GetUserRank retrieves the rank of a specific user
 func (s *UserService) GetUserRank(userID uuid.UUID) (*models.LeaderboardEntry, error) {
 	return s.repo.GetUserRank(userID)
+}
+
+// ============= User Follows =============
+
+// FollowUser creates a follow relationship
+func (s *UserService) FollowUser(followerID, followingID uuid.UUID) error {
+	return s.repo.CreateFollow(followerID, followingID)
+}
+
+// UnfollowUser removes a follow relationship
+func (s *UserService) UnfollowUser(followerID, followingID uuid.UUID) error {
+	return s.repo.DeleteFollow(followerID, followingID)
+}
+
+// GetFollowers gets the list of followers for a user (paginated)
+func (s *UserService) GetFollowers(userID uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+	return s.repo.GetFollowers(userID, page, limit)
+}
+
+// GetFollowing gets the list of users a user is following (paginated)
+func (s *UserService) GetFollowing(userID uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+	return s.repo.GetFollowing(userID, page, limit)
+}
+
+// GetPublicAchievements gets achievements for a public user profile
+func (s *UserService) GetPublicAchievements(userID uuid.UUID) ([]models.UserAchievement, error) {
+	return s.repo.GetUserAchievements(userID)
 }
 
 // ============= Internal Service Methods =============

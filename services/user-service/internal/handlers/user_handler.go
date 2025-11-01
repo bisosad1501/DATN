@@ -1308,3 +1308,297 @@ func (h *UserHandler) GetUserRank(c *gin.Context) {
 		Data:    rank,
 	})
 }
+
+// FollowUser follows another user
+// POST /api/v1/users/:id/follow
+func (h *UserHandler) FollowUser(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "UNAUTHORIZED",
+				Message: "Authentication required",
+			},
+		})
+		return
+	}
+
+	followerID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	followingIDStr := c.Param("id")
+	followingID, err := uuid.Parse(followingIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid target user ID format",
+			},
+		})
+		return
+	}
+
+	err = h.service.FollowUser(followerID, followingID)
+	if err != nil {
+		if err.Error() == "cannot follow yourself" {
+			c.JSON(http.StatusBadRequest, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "CANNOT_FOLLOW_SELF",
+					Message: "You cannot follow yourself",
+				},
+			})
+			return
+		}
+		log.Printf("❌ Error following user: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "FOLLOW_FAILED",
+				Message: "Failed to follow user",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Message: "User followed successfully",
+	})
+}
+
+// UnfollowUser unfollows another user
+// DELETE /api/v1/users/:id/follow
+func (h *UserHandler) UnfollowUser(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "UNAUTHORIZED",
+				Message: "Authentication required",
+			},
+		})
+		return
+	}
+
+	followerID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	followingIDStr := c.Param("id")
+	followingID, err := uuid.Parse(followingIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid target user ID format",
+			},
+		})
+		return
+	}
+
+	err = h.service.UnfollowUser(followerID, followingID)
+	if err != nil {
+		if err.Error() == "follow relationship not found" {
+			c.JSON(http.StatusNotFound, models.Response{
+				Success: false,
+				Error: &models.ErrorInfo{
+					Code:    "NOT_FOLLOWING",
+					Message: "You are not following this user",
+				},
+			})
+			return
+		}
+		log.Printf("❌ Error unfollowing user: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "UNFOLLOW_FAILED",
+				Message: "Failed to unfollow user",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Message: "User unfollowed successfully",
+	})
+}
+
+// GetFollowers gets the list of followers for a user
+// GET /api/v1/users/:id/followers
+func (h *UserHandler) GetFollowers(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	pageStr := c.DefaultQuery("page", "1")
+	pageSizeStr := c.DefaultQuery("pageSize", "20")
+	
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	followers, total, err := h.service.GetFollowers(userID, page, pageSize)
+	if err != nil {
+		log.Printf("❌ Error getting followers: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "GET_FOLLOWERS_FAILED",
+				Message: "Failed to get followers",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Data: gin.H{
+			"followers": followers,
+			"pagination": gin.H{
+				"total":       total,
+				"page":        page,
+				"page_size":   pageSize,
+				"total_pages": totalPages,
+			},
+		},
+	})
+}
+
+// GetFollowing gets the list of users a user is following
+// GET /api/v1/users/:id/following
+func (h *UserHandler) GetFollowing(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	pageStr := c.DefaultQuery("page", "1")
+	pageSizeStr := c.DefaultQuery("pageSize", "20")
+	
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	following, total, err := h.service.GetFollowing(userID, page, pageSize)
+	if err != nil {
+		log.Printf("❌ Error getting following: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "GET_FOLLOWING_FAILED",
+				Message: "Failed to get following",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Data: gin.H{
+			"following": following,
+			"pagination": gin.H{
+				"total":       total,
+				"page":        page,
+				"page_size":   pageSize,
+				"total_pages": totalPages,
+			},
+		},
+	})
+}
+
+// GetPublicAchievements gets achievements for a public user profile
+// GET /api/v1/users/:id/achievements
+func (h *UserHandler) GetPublicAchievements(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "INVALID_USER_ID",
+				Message: "Invalid user ID format",
+			},
+		})
+		return
+	}
+
+	achievements, err := h.service.GetPublicAchievements(userID)
+	if err != nil {
+		log.Printf("❌ Error getting public achievements: %v", err)
+		c.JSON(http.StatusInternalServerError, models.Response{
+			Success: false,
+			Error: &models.ErrorInfo{
+				Code:    "GET_ACHIEVEMENTS_FAILED",
+				Message: "Failed to get achievements",
+				Details: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.Response{
+		Success: true,
+		Data:    achievements,
+	})
+}

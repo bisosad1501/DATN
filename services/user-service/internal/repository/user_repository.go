@@ -516,6 +516,256 @@ func (r *UserRepository) GetUserAchievements(userID uuid.UUID) ([]models.UserAch
 	return achievements, nil
 }
 
+// ============= User Follows =============
+
+// CreateFollow creates a new follow relationship
+func (r *UserRepository) CreateFollow(followerID, followingID uuid.UUID) error {
+	// Prevent self-follow
+	if followerID == followingID {
+		return fmt.Errorf("cannot follow yourself")
+	}
+
+	query := `
+		INSERT INTO user_follows (follower_id, following_id, created_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (follower_id, following_id) DO NOTHING
+	`
+	_, err := r.db.DB.Exec(query, followerID, followingID)
+	if err != nil {
+		return fmt.Errorf("failed to create follow: %w", err)
+	}
+	return nil
+}
+
+// DeleteFollow removes a follow relationship
+func (r *UserRepository) DeleteFollow(followerID, followingID uuid.UUID) error {
+	query := `
+		DELETE FROM user_follows
+		WHERE follower_id = $1 AND following_id = $2
+	`
+	result, err := r.db.DB.Exec(query, followerID, followingID)
+	if err != nil {
+		return fmt.Errorf("failed to delete follow: %w", err)
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("follow relationship not found")
+	}
+	return nil
+}
+
+// IsFollowing checks if a user is following another user
+func (r *UserRepository) IsFollowing(followerID, followingID uuid.UUID) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM user_follows
+			WHERE follower_id = $1 AND following_id = $2
+		)
+	`
+	var exists bool
+	err := r.db.DB.QueryRow(query, followerID, followingID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check follow status: %w", err)
+	}
+	return exists, nil
+}
+
+// GetFollowersCount gets the count of followers for a user
+func (r *UserRepository) GetFollowersCount(userID uuid.UUID) (int, error) {
+	query := `
+		SELECT COUNT(*) FROM user_follows
+		WHERE following_id = $1
+	`
+	var count int
+	err := r.db.DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get followers count: %w", err)
+	}
+	return count, nil
+}
+
+// GetFollowingCount gets the count of users a user is following
+func (r *UserRepository) GetFollowingCount(userID uuid.UUID) (int, error) {
+	query := `
+		SELECT COUNT(*) FROM user_follows
+		WHERE follower_id = $1
+	`
+	var count int
+	err := r.db.DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get following count: %w", err)
+	}
+	return count, nil
+}
+
+// GetFollowers gets the list of followers for a user (paginated)
+func (r *UserRepository) GetFollowers(userID uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+	offset := (page - 1) * limit
+
+	// Get total count
+	countQuery := `
+		SELECT COUNT(*) FROM user_follows
+		WHERE following_id = $1
+	`
+	var total int
+	err := r.db.DB.QueryRow(countQuery, userID).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get followers count: %w", err)
+	}
+
+	// Get followers with user info
+	query := `
+		SELECT 
+			uf.follower_id,
+			COALESCE(up.full_name, '') as full_name,
+			up.avatar_url,
+			up.bio,
+			uf.created_at as followed_at
+		FROM user_follows uf
+		INNER JOIN user_profiles up ON uf.follower_id = up.user_id
+		WHERE uf.following_id = $1
+		ORDER BY uf.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := r.db.DB.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get followers: %w", err)
+	}
+	defer rows.Close()
+
+	followers := []models.UserFollowInfo{}
+	for rows.Next() {
+		var info models.UserFollowInfo
+		var fullName sql.NullString
+		var bio sql.NullString
+		err := rows.Scan(
+			&info.UserID,
+			&fullName,
+			&info.AvatarURL,
+			&bio,
+			&info.FollowedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan follower: %w", err)
+		}
+		
+		// Handle NULL values
+		info.FullName = fullName.String
+		if bio.Valid {
+			info.Bio = &bio.String
+		}
+
+		// Get level and points from learning_progress
+		progressQuery := `
+			SELECT 
+				COALESCE(
+					(SELECT SUM(points) FROM achievements a
+					 INNER JOIN user_achievements ua ON a.id = ua.achievement_id
+					 WHERE ua.user_id = $1), 0
+				) as points
+		`
+		var points int
+		_ = r.db.DB.QueryRow(progressQuery, info.UserID).Scan(&points)
+		info.Points = points
+
+		// Simple level calculation based on points (every 100 points = 1 level)
+		if points/100 < 1 {
+			info.Level = 1
+		} else {
+			info.Level = points / 100
+		}
+
+		followers = append(followers, info)
+	}
+
+	return followers, total, nil
+}
+
+// GetFollowing gets the list of users a user is following (paginated)
+func (r *UserRepository) GetFollowing(userID uuid.UUID, page, limit int) ([]models.UserFollowInfo, int, error) {
+	offset := (page - 1) * limit
+
+	// Get total count
+	countQuery := `
+		SELECT COUNT(*) FROM user_follows
+		WHERE follower_id = $1
+	`
+	var total int
+	err := r.db.DB.QueryRow(countQuery, userID).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get following count: %w", err)
+	}
+
+	// Get following with user info
+	query := `
+		SELECT 
+			uf.following_id,
+			COALESCE(up.full_name, '') as full_name,
+			up.avatar_url,
+			up.bio,
+			uf.created_at as followed_at
+		FROM user_follows uf
+		INNER JOIN user_profiles up ON uf.following_id = up.user_id
+		WHERE uf.follower_id = $1
+		ORDER BY uf.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := r.db.DB.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get following: %w", err)
+	}
+	defer rows.Close()
+
+	following := []models.UserFollowInfo{}
+	for rows.Next() {
+		var info models.UserFollowInfo
+		var fullName sql.NullString
+		var bio sql.NullString
+		err := rows.Scan(
+			&info.UserID,
+			&fullName,
+			&info.AvatarURL,
+			&bio,
+			&info.FollowedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan following: %w", err)
+		}
+		
+		// Handle NULL values
+		info.FullName = fullName.String
+		if bio.Valid {
+			info.Bio = &bio.String
+		}
+
+		// Get level and points from learning_progress
+		progressQuery := `
+			SELECT 
+				COALESCE(
+					(SELECT SUM(points) FROM achievements a
+					 INNER JOIN user_achievements ua ON a.id = ua.achievement_id
+					 WHERE ua.user_id = $1), 0
+				) as points
+		`
+		var points int
+		_ = r.db.DB.QueryRow(progressQuery, info.UserID).Scan(&points)
+		info.Points = points
+
+		// Simple level calculation based on points (every 100 points = 1 level)
+		if points/100 < 1 {
+			info.Level = 1
+		} else {
+			info.Level = points / 100
+		}
+
+		following = append(following, info)
+	}
+
+	return following, total, nil
+}
+
 // ============= Study Goals =============
 
 // CreateGoal creates a new study goal

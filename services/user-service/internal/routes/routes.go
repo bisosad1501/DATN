@@ -19,7 +19,18 @@ func SetupRoutes(handler *handlers.UserHandler, internalHandler *handlers.Intern
 		usersGroup := v1.Group("/users")
 		usersGroup.Use(authMiddleware.OptionalAuth()) // Optional auth - allows unauthenticated access but checks auth if available
 		{
-			usersGroup.GET("/:id/profile", handler.GetPublicProfile) // Get public user profile
+			usersGroup.GET("/:id/profile", handler.GetPublicProfile)      // Get public user profile
+			usersGroup.GET("/:id/achievements", handler.GetPublicAchievements) // Get public user achievements
+			usersGroup.GET("/:id/followers", handler.GetFollowers)        // Get user followers (paginated)
+			usersGroup.GET("/:id/following", handler.GetFollowing)        // Get user following (paginated)
+		}
+
+		// Protected user social routes (auth required)
+		usersProtected := v1.Group("/users")
+		usersProtected.Use(authMiddleware.AuthRequired())
+		{
+			usersProtected.POST("/:id/follow", handler.FollowUser)   // Follow a user
+			usersProtected.DELETE("/:id/follow", handler.UnfollowUser) // Unfollow a user
 		}
 
 		// User routes (protected)

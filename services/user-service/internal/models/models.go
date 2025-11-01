@@ -193,3 +193,22 @@ type ProgressInsight struct {
 	Confidence  float64   `json:"confidence"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+// UserFollow represents a follow relationship between users
+type UserFollow struct {
+	ID          int64     `json:"id" db:"id"`
+	FollowerID  uuid.UUID `json:"follower_id" db:"follower_id"`
+	FollowingID uuid.UUID `json:"following_id" db:"following_id"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+}
+
+// UserFollowInfo represents follow relationship info with user details
+type UserFollowInfo struct {
+	UserID    uuid.UUID `json:"user_id"`
+	FullName  string    `json:"full_name"`
+	AvatarURL *string   `json:"avatar_url,omitempty"`
+	Bio       *string   `json:"bio,omitempty"`
+	Level     int       `json:"level"`
+	Points    int       `json:"points"`
+	FollowedAt time.Time `json:"followed_at"`
+}
