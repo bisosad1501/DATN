@@ -597,20 +597,21 @@ export interface Notification {
   id: string
   userId?: string
   user_id?: string
-  type: string // achievement, reminder, course_update, exercise_graded, system (not strict NotificationType)
+  type: string // achievement, reminder, course_update, exercise_graded, system, social
   category?: "info" | "success" | "warning" | "alert"
-  title: string
-  message: string
+  title: string // Can be translation key (starts with "notifications.") or plain text
+  message: string // Can be translation key (starts with "notifications.") or plain text
   isRead?: boolean
   is_read?: boolean // Backend format
   read?: boolean // Alias for isRead
   actionUrl?: string
-  action_type?: string // navigate_to_course, navigate_to_lesson, external_link
+  action_type?: string // navigate_to_course, navigate_to_lesson, external_link, navigate_to_user_profile
   action_data?: {
     course_id?: string
     lesson_id?: string
     url?: string
     user_id?: string
+    follower_name?: string // For template replacement
     [key: string]: any
   }
   createdAt?: string

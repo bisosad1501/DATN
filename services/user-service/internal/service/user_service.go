@@ -855,17 +855,18 @@ func (s *UserService) FollowUser(followerID, followingID uuid.UUID) error {
 				followerName = *followerProfile.FullName
 			}
 
-			// Send notification
+			// Send notification with translation keys
 			actionType := "navigate_to_user_profile"
 			notificationErr := s.notificationClient.SendNotification(client.SendNotificationRequest{
 				UserID:     followingID.String(),
-				Title:      "Bạn có người theo dõi mới",
-				Message:    fmt.Sprintf("%s đã bắt đầu theo dõi bạn", followerName),
+				Title:      "notifications.new_follower_title", // Translation key
+				Message:    "notifications.new_follower_message", // Translation key
 				Type:       "social",
 				Category:   "info",
 				ActionType: &actionType,
 				ActionData: map[string]interface{}{
 					"user_id": followerID.String(),
+					"follower_name": followerName, // For template replacement
 				},
 				Priority: "normal",
 			})

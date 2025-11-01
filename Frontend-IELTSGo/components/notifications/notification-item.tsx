@@ -8,6 +8,7 @@ import type { Notification } from "@/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "@/lib/i18n"
 
 interface NotificationItemProps {
   notification: Notification
@@ -17,11 +18,56 @@ interface NotificationItemProps {
 
 export function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
   const router = useRouter()
+  const t = useTranslations()
   const [isExpanded, setIsExpanded] = useState(false)
   const [needsTruncation, setNeedsTruncation] = useState(false)
   const messageRef = useRef<HTMLParagraphElement>(null)
   const isRead = notification.read ?? notification.isRead ?? notification.is_read ?? false
   const createdAt = notification.createdAt || notification.created_at
+
+  // Translate notification title and message if they are translation keys
+  const getTranslatedTitle = (): string => {
+    const title = notification.title
+    // Check if title is a translation key (starts with "notifications.")
+    if (title.startsWith("notifications.")) {
+      try {
+        const translated = t(title)
+        // If translation returns the same key, it means translation not found, use original
+        return translated !== title ? translated : title
+      } catch {
+        return title
+      }
+    }
+    return title
+  }
+
+  const getTranslatedMessage = (): string => {
+    const message = notification.message
+    // Check if message is a translation key (starts with "notifications.")
+    if (message.startsWith("notifications.")) {
+      try {
+        // Get translation with template replacement
+        const params: Record<string, string> = {}
+        
+        // Extract params from action_data for template replacement
+        if (notification.action_data) {
+          if (notification.action_data.follower_name) {
+            params.name = notification.action_data.follower_name as string
+          }
+        }
+        
+        const translated = t(message, params)
+        // If translation returns the same key, it means translation not found, use original
+        return translated !== message ? translated : message
+      } catch {
+        return message
+      }
+    }
+    return message
+  }
+
+  const translatedTitle = getTranslatedTitle()
+  const translatedMessage = getTranslatedMessage()
   
   // Check if message actually needs truncation by comparing heights
   // Wait for DOM to render before checking
@@ -116,7 +162,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
               "text-sm font-semibold text-gray-900 dark:text-gray-100 leading-5 mb-1.5",
               !isRead && "text-gray-900 dark:text-gray-50"
             )}>
-              {notification.title}
+              {translatedTitle}
             </p>
             <div className="space-y-1.5">
               <div className="relative">
@@ -130,7 +176,7 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
                       !isExpanded && needsTruncation && "line-clamp-2"
                     )}
                   >
-                    {notification.message}
+                    {translatedMessage}
                   </p>
                   
                   {/* Gradient fade overlay when truncated (subtle, professional) */}
