@@ -28,15 +28,68 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
   const isRead = notification.read ?? notification.isRead ?? notification.is_read ?? false
   const createdAt = notification.createdAt || notification.created_at
 
-  // Translate notification title and message if they are translation keys
+  // Mapping for hardcoded notification texts to translation keys
+  const getNotificationTranslationKey = (text: string, type: string): string | null => {
+    // Map common Vietnamese notification texts to translation keys
+    const titleMap: Record<string, string> = {
+      "Chào mừng đến với IELTSGo": "notifications.welcome_title",
+      "Hoàn thành bài học!": "notifications.lesson_completion_title",
+      "Kết quả bài tập": "notifications.exercise_result_title",
+      "Bạn đã đạt được thành tựu mới": "notifications.achievement_title",
+      "Bạn đã hoàn thành mục tiêu": "notifications.goal_completion_title",
+      "Bạn đã duy trì chuỗi học tập": "notifications.streak_milestone_title",
+      "Đã đăng ký khóa học thành công": "notifications.course_enrollment_title",
+      "Chúc mừng! Bạn đã hoàn thành khóa học": "notifications.course_completion_title",
+      "Bài học mới đã được thêm vào khóa học": "notifications.new_lesson_title",
+      "Khóa học của bạn vừa nhận đánh giá mới": "notifications.review_received_title",
+      "Bạn đã hoàn thành bài học": "notifications.lesson_completed_title",
+    }
+
+    // Try exact match first
+    if (titleMap[text]) {
+      return titleMap[text]
+    }
+
+    // Try pattern matching for dynamic content
+    if (type === "exercise_graded" && text.includes("Kết quả bài tập")) {
+      return "notifications.exercise_result_title"
+    }
+    if (type === "course_update" && text.includes("đăng ký khóa học")) {
+      return "notifications.course_enrollment_title"
+    }
+    if (type === "course_update" && text.includes("Bài học mới")) {
+      return "notifications.new_lesson_title"
+    }
+    if (type === "course_update" && text.includes("đánh giá mới")) {
+      return "notifications.review_received_title"
+    }
+    if (type === "achievement" && text.includes("thành tựu")) {
+      return "notifications.achievement_title"
+    }
+    if (type === "achievement" && text.includes("hoàn thành khóa học")) {
+      return "notifications.course_completion_title"
+    }
+    if (type === "course_update" && text.includes("Hoàn thành bài học")) {
+      return "notifications.lesson_completion_title"
+    }
+
+    // Check if already a translation key
+    if (text.startsWith("notifications.")) {
+      return text
+    }
+
+    return null
+  }
+
+  // Translate notification title and message
   const getTranslatedTitle = (): string => {
     const title = notification.title
-    // Check if title is a translation key (starts with "notifications.")
-    if (title.startsWith("notifications.")) {
+    const translationKey = getNotificationTranslationKey(title, notification.type)
+    
+    if (translationKey) {
       try {
-        const translated = t(title)
-        // If translation returns the same key, it means translation not found, use original
-        return translated !== title ? translated : title
+        const translated = t(translationKey)
+        return translated !== translationKey ? translated : title
       } catch {
         return title
       }
@@ -46,26 +99,129 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
 
   const getTranslatedMessage = (): string => {
     const message = notification.message
-    // Check if message is a translation key (starts with "notifications.")
+    const params: Record<string, string | number> = {}
+    
+    // Extract params from action_data and message content
+    if (notification.action_data) {
+      if (notification.action_data.follower_name) {
+        params.name = notification.action_data.follower_name as string
+      }
+      if (notification.action_data.course_title) {
+        params.course_title = notification.action_data.course_title as string
+      }
+      if (notification.action_data.lesson_title) {
+        params.lesson_title = notification.action_data.lesson_title as string
+      }
+      if (notification.action_data.exercise_title) {
+        params.exercise_title = notification.action_data.exercise_title as string
+      }
+      if (notification.action_data.achievement_name) {
+        params.achievement_name = notification.action_data.achievement_name as string
+      }
+      if (notification.action_data.goal_title) {
+        params.goal_title = notification.action_data.goal_title as string
+      }
+      if (notification.action_data.days) {
+        params.days = notification.action_data.days as number
+      }
+      if (notification.action_data.progress) {
+        params.progress = notification.action_data.progress as number
+      }
+      if (notification.action_data.score) {
+        params.score = notification.action_data.score as number
+      }
+      if (notification.action_data.rating) {
+        params.rating = notification.action_data.rating as number
+      }
+      if (notification.action_data.reviewer_name) {
+        params.reviewer_name = notification.action_data.reviewer_name as string
+      }
+    }
+
+    // Map message patterns to translation keys
+    let messageKey: string | null = null
+
+    // Check if message is already a translation key
     if (message.startsWith("notifications.")) {
+      messageKey = message
+    } else {
+      // Pattern matching for Vietnamese messages
+      if (message.includes("Cảm ơn bạn đã tham gia IELTSGo")) {
+        messageKey = "notifications.welcome_message"
+      } else if (message.includes("Bạn đã hoàn thành bài học") && message.includes("Tiến độ")) {
+        messageKey = "notifications.lesson_completion_message"
+      } else if (message.includes("Bạn đã hoàn thành bài tập") && message.includes("điểm")) {
+        messageKey = "notifications.exercise_result_message"
+      } else if (message.includes("Chúc mừng! Bạn đã đạt được thành tựu")) {
+        messageKey = "notifications.achievement_message"
+      } else if (message.includes("Chúc mừng! Bạn đã hoàn thành mục tiêu")) {
+        messageKey = "notifications.goal_completion_message"
+      } else if (message.includes("Bạn đã học liên tục") && message.includes("ngày")) {
+        messageKey = "notifications.streak_milestone_message"
+      } else if (message.includes("Bạn đã đăng ký khóa học") && message.includes("Bắt đầu học ngay")) {
+        messageKey = "notifications.course_enrollment_message"
+      } else if (message.includes("Bạn đã hoàn thành khóa học") && message.includes("Tiếp tục")) {
+        messageKey = "notifications.course_completion_message"
+      } else if (message.includes("vừa có bài học mới") && message.includes("Truy cập")) {
+        messageKey = "notifications.new_lesson_message"
+      } else if (message.includes("vừa nhận được đánh giá") && message.includes("sao từ")) {
+        messageKey = "notifications.review_received_message"
+      } else if (message.includes("Chúc mừng! Bạn đã hoàn thành bài học") && message.includes("Tiến độ khóa học")) {
+        messageKey = "notifications.lesson_completed_message"
+      }
+
+      // Extract dynamic values from message if not in action_data
+      if (!params.course_title && message.includes("khóa học '")) {
+        const match = message.match(/khóa học '([^']+)'/)
+        if (match) params.course_title = match[1]
+      }
+      if (!params.lesson_title && message.includes("bài học '")) {
+        const match = message.match(/bài học '([^']+)'/)
+        if (match) params.lesson_title = match[1]
+      }
+      if (!params.exercise_title && message.includes("bài tập '")) {
+        const match = message.match(/bài tập '([^']+)'/)
+        if (match) params.exercise_title = match[1]
+      }
+      if (!params.achievement_name && message.includes("thành tựu '")) {
+        const match = message.match(/thành tựu '([^']+)'/)
+        if (match) params.achievement_name = match[1]
+      }
+      if (!params.goal_title && message.includes("mục tiêu '")) {
+        const match = message.match(/mục tiêu '([^']+)'/)
+        if (match) params.goal_title = match[1]
+      }
+      if (!params.days && message.includes("học liên tục")) {
+        const match = message.match(/(\d+) ngày/)
+        if (match) params.days = parseInt(match[1])
+      }
+      if (!params.progress && message.includes("Tiến độ")) {
+        const match = message.match(/(\d+)%/)
+        if (match) params.progress = parseInt(match[1])
+      }
+      if (!params.score && message.includes("với điểm")) {
+        const match = message.match(/với điểm ([\d.]+)/)
+        if (match) params.score = parseFloat(match[1])
+      }
+      if (!params.rating && message.includes("đánh giá") && message.includes("sao")) {
+        const match = message.match(/(\d+) sao/)
+        if (match) params.rating = parseInt(match[1])
+      }
+      if (!params.reviewer_name && message.includes("sao từ")) {
+        const match = message.match(/sao từ ([^.]+)/)
+        if (match) params.reviewer_name = match[1].trim()
+      }
+    }
+
+    if (messageKey) {
       try {
-        // Get translation with template replacement
-        const params: Record<string, string> = {}
-        
-        // Extract params from action_data for template replacement
-        if (notification.action_data) {
-          if (notification.action_data.follower_name) {
-            params.name = notification.action_data.follower_name as string
-          }
-        }
-        
-        const translated = t(message, params)
-        // If translation returns the same key, it means translation not found, use original
-        return translated !== message ? translated : message
+        const translated = t(messageKey, params)
+        return translated !== messageKey ? translated : message
       } catch {
         return message
       }
     }
+
     return message
   }
 
