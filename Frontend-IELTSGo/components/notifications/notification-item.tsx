@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { vi } from "date-fns/locale"
+import { vi, enUS } from "date-fns/locale"
+import { useLocale } from "@/lib/i18n"
 import { X } from "lucide-react"
 import type { Notification } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,8 @@ interface NotificationItemProps {
 export function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
   const router = useRouter()
   const t = useTranslations()
+  const { locale } = useLocale()
+  const tNotif = useTranslations('notifications')
   const [isExpanded, setIsExpanded] = useState(false)
   const [needsTruncation, setNeedsTruncation] = useState(false)
   const messageRef = useRef<HTMLParagraphElement>(null)
@@ -128,15 +131,17 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
   }
 
   const formatTime = () => {
-    if (!createdAt) return "Vừa xong"
+    if (!createdAt) return tNotif('just_now')
     try {
       const date = new Date(createdAt)
       if (isNaN(date.getTime())) {
-        return "Vừa xong"
+        return tNotif('just_now')
       }
-      return formatDistanceToNow(date, { addSuffix: true, locale: vi })
+      // Use locale based on current user locale
+      const dateFnsLocale = locale === 'vi' ? vi : enUS
+      return formatDistanceToNow(date, { addSuffix: true, locale: dateFnsLocale })
     } catch {
-      return "Vừa xong"
+      return tNotif('just_now')
     }
   }
 

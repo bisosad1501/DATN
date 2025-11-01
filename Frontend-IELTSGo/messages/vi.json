@@ -1105,7 +1105,16 @@
     "component_unmounting_cleaning_up": "Đang gỡ thành phần, dọn dẹp…",
     "calling_disconnectsse": "Đang gọi disconnectSSE…",
     "new_follower_title": "Bạn có người theo dõi mới",
-    "new_follower_message": "{{name}} đã bắt đầu theo dõi bạn"
+    "new_follower_message": "{{name}} đã bắt đầu theo dõi bạn",
+    "title": "Thông báo",
+    "mark_all_read": "Đọc tất cả",
+    "loading": "Đang tải thông báo...",
+    "no_notifications": "Chưa có thông báo nào",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "this_week": "Tuần này",
+    "older": "Trước đó",
+    "just_now": "Vừa xong"
   },
   "leaderboard": {
     "leaderboard_title": "Bảng Xếp Hạng",

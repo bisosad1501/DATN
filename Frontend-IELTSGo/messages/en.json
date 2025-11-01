@@ -1097,7 +1097,16 @@
     "component_unmounting_cleaning_up": "Component unmounting, cleaning up...",
     "calling_disconnectsse": "Calling disconnectSSE...",
     "new_follower_title": "New Follower",
-    "new_follower_message": "{{name}} started following you"
+    "new_follower_message": "{{name}} started following you",
+    "title": "Notifications",
+    "mark_all_read": "Mark all as read",
+    "loading": "Loading notifications...",
+    "no_notifications": "No notifications yet",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "this_week": "This Week",
+    "older": "Older",
+    "just_now": "Just now"
   },
   "leaderboard": {
     "leaderboard_title": "Leaderboard",

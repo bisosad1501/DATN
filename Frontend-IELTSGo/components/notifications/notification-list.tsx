@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { isToday, isYesterday, isThisWeek } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/lib/i18n"
 
 interface NotificationListProps {
   onMarkAllAsRead: () => void
@@ -23,6 +24,7 @@ type NotificationGroup = {
 }
 
 export function NotificationList({ onMarkAllAsRead, onNotificationRead, newNotification, onNewNotificationHandled }: NotificationListProps) {
+  const t = useTranslations('notifications')
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -147,26 +149,26 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead, newNotif
     })
 
     if (today.length > 0) {
-      groups.push({ label: "Hôm nay", notifications: today })
+      groups.push({ label: t('today'), notifications: today })
     }
     if (yesterday.length > 0) {
-      groups.push({ label: "Hôm qua", notifications: yesterday })
+      groups.push({ label: t('yesterday'), notifications: yesterday })
     }
     if (thisWeek.length > 0) {
-      groups.push({ label: "Tuần này", notifications: thisWeek })
+      groups.push({ label: t('this_week'), notifications: thisWeek })
     }
     if (older.length > 0) {
-      groups.push({ label: "Trước đó", notifications: older })
+      groups.push({ label: t('older'), notifications: older })
     }
 
     return groups
-  }, [notifications])
+  }, [notifications, t])
 
   if (loading) {
     return (
       <div className="p-8 text-center">
         <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Đang tải thông báo...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">{t('loading')}</p>
       </div>
     )
   }
@@ -174,7 +176,7 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead, newNotif
   if (!notifications || notifications.length === 0) {
     return (
       <div className="p-12 text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có thông báo nào</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('no_notifications')}</p>
       </div>
     )
   }
@@ -183,7 +185,7 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead, newNotif
     <div className="flex flex-col bg-white dark:bg-gray-900 h-full">
       {/* Header - sticky */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10 shrink-0">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Thông báo</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('title')}</h3>
         <Button 
           variant="ghost" 
           size="sm" 
@@ -196,7 +198,7 @@ export function NotificationList({ onMarkAllAsRead, onNotificationRead, newNotif
             "disabled:opacity-40 disabled:cursor-not-allowed"
           )}
         >
-          Đọc tất cả
+          {t('mark_all_read')}
         </Button>
       </div>
 
