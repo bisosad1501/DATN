@@ -164,7 +164,9 @@ export const progressApi = {
       data: historyData.sessions.map(item => ({
         id: item.id,
         type: item.session_type as "course" | "exercise" | "lesson",
-        title: `${item.session_type} - ${item.resource_id.substring(0, 8)}`,
+        title: item.resource_id 
+          ? `${item.session_type} - ${item.resource_id.substring(0, 8)}`
+          : `${item.session_type} - ${item.id.substring(0, 8)}`,
         completedAt: item.created_at,
         duration: item.duration_minutes,
         score: item.score,

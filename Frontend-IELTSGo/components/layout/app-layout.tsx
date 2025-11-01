@@ -6,22 +6,27 @@ import { useState } from "react"
 import { Navbar } from "./navbar"
 import { Sidebar } from "./sidebar"
 import { Footer } from "./footer"
+import { cn } from "@/lib/utils"
 
 interface AppLayoutProps {
   children: React.ReactNode
   showSidebar?: boolean
   showFooter?: boolean
+  hideNavbar?: boolean // Hide navbar when sidebar is shown (for dashboard-like pages)
 }
 
-export function AppLayout({ children, showSidebar = false, showFooter = true }: AppLayoutProps) {
+export function AppLayout({ children, showSidebar = false, showFooter = true, hideNavbar = false }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      <Navbar 
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
-        showMenuButton={showSidebar}
-      />
+    <div className="min-h-screen flex flex-col relative bg-background">
+      {/* Only show navbar if not hidden */}
+      {!hideNavbar && (
+        <Navbar 
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+          showMenuButton={showSidebar}
+        />
+      )}
 
       <div className="flex flex-1 relative z-10">
         {showSidebar && (
@@ -43,7 +48,12 @@ export function AppLayout({ children, showSidebar = false, showFooter = true }: 
           </>
         )}
 
-        <main className="flex-1 relative z-10">{children}</main>
+        <main className={cn(
+          "flex-1 relative z-10",
+          showSidebar && "bg-muted/30"
+        )}>
+          {children}
+        </main>
       </div>
 
       {showFooter && <Footer />}

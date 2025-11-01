@@ -60,7 +60,7 @@ function DashboardContent() {
 
   if (loading) {
     return (
-      <AppLayout showSidebar={true} showFooter={false}>
+      <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
         <PageContainer>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -123,52 +123,64 @@ function DashboardContent() {
   }
 
   return (
-    <AppLayout showSidebar={true} showFooter={false}>
-      <PageContainer>
-        {/* Header with Time Range Filter */}
-        <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">{t('welcomeBack', { name: user?.fullName?.split(" ")[0] || tCommon('student') })}</h1>
-            <p className="text-base text-muted-foreground">
-              {t('subtitle')}
-              {user?.targetBandScore && ` • ${t('targetBand', { score: user.targetBandScore })}`}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant={timeRange === "7d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("7d")}
-            >
-              {t('timeRange.7d')}
-            </Button>
-            <Button 
-              variant={timeRange === "30d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("30d")}
-            >
-              {t('timeRange.30d')}
-            </Button>
-            <Button 
-              variant={timeRange === "90d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("90d")}
-            >
-              {t('timeRange.90d')}
-            </Button>
-            <Button 
-              variant={timeRange === "all" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("all")}
-            >
-              {t('timeRange.all')}
-            </Button>
+    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
+      <div className="min-h-screen">
+        {/* Compact Dashboard Header */}
+        <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">{t('welcomeBack', { name: user?.fullName?.split(" ")[0] || tCommon('student') })}</h1>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {t('subtitle')}
+                    {user?.targetBandScore && ` • ${t('targetBand', { score: user.targetBandScore })}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant={timeRange === "7d" ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setTimeRange("7d")}
+                  className="h-8"
+                >
+                  {t('timeRange.7d')}
+                </Button>
+                <Button 
+                  variant={timeRange === "30d" ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setTimeRange("30d")}
+                  className="h-8"
+                >
+                  {t('timeRange.30d')}
+                </Button>
+                <Button 
+                  variant={timeRange === "90d" ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setTimeRange("90d")}
+                  className="h-8"
+                >
+                  {t('timeRange.90d')}
+                </Button>
+                <Button 
+                  variant={timeRange === "all" ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setTimeRange("all")}
+                  className="h-8"
+                >
+                  {t('timeRange.all')}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Main Content */}
+        <div className="px-6 py-6">
         {/* Stats Grid - Only show if user preference allows */}
         {showStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <StatCard
               title={t('stats.coursesInProgress')}
               value={summary?.inProgressCourses || 0}
@@ -314,7 +326,8 @@ function DashboardContent() {
             </TabsContent>
           )}
         </Tabs>
-      </PageContainer>
+        </div>
+      </div>
     </AppLayout>
   )
 }
