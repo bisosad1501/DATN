@@ -20,11 +20,27 @@ function getNestedValue(obj: any, path: string): string | undefined {
 }
 
 // Format message with parameters
+// Supports both {{key}} (double braces) and {key} (single braces) formats
 function formatMessage(template: string, params?: Record<string, string | number>): string {
-  if (!params) return template
-  return template.replace(/\{(\w+)\}/g, (match, key) => {
-    return params[key]?.toString() || match
+  if (!params || Object.keys(params).length === 0) return template
+  
+  let result = template
+  
+  // First, replace {{key}} (double braces) - priority for translation templates
+  result = result.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    const value = params[key]
+    return value !== undefined && value !== null ? value.toString() : match
   })
+  
+  // Then, replace {key} (single braces) as fallback
+  result = result.replace(/\{(\w+)\}/g, (match, key) => {
+    const value = params[key]
+    // Skip if already replaced by double braces or if param doesn't exist
+    if (value === undefined || value === null) return match
+    return value.toString()
+  })
+  
+  return result
 }
 
 /**

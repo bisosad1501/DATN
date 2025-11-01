@@ -172,23 +172,50 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
       // Pattern matching for English messages (from backend hardcoded or old notifications)
       else if (message.includes("started following you") || (message.includes("{") && message.includes("started following"))) {
         messageKey = "notifications.new_follower_message"
-        // Extract name from {Name} pattern
+        // Extract name from {Name} pattern - MUST extract BEFORE translating
         if (!params.name) {
-          const match = message.match(/\{([^}]+)\}/)
-          if (match) params.name = match[1]
+          // Try multiple patterns: {Name}, '{Name}', "{Name}"
+          const match1 = message.match(/\{([^}]+)\}/)
+          const match2 = message.match(/'\{([^}]+)\}'/)
+          const match3 = message.match(/"\{([^}]+)\}"/)
+          if (match1) params.name = match1[1].trim()
+          else if (match2) params.name = match2[1].trim()
+          else if (match3) params.name = match3[1].trim()
         }
       } else if (message.includes("You have completed the exercise") || (message.includes("completed the exercise") && message.includes("score"))) {
         messageKey = "notifications.exercise_result_message"
-        // Extract exercise title from '{Title}' or {Title} pattern
+        // Extract exercise title from '{Exercise Title}' or {Exercise Title} pattern - MUST extract BEFORE translating
         if (!params.exercise_title) {
-          const match = message.match(/['"]?\{?([^}'"]+)\}?['"]?\s+with a score|exercise ['"]?\{?([^}'"]+)\}?['"]?/)
-          if (match && match[1]) params.exercise_title = match[1]
-          else if (match && match[2]) params.exercise_title = match[2]
+          // Match: exercise '{Exercise 1: True/False/Not Given}' with a score
+          // Match: exercise '{Title}' or exercise {Title}
+          const patterns = [
+            /exercise\s+['"]?\{([^}]+)\}['"]?\s+with a score/i,
+            /exercise\s+['"]\{([^}]+)\}['"]\s+with a score/i,
+            /['"]?\{([^}]+)\}['"]?\s+with a score/i,
+          ]
+          for (const pattern of patterns) {
+            const match = message.match(pattern)
+            if (match && match[1]) {
+              params.exercise_title = match[1].trim()
+              break
+            }
+          }
         }
-        // Extract score from {0} or score of {0}
+        // Extract score from {0} or score of {0} - MUST extract BEFORE translating
         if (!params.score) {
-          const match = message.match(/score (?:of )?\{?([\d.]+)\}?/)
-          if (match) params.score = parseFloat(match[1])
+          const patterns = [
+            /with a score of\s+\{([\d.]+)\}/i,
+            /with a score\s+of\s+([\d.]+)/i,
+            /score of\s+\{([\d.]+)\}/i,
+            /score\s+of\s+([\d.]+)/i,
+          ]
+          for (const pattern of patterns) {
+            const match = message.match(pattern)
+            if (match && match[1]) {
+              params.score = parseFloat(match[1])
+              break
+            }
+          }
         }
       } else if (message.includes("Thank you for joining IELTSGo") || message.includes("Start your IELTS learning journey")) {
         messageKey = "notifications.welcome_message"
@@ -240,16 +267,35 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
 
     if (messageKey) {
       try {
+        // Debug: log params to ensure they're extracted
+        if (process.env.NODE_ENV === 'development' && Object.keys(params).length > 0) {
+          console.log('[Notification] Translation params:', params, 'for key:', messageKey)
+        }
+        
         const translated = t(messageKey, params)
-        // Clean up: remove any remaining {} if replacement didn't work perfectly
-        const cleaned = translated.replace(/\{[^}]+\}/g, '').replace(/\s+/g, ' ').trim()
-        return cleaned !== translated && cleaned.length > 0 ? cleaned : (translated !== messageKey ? translated : message)
-      } catch {
+        
+        // If translation still has {{}} or {} placeholders, it means params weren't replaced
+        // Don't clean them up - they might be intentional, but log a warning
+        if (translated.includes('{{') || translated.includes('{') && !translated.includes('{{name}}') && !translated.includes('{{exercise_title}}')) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Notification] Translation has unreplaced placeholders:', translated, 'params:', params)
+          }
+          // Try to clean up ONLY if it's clearly an error (not a valid placeholder)
+          // But don't remove content inside {}
+          return translated
+        }
+        
+        return translated !== messageKey ? translated : message
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Notification] Translation error:', error, 'key:', messageKey, 'params:', params)
+        }
         return message
       }
     }
 
-    // Clean up message even if no translation key found - remove ugly {}
+    // If no translation key found, try to clean up message but preserve content
+    // Replace {content} with content (remove brackets but keep the text)
     const cleanedMessage = message.replace(/\{([^}]+)\}/g, '$1').replace(/\s+/g, ' ').trim()
     return cleanedMessage !== message ? cleanedMessage : message
   }
