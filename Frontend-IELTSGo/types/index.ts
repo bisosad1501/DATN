@@ -121,6 +121,7 @@ export interface UpdatePreferencesRequest {
   weekly_report?: boolean
   theme?: "light" | "dark" | "auto"
   font_size?: "small" | "medium" | "large"
+  locale?: "vi" | "en"
   auto_play_next_lesson?: boolean
   show_answer_explanation?: boolean
   playback_speed?: number
