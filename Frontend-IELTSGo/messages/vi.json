@@ -682,6 +682,17 @@
         "role": "Học viên IELTS 7.0",
         "content": "Video bài giảng chất lượng cao, giáo viên giải thích rất dễ hiểu. Tôi đặc biệt thích phần luyện tập theo kỹ năng."
       }
+    },
+    "loggedIn": {
+      "heroTitle": "Chào mừng trở lại",
+      "heroDescription": "Tiếp tục hành trình IELTS của bạn. Khám phá khóa học mới, luyện tập bài tập và theo dõi tiến độ của bạn",
+      "goToDashboard": "Vào Dashboard",
+      "myCourses": "Khóa học của tôi",
+      "continueLearning": "Tiếp tục học",
+      "exploreCourses": "Khám phá khóa học",
+      "practiceExercises": "Luyện tập bài tập",
+      "ctaTitle": "Tiếp tục phát triển kỹ năng IELTS của bạn",
+      "ctaDescription": "Đạt được mục tiêu band score với các khóa học và bài tập được cá nhân hóa"
     }
   },
   "footer": {

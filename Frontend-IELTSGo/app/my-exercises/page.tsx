@@ -55,7 +55,7 @@ export default function MyExercisesPage() {
 
   if (!user) {
     return (
-      <AppLayout>
+      <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
         <PageContainer className="py-12 text-center">
           <h1 className="text-2xl font-bold mb-4">{t('please_sign_in')}</h1>
           <p className="text-muted-foreground mb-6">
@@ -116,7 +116,7 @@ export default function MyExercisesPage() {
   }
 
   return (
-    <AppLayout>
+    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
       <PageContainer maxWidth="7xl">
         {/* Header */}
         <div className="mb-8">

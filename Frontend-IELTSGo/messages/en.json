@@ -676,6 +676,17 @@
         "role": "IELTS 7.0 Student",
         "content": "High-quality video lessons, teachers explain very clearly. I especially like the skill-based practice section."
       }
+    },
+    "loggedIn": {
+      "heroTitle": "Welcome Back",
+      "heroDescription": "Continue your IELTS journey. Explore new courses, practice exercises, and track your progress",
+      "goToDashboard": "Go to Dashboard",
+      "myCourses": "My Courses",
+      "continueLearning": "Continue Learning",
+      "exploreCourses": "Explore Courses",
+      "practiceExercises": "Practice Exercises",
+      "ctaTitle": "Keep Growing Your IELTS Skills",
+      "ctaDescription": "Achieve your target band score with personalized courses and exercises"
     }
   },
   "footer": {

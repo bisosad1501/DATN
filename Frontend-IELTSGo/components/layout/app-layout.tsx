@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Navbar } from "./navbar"
 import { Sidebar } from "./sidebar"
+import { TopBar } from "./topbar"
 import { Footer } from "./footer"
 import { cn } from "@/lib/utils"
 
@@ -20,13 +21,16 @@ export function AppLayout({ children, showSidebar = false, showFooter = true, hi
 
   return (
     <div className="min-h-screen flex flex-col relative bg-background">
-      {/* Only show navbar if not hidden */}
+      {/* Show full navbar if not hidden */}
       {!hideNavbar && (
         <Navbar 
           onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
           showMenuButton={showSidebar}
         />
       )}
+
+      {/* Show compact topbar when sidebar is shown and navbar is hidden */}
+      {hideNavbar && showSidebar && <TopBar />}
 
       <div className="flex flex-1 relative z-10">
         {showSidebar && (

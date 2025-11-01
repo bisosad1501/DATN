@@ -2,13 +2,15 @@
 
 import type React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Target, TrendingUp, Users, Award, Clock, Star, CheckCircle2, ArrowRight, PlayCircle, Quote, Zap, Globe } from "lucide-react"
+import { BookOpen, Target, TrendingUp, Users, Award, Clock, Star, CheckCircle2, ArrowRight, PlayCircle, Quote, Zap, Globe, LayoutDashboard } from "lucide-react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { BrandText } from "@/components/ui/brand-text"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTranslations } from "@/lib/i18n"
+import { useAuth } from "@/lib/contexts/auth-context"
 
 export default function HomePage() {
   return (
@@ -85,7 +87,58 @@ export default function HomePage() {
 
 function HeroSection() {
   const t = useTranslations('homepage')
+  const tLoggedIn = useTranslations('homepage.loggedIn')
+  const tCommon = useTranslations('common')
+  const { user, isAuthenticated } = useAuth()
+  const router = useRouter()
   
+  // Personalized content for logged-in users
+  if (isAuthenticated && user) {
+    const firstName = user.fullName?.split(" ")[0] || tCommon('student')
+    
+    return (
+      <div className="text-center max-w-4xl mx-auto space-y-6">
+        <div className="space-y-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
+            {tLoggedIn('heroTitle')}, {firstName}! 👋
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            {tLoggedIn('heroDescription')}
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
+          <Button 
+            size="lg" 
+            onClick={() => router.push('/dashboard')}
+            className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30"
+          >
+            <LayoutDashboard className="mr-2 h-5 w-5" />
+            {tLoggedIn('goToDashboard')}
+          </Button>
+          <Button 
+            size="lg" 
+            variant="outline"
+            onClick={() => router.push('/my-courses')}
+            className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 border-2 hover:bg-accent/50 transition-all duration-200"
+          >
+            <BookOpen className="mr-2 h-5 w-5" />
+            {tLoggedIn('myCourses')}
+          </Button>
+          <Button 
+            size="lg" 
+            variant="outline"
+            onClick={() => router.push('/exercises')}
+            className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 border-2 hover:bg-accent/50 transition-all duration-200"
+          >
+            <Target className="mr-2 h-5 w-5" />
+            {tLoggedIn('practiceExercises')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+  
+  // Default content for non-authenticated users
   return (
     <div className="text-center max-w-4xl mx-auto space-y-6">
       <div className="space-y-4">
@@ -115,7 +168,46 @@ function HeroSection() {
 
 function CTASection() {
   const t = useTranslations('homepage')
+  const tLoggedIn = useTranslations('homepage.loggedIn')
+  const tCommon = useTranslations('common')
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
   
+  // Personalized CTA for logged-in users
+  if (isAuthenticated) {
+    return (
+      <>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
+          {tLoggedIn('ctaTitle')}
+        </h2>
+        <p className="text-base sm:text-lg opacity-95 leading-relaxed">
+          {tLoggedIn('ctaDescription')}
+        </p>
+        <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center">
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            onClick={() => router.push('/courses')}
+            className="px-8 text-base sm:text-lg h-12 sm:h-14 bg-background text-primary hover:bg-background/95 shadow-lg shadow-black/10 transition-all duration-200 hover:shadow-xl hover:scale-105"
+          >
+            <BookOpen className="mr-2 h-5 w-5" />
+            {tLoggedIn('exploreCourses')}
+          </Button>
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            onClick={() => router.push('/exercises')}
+            className="px-8 text-base sm:text-lg h-12 sm:h-14 bg-background text-primary hover:bg-background/95 shadow-lg shadow-black/10 transition-all duration-200 hover:shadow-xl hover:scale-105"
+          >
+            <Target className="mr-2 h-5 w-5" />
+            {tLoggedIn('practiceExercises')}
+          </Button>
+        </div>
+      </>
+    )
+  }
+  
+  // Default CTA for non-authenticated users
   return (
     <>
       <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
