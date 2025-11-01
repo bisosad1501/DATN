@@ -9,8 +9,9 @@ import { StatCard } from "@/components/dashboard/stat-card"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
 import { SkillProgressCard } from "@/components/dashboard/skill-progress-card"
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
-import { BookOpen, CheckCircle, Clock, TrendingUp, Flame, BarChart3, Target } from "lucide-react"
+import { BookOpen, CheckCircle, Clock, TrendingUp, Flame, BarChart3, Target, ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { progressApi } from "@/lib/api/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,7 @@ export default function DashboardPage() {
 function DashboardContent() {
   const { user } = useAuth()
   const { preferences } = usePreferences()
+  const router = useRouter()
   const t = useTranslations('dashboard')
   const tCommon = useTranslations('common')
   const showStats = preferences?.show_study_stats ?? true // Default to true for backward compatibility
@@ -165,6 +167,55 @@ function DashboardContent() {
             </Button>
           </div>
         </div>
+
+        {/* Quick Actions - Always visible for better UX */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer group border-2 hover:border-primary/20" onClick={() => router.push("/courses")}>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                  <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm mb-1">{tCommon('courses')}</h3>
+                  <p className="text-xs text-muted-foreground">{tCommon('explore_courses') || "Khám phá khóa học"}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer group border-2 hover:border-primary/20" onClick={() => router.push("/exercises")}>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm mb-1">{tCommon('exercises')}</h3>
+                  <p className="text-xs text-muted-foreground">{tCommon('practice_exercises') || "Luyện tập bài tập"}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer group border-2 hover:border-primary/20" onClick={() => router.push("/goals")}>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
+                  <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm mb-1">{t('goals')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('set_and_track_goals') || "Đặt và theo dõi mục tiêu"}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Stats Grid - Only show if user preference allows */}
         {showStats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">

@@ -67,7 +67,7 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
             <p className="text-sm text-muted-foreground text-center py-8">{t('no_recent_activity')}</p>
           ) : (
             sorted.map(({ activity, count }, index) => {
-              const config = activityConfig[activity.type]
+              const config = activityConfig[activity.type] || activityConfig.exercise // Fallback to exercise if type unknown
               const Icon = config.icon
               return (
                 <div key={activity.id + '-' + activity.completedAt} className="flex gap-4">
