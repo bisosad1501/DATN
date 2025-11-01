@@ -311,17 +311,40 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
         // If translation still has unreplaced placeholders, try to extract from original message
         if (translated.includes('{{score}}') || translated.includes('{score}')) {
           // Score not replaced - try one more time to extract from original message
-          if (message.includes('score')) {
-            const scoreMatch = message.match(/với điểm\s+([\d.]+)/i) || 
-                              message.match(/điểm\s+([\d.]+)/i) ||
-                              message.match(/score\s+(?:of\s+)?(\d+(?:\.\d+)?)/i)
+          // Check multiple patterns including Vietnamese and English
+          const scorePatterns = [
+            /với điểm\s+([\d.]+)/i,
+            /điểm\s+([\d.]+)/i,
+            /score\s+(?:of\s+)?(\d+(?:\.\d+)?)/i,
+            /score of\s+(\d+(?:\.\d+)?)/i,
+            /with a score of\s+(\d+(?:\.\d+)?)/i,
+            /with a score\s+(\d+(?:\.\d+)?)/i,
+            // Look for any number near the word "score"
+            /score.*?(\d+(?:\.\d+)?)/i,
+          ]
+          
+          for (const pattern of scorePatterns) {
+            const scoreMatch = message.match(pattern)
             if (scoreMatch && scoreMatch[1]) {
-              params.score = parseFloat(scoreMatch[1])
-              // Retry translation with score param
-              const retranslated = t(messageKey, params)
-              if (!retranslated.includes('{{score}}') && !retranslated.includes('{score}')) {
-                return retranslated
+              const extractedScore = parseFloat(scoreMatch[1])
+              if (!isNaN(extractedScore)) {
+                params.score = extractedScore
+                // Retry translation with score param
+                const retranslated = t(messageKey, params)
+                if (!retranslated.includes('{{score}}') && !retranslated.includes('{score}')) {
+                  return retranslated
+                }
+                break
               }
+            }
+          }
+          
+          // If still no score, and message literally contains "{score}", remove it
+          if (translated.includes('{score}') && (!params.score || isNaN(params.score as number))) {
+            // Replace {score} with empty or "N/A" - but this is not ideal
+            // Better to keep placeholder or log error
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[Notification] Cannot extract score from message:', message)
             }
           }
         }
