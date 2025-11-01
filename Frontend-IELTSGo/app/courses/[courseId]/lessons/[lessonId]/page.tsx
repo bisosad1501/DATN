@@ -238,7 +238,7 @@ export default function LessonPlayerPage() {
         const transformedModules: Module[] = courseDetail.modules.map((moduleData: any, index: number) => ({
           id: moduleData.module.id,
           course_id: params.courseId as string,
-          title: moduleData.module.title || `Module ${index + 1}`,
+          title: moduleData.module.title || `${tCommon('module')} ${index + 1}`,
           display_order: moduleData.module.display_order || index + 1,
           total_lessons: moduleData.lessons?.length || 0,
           total_exercises: moduleData.exercises?.length || 0,  // NEW

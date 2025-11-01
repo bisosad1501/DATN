@@ -309,11 +309,11 @@ export default function CourseDetailPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">{tCourses('level')}</span>
-                      <span className="font-medium">{course.level}</span>
+                      <span className="font-medium capitalize">{t((course.level || 'beginner').toLowerCase())}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">{tCourses('skill')}</span>
-                      <span className="font-medium capitalize">{course.skill_type || course.skillType}</span>
+                      <span className="font-medium capitalize">{t((course.skill_type || course.skillType || 'listening').toLowerCase())}</span>
                     </div>
                   </div>
                 </CardContent>
