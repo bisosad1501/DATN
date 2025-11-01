@@ -174,6 +174,52 @@ package-lock.json
 yarn.lock
 
 # ============================================
+# Next.js / Frontend Build Artifacts
+# ============================================
+# Next.js build output
+Frontend-IELTSGo/.next/
+Frontend-IELTSGo/.next/*
+!.next/cache/webpack/server-development/*.pack.gz
+**/.next/
+**/.next/*
+
+# Next.js cache
+Frontend-IELTSGo/.next/cache/
+**/.next/cache/
+
+# Next.js generated types
+Frontend-IELTSGo/.next/types/
+**/.next/types/
+
+# Vercel
+Frontend-IELTSGo/.vercel
+**/.vercel
+
+# ============================================
+# Node.js / Package Managers
+# ============================================
+# Lock files (keep one preferred, ignore others)
+pnpm-lock.yaml
+yarn.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ============================================
+# Testing & Coverage
+# ============================================
+# Test results
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# ============================================
 # Project Specific
 # ============================================
 # Don't ignore example files
