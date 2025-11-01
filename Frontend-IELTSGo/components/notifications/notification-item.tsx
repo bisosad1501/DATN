@@ -188,10 +188,13 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
         if (!params.exercise_title) {
           // Match: exercise '{Exercise 1: True/False/Not Given}' with a score
           // Match: exercise '{Title}' or exercise {Title}
+          // Also handle already processed messages: exercise Exercise 1: True/False/Not Given with a score
           const patterns = [
             /exercise\s+['"]?\{([^}]+)\}['"]?\s+with a score/i,
             /exercise\s+['"]\{([^}]+)\}['"]\s+with a score/i,
             /['"]?\{([^}]+)\}['"]?\s+with a score/i,
+            // Handle already processed (quotes removed)
+            /exercise\s+([^'"]+?)\s+with a score/i,
           ]
           for (const pattern of patterns) {
             const match = message.match(pattern)
@@ -201,21 +204,48 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
             }
           }
         }
-        // Extract score from {0} or score of {0} - MUST extract BEFORE translating
-        if (!params.score) {
-          const patterns = [
-            /with a score of\s+\{([\d.]+)\}/i,
-            /with a score\s+of\s+([\d.]+)/i,
-            /score of\s+\{([\d.]+)\}/i,
-            /score\s+of\s+([\d.]+)/i,
-          ]
-          for (const pattern of patterns) {
-            const match = message.match(pattern)
-            if (match && match[1]) {
-              params.score = parseFloat(match[1])
-              break
+        // Extract score from {0} or score of {0} or score of 0 - MUST extract BEFORE translating
+        if (!params.score && typeof params.score !== 'number') {
+          // First check action_data (most reliable source)
+          if (notification.action_data?.score !== undefined) {
+            params.score = typeof notification.action_data.score === 'number' 
+              ? notification.action_data.score 
+              : parseFloat(notification.action_data.score as string)
+            if (!isNaN(params.score as number)) {
+              // Score found in action_data, skip regex patterns
+            } else {
+              params.score = undefined
             }
           }
+          
+          // If not in action_data, try regex patterns
+          if (!params.score || isNaN(params.score as number)) {
+            const patterns = [
+              /with a score of\s+\{([\d.]+)\}/i,
+              /with a score\s+of\s+(\d+(?:\.\d+)?)/i,
+              /score of\s+\{([\d.]+)\}/i,
+              /score\s+of\s+(\d+(?:\.\d+)?)/i,
+              /with a score of\s+(\d+(?:\.\d+)?)/i,
+              // Handle remaining {score} or {0} placeholders
+              /with a score of\s+\{score\}/i,
+              /with a score of\s+\{(\d+(?:\.\d+)?)\}/i,
+              /\{(\d+(?:\.\d+)?)\}/i, // Any number in braces at the end
+            ]
+            for (const pattern of patterns) {
+              const match = message.match(pattern)
+              if (match && match[1]) {
+                const scoreValue = parseFloat(match[1])
+                if (!isNaN(scoreValue)) {
+                  params.score = scoreValue
+                  break
+                }
+              }
+            }
+          }
+          
+          // Last resort: if message contains {score} placeholder and we still don't have a value
+          // This means the backend didn't provide it, we'll need to keep the placeholder
+          // or try to infer from message context
         }
       } else if (message.includes("Thank you for joining IELTSGo") || message.includes("Start your IELTS learning journey")) {
         messageKey = "notifications.welcome_message"
@@ -268,21 +298,40 @@ export function NotificationItem({ notification, onMarkAsRead, onDelete }: Notif
     if (messageKey) {
       try {
         // Debug: log params to ensure they're extracted
-        if (process.env.NODE_ENV === 'development' && Object.keys(params).length > 0) {
-          console.log('[Notification] Translation params:', params, 'for key:', messageKey)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Notification] Translating:', {
+            key: messageKey,
+            params: params,
+            message: message.substring(0, 100)
+          })
         }
         
         const translated = t(messageKey, params)
         
-        // If translation still has {{}} or {} placeholders, it means params weren't replaced
-        // Don't clean them up - they might be intentional, but log a warning
-        if (translated.includes('{{') || translated.includes('{') && !translated.includes('{{name}}') && !translated.includes('{{exercise_title}}')) {
+        // If translation still has unreplaced placeholders, try to extract from original message
+        if (translated.includes('{{score}}') || translated.includes('{score}')) {
+          // Score not replaced - try one more time to extract from original message
+          if (message.includes('score')) {
+            const scoreMatch = message.match(/với điểm\s+([\d.]+)/i) || 
+                              message.match(/điểm\s+([\d.]+)/i) ||
+                              message.match(/score\s+(?:of\s+)?(\d+(?:\.\d+)?)/i)
+            if (scoreMatch && scoreMatch[1]) {
+              params.score = parseFloat(scoreMatch[1])
+              // Retry translation with score param
+              const retranslated = t(messageKey, params)
+              if (!retranslated.includes('{{score}}') && !retranslated.includes('{score}')) {
+                return retranslated
+              }
+            }
+          }
+        }
+        
+        // If still has placeholders after all attempts, log warning but return translated
+        if ((translated.includes('{{') && !translated.match(/\{\{[a-z_]+\}\}/)) || 
+            (translated.includes('{') && !translated.match(/\{[a-z_]+\}/))) {
           if (process.env.NODE_ENV === 'development') {
             console.warn('[Notification] Translation has unreplaced placeholders:', translated, 'params:', params)
           }
-          // Try to clean up ONLY if it's clearly an error (not a valid placeholder)
-          // But don't remove content inside {}
-          return translated
         }
         
         return translated !== messageKey ? translated : message
