@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -6,6 +8,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { BrandText } from "@/components/ui/brand-text"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useTranslations } from "@/lib/i18n"
 
 export default function HomePage() {
   return (
@@ -22,29 +25,7 @@ export default function HomePage() {
           
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-16 sm:py-20 lg:py-24">
-              <div className="text-center max-w-4xl mx-auto space-y-6">
-                <div className="space-y-4">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
-                    Chinh phục IELTS cùng{" "}
-                    <BrandText className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl inline-block font-bold" />
-                  </h1>
-                  <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                    Nền tảng học IELTS trực tuyến với khóa học chuyên sâu, bài tập thực hành đa dạng và theo dõi tiến độ cá nhân hóa
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
-                  <Link href="/register" className="w-full sm:w-auto">
-                    <Button size="lg" className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30">
-                      Bắt đầu miễn phí
-                    </Button>
-                  </Link>
-                  <Link href="/login" className="w-full sm:w-auto">
-                    <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 border-2 hover:bg-accent/50 transition-all duration-200">
-                      Đăng nhập
-                    </Button>
-                  </Link>
-                </div>
-              </div>
+              <HeroSection />
             </div>
           </div>
         </div>
@@ -54,23 +35,23 @@ export default function HomePage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             <FeatureCard
               icon={<BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />}
-              title="Khóa học chuyên sâu"
-              description="Học từ các khóa học được thiết kế bởi chuyên gia IELTS"
+              titleKey="features.deepCourses.title"
+              descriptionKey="features.deepCourses.description"
             />
             <FeatureCard
               icon={<Target className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />}
-              title="Luyện tập đa dạng"
-              description="Rèn luyện cả 4 kỹ năng với bài tập thực hành có mục tiêu"
+              titleKey="features.diversePractice.title"
+              descriptionKey="features.diversePractice.description"
             />
             <FeatureCard
               icon={<TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />}
-              title="Theo dõi tiến độ"
-              description="Giám sát sự tiến bộ với phân tích chi tiết"
+              titleKey="features.progressTracking.title"
+              descriptionKey="features.progressTracking.description"
             />
             <FeatureCard
               icon={<Users className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />}
-              title="Cộng đồng học tập"
-              description="Cạnh tranh và học hỏi cùng hàng nghìn học viên"
+              titleKey="features.learningCommunity.title"
+              descriptionKey="features.learningCommunity.description"
             />
           </div>
         </div>
@@ -93,23 +74,7 @@ export default function HomePage() {
           
           <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
             <div className="text-center max-w-3xl mx-auto space-y-6">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
-                Sẵn sàng bắt đầu hành trình IELTS?
-              </h2>
-              <p className="text-base sm:text-lg opacity-95 leading-relaxed">
-                Tham gia cùng hàng nghìn học viên đã đạt mục tiêu IELTS của họ
-              </p>
-              <div className="pt-4">
-                <Link href="/register">
-                  <Button 
-                    size="lg" 
-                    variant="secondary" 
-                    className="px-8 text-base sm:text-lg h-12 sm:h-14 bg-background text-primary hover:bg-background/95 shadow-lg shadow-black/10 transition-all duration-200 hover:shadow-xl hover:scale-105"
-                  >
-                    Đăng ký ngay
-                  </Button>
-                </Link>
-              </div>
+              <CTASection />
             </div>
           </div>
         </div>
@@ -118,28 +83,85 @@ export default function HomePage() {
   )
 }
 
+function HeroSection() {
+  const t = useTranslations('homepage')
+  
+  return (
+    <div className="text-center max-w-4xl mx-auto space-y-6">
+      <div className="space-y-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight">
+          {t('heroTitle')}{" "}
+          <BrandText className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl inline-block font-bold" />
+        </h1>
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          {t('heroDescription')}
+        </p>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
+        <Link href="/register" className="w-full sm:w-auto">
+          <Button size="lg" className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30">
+            {t('getStarted')}
+          </Button>
+        </Link>
+        <Link href="/login" className="w-full sm:w-auto">
+          <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 text-base sm:text-lg h-12 sm:h-14 border-2 hover:bg-accent/50 transition-all duration-200">
+            {t('signIn')}
+          </Button>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function CTASection() {
+  const t = useTranslations('homepage')
+  
+  return (
+    <>
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
+        {t('ctaTitle')}
+      </h2>
+      <p className="text-base sm:text-lg opacity-95 leading-relaxed">
+        {t('ctaDescription')}
+      </p>
+      <div className="pt-4">
+        <Link href="/register">
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            className="px-8 text-base sm:text-lg h-12 sm:h-14 bg-background text-primary hover:bg-background/95 shadow-lg shadow-black/10 transition-all duration-200 hover:shadow-xl hover:scale-105"
+          >
+            {t('registerNow')}
+          </Button>
+        </Link>
+      </div>
+    </>
+  )
+}
+
 function TestimonialsSection() {
+  const t = useTranslations('homepage')
   const testimonials = [
     {
-      name: "Nguyễn Văn A",
-      role: "Học viên IELTS 7.5",
-      content: "Nhờ IELTSGo, tôi đã cải thiện điểm số từ 5.5 lên 7.5 chỉ sau 3 tháng. Giáo trình rất chi tiết và dễ hiểu!",
+      nameKey: "testimonials.user1.name",
+      roleKey: "testimonials.user1.role",
+      contentKey: "testimonials.user1.content",
       rating: 5,
-      avatar: "NV"
+      avatarKey: "testimonials.user1.avatar"
     },
     {
-      name: "Trần Thị B",
-      role: "Học viên IELTS 8.0",
-      content: "Nền tảng này giúp tôi luyện tập mọi lúc mọi nơi. Bài tập đa dạng và theo dõi tiến độ rất rõ ràng.",
+      nameKey: "testimonials.user2.name",
+      roleKey: "testimonials.user2.role",
+      contentKey: "testimonials.user2.content",
       rating: 5,
-      avatar: "TT"
+      avatarKey: "testimonials.user2.avatar"
     },
     {
-      name: "Lê Văn C",
-      role: "Học viên IELTS 7.0",
-      content: "Video bài giảng chất lượng cao, giáo viên giải thích rất dễ hiểu. Tôi đặc biệt thích phần luyện tập theo kỹ năng.",
+      nameKey: "testimonials.user3.name",
+      roleKey: "testimonials.user3.role",
+      contentKey: "testimonials.user3.content",
       rating: 5,
-      avatar: "LV"
+      avatarKey: "testimonials.user3.avatar"
     },
   ]
 
@@ -156,12 +178,12 @@ function TestimonialsSection() {
           <div className="inline-flex items-center justify-center gap-2 mb-4">
             <Star className="w-5 h-5 text-primary fill-primary" />
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
-              Học viên nói gì về chúng tôi
+              {t('testimonials.title')}
             </h2>
             <Star className="w-5 h-5 text-primary fill-primary" />
           </div>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Hàng nghìn học viên đã đạt mục tiêu IELTS của mình với IELTSGo
+            {t('testimonials.description')}
           </p>
         </div>
 
@@ -182,19 +204,19 @@ function TestimonialsSection() {
                   
                   {/* Content */}
                   <p className="text-sm text-foreground leading-relaxed italic">
-                    "{testimonial.content}"
+                    "{t(testimonial.contentKey)}"
                   </p>
                   
                   {/* Author */}
                   <div className="flex items-center gap-3 pt-2 border-t border-border/50">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {testimonial.avatar}
+                        {t(testimonial.avatarKey)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-semibold text-sm text-foreground">{testimonial.name}</p>
-                      <p className="text-xs text-muted-foreground">{testimonial.role}</p>
+                      <p className="font-semibold text-sm text-foreground">{t(testimonial.nameKey)}</p>
+                      <p className="text-xs text-muted-foreground">{t(testimonial.roleKey)}</p>
                     </div>
                   </div>
                 </div>
@@ -209,13 +231,16 @@ function TestimonialsSection() {
 
 function FeatureCard({
   icon,
-  title,
-  description,
+  titleKey,
+  descriptionKey,
+  namespace = 'homepage',
 }: {
   icon: React.ReactNode
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
+  namespace?: string
 }) {
+  const t = useTranslations(namespace)
   return (
     <div className="group relative bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-6 sm:p-8 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 flex flex-col items-center text-center h-full">
       {/* Subtle gradient on hover */}
@@ -227,42 +252,43 @@ function FeatureCard({
         </div>
       </div>
       <h3 className="relative text-base sm:text-lg font-semibold mb-3 text-foreground leading-tight">
-        {title}
+        {t(titleKey)}
       </h3>
       <p className="relative text-sm text-muted-foreground leading-relaxed flex-grow">
-        {description}
+        {t(descriptionKey)}
       </p>
     </div>
   )
 }
 
 function StatsSection() {
+  const t = useTranslations('homepage')
   const stats = [
     { 
       icon: Users, 
       value: "10,000+", 
-      label: "Học viên đang học", 
+      labelKey: "stats.activeStudents",
       iconBg: "bg-blue-100 dark:bg-blue-950",
       iconColor: "text-blue-600 dark:text-blue-400"
     },
     { 
       icon: BookOpen, 
       value: "50+", 
-      label: "Khóa học chất lượng", 
+      labelKey: "stats.qualityCourses",
       iconBg: "bg-green-100 dark:bg-green-950",
       iconColor: "text-green-600 dark:text-green-400"
     },
     { 
       icon: Target, 
       value: "500+", 
-      label: "Bài tập thực hành", 
+      labelKey: "stats.practiceExercises",
       iconBg: "bg-purple-100 dark:bg-purple-950",
       iconColor: "text-purple-600 dark:text-purple-400"
     },
     { 
       icon: Award, 
       value: "95%", 
-      label: "Tỷ lệ đạt mục tiêu", 
+      labelKey: "stats.successRate",
       iconBg: "bg-primary/10 dark:bg-primary/20",
       iconColor: "text-primary"
     },
@@ -287,7 +313,7 @@ function StatsSection() {
               </div>
               <div className="space-y-1">
                 <div className="text-3xl sm:text-4xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="text-sm text-muted-foreground">{t(stat.labelKey)}</div>
               </div>
             </div>
           ))}
@@ -298,36 +324,37 @@ function StatsSection() {
 }
 
 function WhyChooseSection() {
+  const t = useTranslations('homepage')
   const benefits = [
     {
       icon: CheckCircle2,
-      title: "Giáo trình chuẩn quốc tế",
-      description: "Được thiết kế bởi đội ngũ chuyên gia IELTS có kinh nghiệm nhiều năm",
+      titleKey: "whyChoose.internationalCurriculum.title",
+      descriptionKey: "whyChoose.internationalCurriculum.description",
     },
     {
       icon: Clock,
-      title: "Học mọi lúc mọi nơi",
-      description: "Truy cập từ mọi thiết bị, học theo tốc độ của bạn",
+      titleKey: "whyChoose.learnAnywhere.title",
+      descriptionKey: "whyChoose.learnAnywhere.description",
     },
     {
       icon: TrendingUp,
-      title: "Tiến độ rõ ràng",
-      description: "Theo dõi điểm số và cải thiện từng kỹ năng một cách chi tiết",
+      titleKey: "whyChoose.clearProgress.title",
+      descriptionKey: "whyChoose.clearProgress.description",
     },
     {
       icon: Star,
-      title: "Lộ trình cá nhân hóa",
-      description: "Học theo trình độ và mục tiêu band score của bạn",
+      titleKey: "whyChoose.personalizedPath.title",
+      descriptionKey: "whyChoose.personalizedPath.description",
     },
     {
       icon: PlayCircle,
-      title: "Video bài giảng chất lượng",
-      description: "Học từ các video được ghi lại bởi giáo viên chuyên nghiệp",
+      titleKey: "whyChoose.qualityVideos.title",
+      descriptionKey: "whyChoose.qualityVideos.description",
     },
     {
       icon: Award,
-      title: "Chứng chỉ hoàn thành",
-      description: "Nhận chứng chỉ khi hoàn thành khóa học để thêm vào CV",
+      titleKey: "whyChoose.certificate.title",
+      descriptionKey: "whyChoose.certificate.description",
     },
   ]
 
@@ -344,10 +371,10 @@ function WhyChooseSection() {
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
         <div className="text-center mb-8 sm:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
-            Tại sao chọn <BrandText className="text-2xl sm:text-3xl md:text-4xl inline-block" />?
+            {t('whyChoose.title')} <BrandText className="text-2xl sm:text-3xl md:text-4xl inline-block" />?
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Nền tảng học IELTS toàn diện giúp bạn đạt band score mong muốn một cách hiệu quả nhất
+            {t('whyChoose.description')}
           </p>
         </div>
         
@@ -360,8 +387,8 @@ function WhyChooseSection() {
                     <benefit.icon className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1 space-y-2">
-                    <h3 className="font-semibold text-foreground">{benefit.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{benefit.description}</p>
+                    <h3 className="font-semibold text-foreground">{t(benefit.titleKey)}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{t(benefit.descriptionKey)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -372,7 +399,7 @@ function WhyChooseSection() {
         <div className="mt-8 sm:mt-10 text-center">
           <Link href="/courses">
             <Button size="lg" variant="outline" className="group bg-background/80 backdrop-blur-sm">
-              Khám phá khóa học
+              {t('whyChoose.exploreCourses')}
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>

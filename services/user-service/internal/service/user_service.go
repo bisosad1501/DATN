@@ -582,6 +582,9 @@ func (s *UserService) UpdatePreferences(userID uuid.UUID, req *models.UpdatePref
 	if req.FontSize != nil {
 		prefs.FontSize = *req.FontSize
 	}
+	if req.Locale != nil {
+		prefs.Locale = *req.Locale
+	}
 	if req.AutoPlayNextLesson != nil {
 		prefs.AutoPlayNextLesson = *req.AutoPlayNextLesson
 	}

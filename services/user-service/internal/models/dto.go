@@ -111,6 +111,7 @@ type UpdatePreferencesRequest struct {
 	WeeklyReport          *bool    `json:"weekly_report,omitempty"`
 	Theme                 *string  `json:"theme,omitempty" binding:"omitempty,oneof=light dark auto"`
 	FontSize              *string  `json:"font_size,omitempty" binding:"omitempty,oneof=small medium large"`
+	Locale                *string  `json:"locale,omitempty" binding:"omitempty,oneof=vi en"`
 	AutoPlayNextLesson    *bool    `json:"auto_play_next_lesson,omitempty"`
 	ShowAnswerExplanation *bool    `json:"show_answer_explanation,omitempty"`
 	PlaybackSpeed         *float64 `json:"playback_speed,omitempty"`

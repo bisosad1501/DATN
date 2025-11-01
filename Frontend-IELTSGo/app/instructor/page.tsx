@@ -13,8 +13,12 @@ import { formatDate } from "@/lib/utils/date"
 import { BookOpen, PenTool, Users, TrendingUp, Plus, Star, Target, ArrowRight, Edit, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { useTranslations } from '@/lib/i18n'
 
 export default function InstructorDashboardPage() {
+
+  const t = useTranslations('common')
+
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<InstructorStats | null>(null)
   const [activities, setActivities] = useState<InstructorActivity[]>([])
@@ -56,7 +60,7 @@ export default function InstructorDashboardPage() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading dashboard...</p>
+              <p className="text-muted-foreground">{t('loading_dashboard')}</p>
             </div>
           </div>
         </InstructorLayout>
@@ -71,21 +75,21 @@ export default function InstructorDashboardPage() {
           {/* Welcome Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Welcome back, Instructor!</h1>
-              <p className="text-muted-foreground mt-1">Here's what's happening with your content</p>
+              <h1 className="text-3xl font-bold text-foreground">{t('welcome_back_instructor')}</h1>
+              <p className="text-muted-foreground mt-1">{t('instructor_welcome_description')}</p>
               <p className="text-sm text-muted-foreground mt-1">{formatDate(new Date().toISOString())}</p>
             </div>
             <div className="flex gap-2">
               <Link href="/instructor/courses/new">
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
-                  Create Course
+                  {t('create_course')}
                 </Button>
               </Link>
               <Link href="/instructor/exercises/new">
                 <Button variant="outline" className="gap-2 bg-transparent">
                   <Plus className="h-4 w-4" />
-                  Create Exercise
+                  {t('create_exercise')}
                 </Button>
               </Link>
             </div>
@@ -97,15 +101,15 @@ export default function InstructorDashboardPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <BookOpen className="h-8 w-8 text-blue-600" />
-                  <Badge variant="secondary">{stats?.publishedCourses} published</Badge>
+                  <Badge variant="secondary">{stats?.publishedCourses} {t('published')}</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats?.totalCourses || 0}</div>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">My Courses</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">{t('my_courses')}</p>
                 <Link href="/instructor/courses">
                   <Button variant="link" className="p-0 h-auto text-blue-600 mt-2">
-                    View all <ArrowRight className="h-3 w-3 ml-1" />
+                    {t('view_all')} <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 </Link>
               </CardContent>
@@ -115,14 +119,14 @@ export default function InstructorDashboardPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <PenTool className="h-8 w-8 text-green-600" />
-                  <Badge variant="secondary">{stats?.publishedExercises} published</Badge>
+                  <Badge variant="secondary">{stats?.publishedExercises} {t('published')}</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-900 dark:text-green-100">
                   {stats?.totalExercises || 0}
                 </div>
-                <p className="text-sm text-green-700 dark:text-green-300 mt-1">My Exercises</p>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">{t('my_exercises')}</p>
                 <Link href="/instructor/exercises">
                   <Button variant="link" className="p-0 h-auto text-green-600 mt-2">
                     View all <ArrowRight className="h-3 w-3 ml-1" />
@@ -135,17 +139,17 @@ export default function InstructorDashboardPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <Users className="h-8 w-8 text-orange-600" />
-                  <Badge variant="secondary">{stats?.activeStudents} active</Badge>
+                  <Badge variant="secondary">{stats?.activeStudents} {t('active')}</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
                   {stats?.totalStudents || 0}
                 </div>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">Total Students</p>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('total_students')}</p>
                 <Link href="/instructor/students">
                   <Button variant="link" className="p-0 h-auto text-orange-600 mt-2">
-                    View students <ArrowRight className="h-3 w-3 ml-1" />
+                    {t('view_students')} <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 </Link>
               </CardContent>
@@ -162,10 +166,10 @@ export default function InstructorDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary">{stats?.averageCompletionRate || 0}%</div>
-                <p className="text-sm text-red-700 dark:text-red-300 mt-1">Avg Completion Rate</p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">{t('avg_completion_rate')}</p>
                 <Link href="/instructor/analytics">
                   <Button variant="link" className="p-0 h-auto text-primary mt-2">
-                    View analytics <ArrowRight className="h-3 w-3 ml-1" />
+                    {t('view_analytics')} <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 </Link>
               </CardContent>
@@ -175,8 +179,8 @@ export default function InstructorDashboardPage() {
           {/* Student Engagement Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Student Engagement (Last 30 Days)</CardTitle>
-              <CardDescription>Track enrollments, attempts, and completions</CardDescription>
+              <CardTitle>{t('student_engagement_last_30_days')}</CardTitle>
+              <CardDescription>{t('track_enrollments_attempts_and_completio')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -186,9 +190,9 @@ export default function InstructorDashboardPage() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="enrollments" stroke="#3b82f6" name="Enrollments" />
-                  <Line type="monotone" dataKey="attempts" stroke="#10b981" name="Exercise Attempts" />
-                  <Line type="monotone" dataKey="completions" stroke="#ED372A" name="Completions" />
+                  <Line type="monotone" dataKey="enrollments" stroke="#3b82f6" name={t('enrollments')} />
+                  <Line type="monotone" dataKey="attempts" stroke="#10b981" name={t('exercise_attempts')} />
+                  <Line type="monotone" dataKey="completions" stroke="#ED372A" name={t('completions')} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -198,8 +202,8 @@ export default function InstructorDashboardPage() {
             {/* Recent Activity */}
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest updates from your students</CardDescription>
+                <CardTitle>{t('recent_activity')}</CardTitle>
+                <CardDescription>{t('latest_updates_from_your_students')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -219,7 +223,7 @@ export default function InstructorDashboardPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">No recent activity</p>
+                    <p className="text-sm text-muted-foreground text-center py-8">{t('no_recent_activity')}</p>
                   )}
                 </div>
               </CardContent>
@@ -230,12 +234,12 @@ export default function InstructorDashboardPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>My Courses</CardTitle>
-                    <CardDescription>Your recent courses</CardDescription>
+                    <CardTitle>{t('my_courses')}</CardTitle>
+                    <CardDescription>{t('your_recent_courses')}</CardDescription>
                   </div>
                   <Link href="/instructor/courses">
                     <Button variant="outline" size="sm">
-                      View All
+                      {t('view_all')}
                     </Button>
                   </Link>
                 </div>
@@ -267,13 +271,13 @@ export default function InstructorDashboardPage() {
                           <Link href={`/instructor/courses/${course.id}/edit`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full gap-1 bg-transparent">
                               <Edit className="h-3 w-3" />
-                              Edit
+                              {t('edit')}
                             </Button>
                           </Link>
                           <Link href={`/instructor/courses/${course.id}/analytics`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full gap-1 bg-transparent">
                               <BarChart3 className="h-3 w-3" />
-                              Analytics
+                              {t('analytics')}
                             </Button>
                           </Link>
                         </div>
@@ -282,11 +286,11 @@ export default function InstructorDashboardPage() {
                   ) : (
                     <div className="col-span-2 text-center py-8">
                       <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground mb-3">No courses yet</p>
+                      <p className="text-sm text-muted-foreground mb-3">{t('no_courses_yet')}</p>
                       <Link href="/instructor/courses/new">
                         <Button className="gap-2">
                           <Plus className="h-4 w-4" />
-                          Create Your First Course
+                          {t('create_your_first_course')}
                         </Button>
                       </Link>
                     </div>
@@ -301,12 +305,12 @@ export default function InstructorDashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>My Exercises</CardTitle>
-                  <CardDescription>Your recent exercises</CardDescription>
+                  <CardTitle>{t('my_exercises')}</CardTitle>
+                  <CardDescription>{t('your_recent_exercises')}</CardDescription>
                 </div>
                 <Link href="/instructor/exercises">
                   <Button variant="outline" size="sm">
-                    View All
+                    {t('view_all')}
                   </Button>
                 </Link>
               </div>
@@ -331,21 +335,21 @@ export default function InstructorDashboardPage() {
                         </Badge>
                       </div>
                       <h4 className="font-semibold text-sm mb-2 line-clamp-2">{exercise.title}</h4>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                        <span>{exercise.questionCount || 0} questions</span>
-                        <span>{exercise.totalAttempts || 0} attempts</span>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                        <span>{exercise.questionCount || 0} {t('questions')}</span>
+                        <span>{exercise.totalAttempts || 0} {t('attempts')}</span>
                       </div>
                       <div className="flex gap-2">
                         <Link href={`/instructor/exercises/${exercise.id}/edit`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full gap-1 bg-transparent">
                             <Edit className="h-3 w-3" />
-                            Edit
+                            {t('edit')}
                           </Button>
                         </Link>
                         <Link href={`/instructor/exercises/${exercise.id}/analytics`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full gap-1 bg-transparent">
                             <BarChart3 className="h-3 w-3" />
-                            Analytics
+                            {t('analytics')}
                           </Button>
                         </Link>
                       </div>
@@ -354,11 +358,11 @@ export default function InstructorDashboardPage() {
                 ) : (
                   <div className="col-span-3 text-center py-8">
                     <PenTool className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground mb-3">No exercises yet</p>
+                    <p className="text-sm text-muted-foreground mb-3">{t('no_exercises_yet')}</p>
                     <Link href="/instructor/exercises/new">
                       <Button className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Create Your First Exercise
+                        {t('create_your_first_exercise')}
                       </Button>
                     </Link>
                   </div>

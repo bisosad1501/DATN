@@ -10,8 +10,12 @@ import { instructorApi } from "@/lib/api/instructor"
 import type { Course } from "@/types"
 import { Plus, Search, Edit, Trash2, Eye, Users, BookOpen } from "lucide-react"
 import Link from "next/link"
+import { useTranslations } from '@/lib/i18n'
 
 export default function InstructorCoursesPage() {
+
+  const t = useTranslations('common')
+
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -34,7 +38,7 @@ export default function InstructorCoursesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this course?")) return
+    if (!confirm(t('are_you_sure_delete_course'))) return
 
     try {
       await instructorApi.deleteCourse(id)
@@ -54,7 +58,7 @@ export default function InstructorCoursesPage() {
     return (
       <InstructorLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading courses...</div>
+          <div className="text-muted-foreground">{t('loading_courses')}</div>
         </div>
       </InstructorLayout>
     )
@@ -66,13 +70,13 @@ export default function InstructorCoursesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">My Courses</h1>
-            <p className="text-muted-foreground mt-1">Manage your courses and curriculum</p>
+            <h1 className="text-3xl font-bold text-foreground">{t('my_courses')}</h1>
+            <p className="text-muted-foreground mt-1">{t('manage_your_courses_and_curriculum')}</p>
           </div>
           <Link href="/instructor/courses/create">
             <Button className="bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
-              Create Course
+              {t('create_course')}
             </Button>
           </Link>
         </div>
@@ -81,7 +85,7 @@ export default function InstructorCoursesPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search courses..."
+            placeholder={t('search_courses')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -110,7 +114,7 @@ export default function InstructorCoursesPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <BookOpen className="w-4 h-4" />
-                    <span>{course.lessonCount || 0} lessons</span>
+                    <span>{course.lessonCount || 0} {t('lessons')}</span>
                   </div>
                 </div>
 
@@ -119,7 +123,7 @@ export default function InstructorCoursesPage() {
                   <Link href={`/instructor/courses/${course.id}`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full bg-transparent">
                       <Edit className="w-4 h-4 mr-2" />
-                      Edit
+                      {t('edit')}
                     </Button>
                   </Link>
                   <Link href={`/courses/${course.id}`}>
@@ -144,15 +148,15 @@ export default function InstructorCoursesPage() {
         {filteredCourses.length === 0 && (
           <div className="text-center py-12">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No courses found</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">{t('no_courses_found')}</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery ? "Try adjusting your search" : "Create your first course to get started"}
+              {searchQuery ? t('try_adjusting_your_search') : t('create_your_first_course_to_get_started')}
             </p>
             {!searchQuery && (
               <Link href="/instructor/courses/create">
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Course
+                  {t('create_course')}
                 </Button>
               </Link>
             )}

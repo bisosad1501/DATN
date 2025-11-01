@@ -1,6 +1,9 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTranslations } from '@/lib/i18n'
 
 interface StatCardProps {
   title: string
@@ -15,6 +18,7 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, description, icon: Icon, trend, className }: StatCardProps) {
+  const t = useTranslations('common')
   return (
     <Card className={cn("hover:shadow-lg transition-shadow", className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -30,7 +34,7 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
               {trend.isPositive ? "+" : ""}
               {trend.value}%
             </span>
-            <span className="text-xs text-muted-foreground ml-1">from last period</span>
+            <span className="text-xs text-muted-foreground ml-1">{t('from_last_period')}</span>
           </div>
         )}
       </CardContent>

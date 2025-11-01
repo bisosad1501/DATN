@@ -9,10 +9,15 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { exercisesApi, type ExerciseFilters } from "@/lib/api/exercises"
 import type { Exercise } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 type ExerciseSource = "all" | "course" | "standalone"
 
 export default function ExercisesListPage() {
+
+  const t = useTranslations('exercises')
+  const tCommon = useTranslations('common')
+
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +49,7 @@ export default function ExercisesListPage() {
       setTotalPages(Math.ceil(filteredExercises.length / 12))
     } catch (error) {
       console.error("Failed to fetch exercises:", error)
-      setError("Failed to load exercises. Please try again later.")
+      setError(t('failed_to_load_exercises_please_try_agai'))
       setExercises([])
     } finally {
       setLoading(false)
@@ -87,9 +92,9 @@ export default function ExercisesListPage() {
     <AppLayout showFooter={true}>
       <PageContainer>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">IELTS Exercises</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('ielts_exercises')}</h1>
           <p className="text-base text-muted-foreground">
-            Practice with our comprehensive collection of IELTS exercises
+            {t('exercises_description')}
           </p>
         </div>
 
@@ -103,14 +108,14 @@ export default function ExercisesListPage() {
           <div className="text-center py-20">
             <p className="text-destructive text-lg mb-4">{error}</p>
             <Button variant="outline" className="bg-transparent" onClick={fetchExercises}>
-              Try Again
+              {tCommon('try_again')}
             </Button>
           </div>
         ) : exercises.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-muted-foreground text-lg">No exercises found matching your criteria</p>
+            <p className="text-muted-foreground text-lg">{t('no_exercises_found_matching_your_criteri')}</p>
             <Button variant="outline" className="mt-4 bg-transparent" onClick={() => handleFiltersChange({})}>
-              Clear Filters
+              {tCommon('clear_filters')}
             </Button>
           </div>
         ) : (
@@ -129,10 +134,10 @@ export default function ExercisesListPage() {
                   onClick={() => setPage(page - 1)}
                   className="bg-transparent"
                 >
-                  Previous
+                  {tCommon('previous')}
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
+                  {tCommon('page_of', { page: page.toString(), totalPages: totalPages.toString() })}
                 </span>
                 <Button
                   variant="outline"
@@ -140,7 +145,7 @@ export default function ExercisesListPage() {
                   onClick={() => setPage(page + 1)}
                   className="bg-transparent"
                 >
-                  Next
+                  {tCommon('next')}
                 </Button>
               </div>
             )}

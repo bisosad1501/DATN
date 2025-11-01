@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Loader2, Clock, ChevronLeft, ChevronRight, Flag, Eye, EyeOff } from "lucide-react"
 import { exercisesApi } from "@/lib/api/exercises"
 import type { ExerciseSection, QuestionWithOptions } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 interface ExerciseData {
   exercise: {
@@ -22,6 +23,9 @@ interface ExerciseData {
 }
 
 export default function TakeExercisePage() {
+
+  const t = useTranslations('exercises')
+
   const params = useParams()
   const router = useRouter()
   const exerciseId = params.exerciseId as string
@@ -117,7 +121,7 @@ export default function TakeExercisePage() {
   }
 
   const handleSubmit = async () => {
-    if (!confirm("Are you sure you want to submit? You cannot change your answers after submission.")) {
+    if (!confirm(t('are_you_sure_you_want_to_submit_you_cann'))) {
       return
     }
 
@@ -150,7 +154,7 @@ export default function TakeExercisePage() {
       router.push(`/exercises/${exerciseId}/result/${submissionId}`)
     } catch (error) {
       console.error("Failed to submit answers:", error)
-      alert("Failed to submit answers. Please try again.")
+      alert(t('failed_to_submit_answers_please_try_agai'))
     } finally {
       setSubmitting(false)
     }
@@ -189,7 +193,7 @@ export default function TakeExercisePage() {
               <div>
                 <h2 className="text-lg font-semibold">{exerciseData.exercise.title}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Question {currentQuestionIndex + 1} of {allQuestions.length}
+                  {t('question_of', { current: (currentQuestionIndex + 1).toString(), total: allQuestions.length.toString() })}
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -198,7 +202,7 @@ export default function TakeExercisePage() {
                   <span className="font-mono text-lg">{formatTime(timeSpent)}</span>
                 </div>
                 <Badge variant="outline">
-                  {answeredCount}/{allQuestions.length} answered
+                  {answeredCount}/{allQuestions.length} {t('answered')}
                 </Badge>
               </div>
             </div>
@@ -219,12 +223,12 @@ export default function TakeExercisePage() {
                 {showSectionContent ? (
                   <>
                     <EyeOff className="w-4 h-4 mr-2" />
-                    Hide Section Content
+                    {t('hide_section_content')}
                   </>
                 ) : (
                   <>
                     <Eye className="w-4 h-4 mr-2" />
-                    Show Section Content
+                    {t('show_section_content')}
                   </>
                 )}
               </Button>
@@ -237,7 +241,7 @@ export default function TakeExercisePage() {
                   <Card className="mb-4 border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
-                        📋 Instructions
+                        📋 {t('instructions')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -254,11 +258,11 @@ export default function TakeExercisePage() {
                   <Card className="mb-4">
                     <CardHeader>
                       <CardTitle className="text-lg">
-                        📖 {currentSection.passage_title || 'Reading Passage'}
+                        📖 {currentSection.passage_title || t('reading_passage_label')}
                       </CardTitle>
                       {currentSection.passage_word_count && (
                         <p className="text-sm text-muted-foreground">
-                          Word count: {currentSection.passage_word_count}
+                          {t('word_count', { count: currentSection.passage_word_count.toString() })}
                         </p>
                       )}
                     </CardHeader>
@@ -276,7 +280,7 @@ export default function TakeExercisePage() {
                   <Card className="mb-4 border-purple-200 bg-purple-50/50 dark:bg-purple-950/20">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
-                        🎧 Audio
+                        🎧 {t('audio')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -285,12 +289,12 @@ export default function TakeExercisePage() {
                         className="w-full"
                         src={currentSection.audio_url}
                       >
-                        Your browser does not support the audio element.
+                        {t('browser_no_audio_support')}
                       </audio>
                       {currentSection.transcript && (
                         <details className="mt-4">
                           <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
-                            View Transcript
+                            {t('view_transcript')}
                           </summary>
                           <div className="mt-2 p-3 bg-muted rounded-lg text-sm">
                             {currentSection.transcript}
@@ -309,7 +313,7 @@ export default function TakeExercisePage() {
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="text-xl">
-              Question {currentQuestion.question.question_number}
+              {t('question')} {currentQuestion.question.question_number}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -376,7 +380,7 @@ export default function TakeExercisePage() {
                   onChange={(e) =>
                     handleAnswerChange(currentQuestion.question.id, e.target.value)
                   }
-                  placeholder="Type your answer here..."
+                  placeholder={t('type_your_answer_here')}
                   className="w-full p-3 border-2 rounded-lg focus:border-primary outline-none"
                 />
               )}
@@ -385,7 +389,7 @@ export default function TakeExercisePage() {
             {/* Tips */}
             {currentQuestion.question.tips && (
               <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">💡 Tip:</p>
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">💡 {t('tip')}:</p>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   {currentQuestion.question.tips}
                 </p>
@@ -398,7 +402,7 @@ export default function TakeExercisePage() {
         <div className="flex justify-between mb-6">
           <Button onClick={handlePrevious} disabled={currentQuestionIndex === 0} variant="outline">
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Previous
+            {t('previous')}
           </Button>
 
           {currentQuestionIndex === allQuestions.length - 1 ? (
@@ -406,18 +410,18 @@ export default function TakeExercisePage() {
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
+                  {t('submitting')}
                 </>
               ) : (
                 <>
                   <Flag className="w-4 h-4 mr-2" />
-                  Submit Exercise
+                  {t('submit_exercise')}
                 </>
               )}
             </Button>
           ) : (
             <Button onClick={handleNext}>
-              Next
+              {t('next')}
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           )}
@@ -426,7 +430,7 @@ export default function TakeExercisePage() {
         {/* Question Navigator */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Question Navigator</CardTitle>
+            <CardTitle className="text-sm">{t('question_navigator')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-10 gap-2">

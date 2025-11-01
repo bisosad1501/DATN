@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Send, Clock, FileText, Plus, Edit, Trash2 } from "lucide-react"
 import { adminApi } from "@/lib/api/admin"
 import { useToast } from "@/hooks/use-toast"
+import { useTranslations } from '@/lib/i18n'
 
 interface NotificationTemplate {
   id: string
@@ -22,6 +23,9 @@ interface NotificationTemplate {
 }
 
 export default function AdminNotificationsPage() {
+
+  const t = useTranslations('common')
+
   const [loading, setLoading] = useState(false)
   const [templates, setTemplates] = useState<NotificationTemplate[]>([
     {
@@ -73,14 +77,14 @@ export default function AdminNotificationsPage() {
     try {
       await adminApi.sendBulkNotification(bulkForm)
       toast({
-        title: "Notifications sent",
-        description: "Bulk notifications have been sent successfully.",
+        title: t('notifications_sent'),
+        description: t('bulk_notifications_sent_successfully'),
       })
       setBulkForm({ recipient: "all", type: "email", subject: "", content: "" })
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to send notifications.",
+        title: t('error'),
+        description: t('failed_to_send_notifications'),
         variant: "destructive",
       })
     } finally {
@@ -93,14 +97,14 @@ export default function AdminNotificationsPage() {
     try {
       await adminApi.scheduleNotification(scheduleForm)
       toast({
-        title: "Notification scheduled",
-        description: "Notification has been scheduled successfully.",
+        title: t('notification_scheduled'),
+        description: t('notification_scheduled_successfully'),
       })
       setScheduleForm({ recipient: "all", type: "email", subject: "", content: "", scheduledAt: "" })
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to schedule notification.",
+        title: t('error'),
+        description: t('failed_to_schedule_notification'),
         variant: "destructive",
       })
     } finally {
@@ -116,8 +120,8 @@ export default function AdminNotificationsPage() {
     }
     setTemplates([...templates, newTemplate])
     toast({
-      title: "Template saved",
-      description: "Notification template has been saved successfully.",
+      title: t('template_saved'),
+      description: t('template_saved_successfully'),
     })
     setTemplateForm({ name: "", subject: "", content: "", type: "email" })
   }
@@ -125,44 +129,44 @@ export default function AdminNotificationsPage() {
   const handleDeleteTemplate = (id: string) => {
     setTemplates(templates.filter((t) => t.id !== id))
     toast({
-      title: "Template deleted",
-      description: "Notification template has been deleted.",
+      title: t('template_deleted'),
+      description: t('template_deleted_successfully'),
     })
   }
 
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Notification Center</h1>
-        <p className="text-muted-foreground mt-1">Send bulk notifications, manage templates, and schedule messages</p>
+        <h1 className="text-3xl font-bold text-foreground">{t('notification_center')}</h1>
+        <p className="text-muted-foreground mt-1">{t('admin_notifications_description')}</p>
       </div>
 
         <Tabs defaultValue="bulk" className="space-y-6">
           <TabsList>
             <TabsTrigger value="bulk" className="gap-2">
               <Send className="h-4 w-4" />
-              Bulk Send
+              {t('bulk_send')}
             </TabsTrigger>
             <TabsTrigger value="schedule" className="gap-2">
               <Clock className="h-4 w-4" />
-              Schedule
+              {t('schedule')}
             </TabsTrigger>
             <TabsTrigger value="templates" className="gap-2">
               <FileText className="h-4 w-4" />
-              Templates
+              {t('templates')}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bulk" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Send Bulk Notification</CardTitle>
-                <CardDescription>Send notifications to multiple users at once</CardDescription>
+                <CardTitle>{t('send_bulk_notification')}</CardTitle>
+                <CardDescription>{t('send_notifications_to_multiple_users_at_')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Recipient Group</Label>
+                    <Label>{t('recipient_group')}</Label>
                     <Select
                       value={bulkForm.recipient}
                       onValueChange={(value) => setBulkForm({ ...bulkForm, recipient: value })}
@@ -171,43 +175,43 @@ export default function AdminNotificationsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="students">Students Only</SelectItem>
-                        <SelectItem value="instructors">Instructors Only</SelectItem>
-                        <SelectItem value="active">Active Users</SelectItem>
-                        <SelectItem value="inactive">Inactive Users</SelectItem>
+                        <SelectItem value="all">{t('all_users')}</SelectItem>
+                        <SelectItem value="students">{t('students_only')}</SelectItem>
+                        <SelectItem value="instructors">{t('instructors_only')}</SelectItem>
+                        <SelectItem value="active">{t('active_users')}</SelectItem>
+                        <SelectItem value="inactive">{t('inactive_users')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Notification Type</Label>
+                    <Label>{t('notification_type')}</Label>
                     <Select value={bulkForm.type} onValueChange={(value) => setBulkForm({ ...bulkForm, type: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="push">Push Notification</SelectItem>
-                        <SelectItem value="in-app">In-App Notification</SelectItem>
+                        <SelectItem value="email">{t('email')}</SelectItem>
+                        <SelectItem value="push">{t('push_notification')}</SelectItem>
+                        <SelectItem value="in-app">{t('in_app_notification')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Subject</Label>
+                  <Label>{t('subject')}</Label>
                   <Input
-                    placeholder="Enter notification subject"
+                    placeholder={t('enter_notification_subject')}
                     value={bulkForm.subject}
                     onChange={(e) => setBulkForm({ ...bulkForm, subject: e.target.value })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Message Content</Label>
+                  <Label>{t('message_content')}</Label>
                   <Textarea
-                    placeholder="Enter notification message"
+                    placeholder={t('enter_notification_message')}
                     rows={6}
                     value={bulkForm.content}
                     onChange={(e) => setBulkForm({ ...bulkForm, content: e.target.value })}
@@ -216,7 +220,7 @@ export default function AdminNotificationsPage() {
 
                 <Button onClick={handleBulkSend} disabled={loading} className="w-full">
                   <Send className="h-4 w-4 mr-2" />
-                  Send Notification
+                  {t('send_notification')}
                 </Button>
               </CardContent>
             </Card>
@@ -225,13 +229,13 @@ export default function AdminNotificationsPage() {
           <TabsContent value="schedule" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Schedule Notification</CardTitle>
-                <CardDescription>Schedule notifications to be sent at a specific time</CardDescription>
+                <CardTitle>{t('schedule_notification')}</CardTitle>
+                <CardDescription>{t('schedule_notifications_description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Recipient Group</Label>
+                    <Label>{t('recipient_group')}</Label>
                     <Select
                       value={scheduleForm.recipient}
                       onValueChange={(value) => setScheduleForm({ ...scheduleForm, recipient: value })}
@@ -240,16 +244,16 @@ export default function AdminNotificationsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="students">Students Only</SelectItem>
-                        <SelectItem value="instructors">Instructors Only</SelectItem>
-                        <SelectItem value="active">Active Users</SelectItem>
+                        <SelectItem value="all">{t('all_users')}</SelectItem>
+                        <SelectItem value="students">{t('students_only')}</SelectItem>
+                        <SelectItem value="instructors">{t('instructors_only')}</SelectItem>
+                        <SelectItem value="active">{t('active_users')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Notification Type</Label>
+                    <Label>{t('notification_type')}</Label>
                     <Select
                       value={scheduleForm.type}
                       onValueChange={(value) => setScheduleForm({ ...scheduleForm, type: value })}
@@ -258,9 +262,9 @@ export default function AdminNotificationsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="push">Push Notification</SelectItem>
-                        <SelectItem value="in-app">In-App Notification</SelectItem>
+                        <SelectItem value="email">{t('email')}</SelectItem>
+                        <SelectItem value="push">{t('push_notification')}</SelectItem>
+                        <SelectItem value="in-app">{t('in_app_notification')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -276,18 +280,18 @@ export default function AdminNotificationsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Subject</Label>
+                  <Label>{t('subject')}</Label>
                   <Input
-                    placeholder="Enter notification subject"
+                    placeholder={t('enter_notification_subject')}
                     value={scheduleForm.subject}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, subject: e.target.value })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Message Content</Label>
+                  <Label>{t('message_content')}</Label>
                   <Textarea
-                    placeholder="Enter notification message"
+                    placeholder={t('enter_notification_message')}
                     rows={6}
                     value={scheduleForm.content}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, content: e.target.value })}
@@ -295,9 +299,7 @@ export default function AdminNotificationsPage() {
                 </div>
 
                 <Button onClick={handleSchedule} disabled={loading} className="w-full">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Schedule Notification
-                </Button>
+                  <Clock className="h-4 w-4 mr-2" />{t('schedule_notification')}</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -305,22 +307,22 @@ export default function AdminNotificationsPage() {
           <TabsContent value="templates" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Create Template</CardTitle>
-                <CardDescription>Save notification templates for quick reuse</CardDescription>
+                <CardTitle>{t('create_template')}</CardTitle>
+                <CardDescription>{t('save_notification_templates_for_quick_re')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Template Name</Label>
+                    <Label>{t('template_name')}</Label>
                     <Input
-                      placeholder="e.g., Welcome Email"
+                      placeholder={t('eg_welcome_email')}
                       value={templateForm.name}
                       onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Type</Label>
+                    <Label>{t('type')}</Label>
                     <Select
                       value={templateForm.type}
                       onValueChange={(value: any) => setTemplateForm({ ...templateForm, type: value })}
@@ -329,27 +331,27 @@ export default function AdminNotificationsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="push">Push Notification</SelectItem>
-                        <SelectItem value="in-app">In-App Notification</SelectItem>
+                        <SelectItem value="email">{t('email')}</SelectItem>
+                        <SelectItem value="push">{t('push_notification')}</SelectItem>
+                        <SelectItem value="in-app">{t('in_app_notification')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Subject</Label>
+                  <Label>{t('subject')}</Label>
                   <Input
-                    placeholder="Enter template subject"
+                    placeholder={t('enter_template_subject')}
                     value={templateForm.subject}
                     onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Content</Label>
+                  <Label>{t('content')}</Label>
                   <Textarea
-                    placeholder="Enter template content"
+                    placeholder={t('enter_template_content')}
                     rows={6}
                     value={templateForm.content}
                     onChange={(e) => setTemplateForm({ ...templateForm, content: e.target.value })}
@@ -365,8 +367,8 @@ export default function AdminNotificationsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Saved Templates</CardTitle>
-                <CardDescription>Manage your notification templates</CardDescription>
+                <CardTitle>{t('saved_templates')}</CardTitle>
+                <CardDescription>{t('manage_your_notification_templates')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">

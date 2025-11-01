@@ -22,8 +22,12 @@ import {
 import { exercisesApi } from "@/lib/api/exercises"
 import { useAuth } from "@/lib/contexts/auth-context"
 import type { SubmissionWithExercise } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 export default function MyExercisesPage() {
+
+  const t = useTranslations('common')
+
   const router = useRouter()
   const { user } = useAuth()
   const [submissions, setSubmissions] = useState<SubmissionWithExercise[]>([])
@@ -53,14 +57,14 @@ export default function MyExercisesPage() {
     return (
       <AppLayout>
         <PageContainer className="py-12 text-center">
-          <h1 className="text-2xl font-bold mb-4">Please Sign In</h1>
+          <h1 className="text-2xl font-bold mb-4">{t('please_sign_in')}</h1>
           <p className="text-muted-foreground mb-6">
-            You need to be signed in to view your exercises
+            {t('you_need_to_be_signed_in_to_view_exercises')}
           </p>
           <Button onClick={() => router.push('/auth/login')}>
-            Sign In
+            {t('sign_in')}
           </Button>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -107,7 +111,7 @@ export default function MyExercisesPage() {
   }
 
   const formatScore = (score?: number) => {
-    if (score === undefined || score === null) return "N/A"
+    if (score === undefined || score === null) return t('not_available')
     return `${score.toFixed(1)}%`
   }
 
@@ -116,9 +120,9 @@ export default function MyExercisesPage() {
       <PageContainer maxWidth="7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">My Exercises</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('my_exercises')}</h1>
           <p className="text-base text-muted-foreground">
-            Track your practice progress and improve your IELTS skills
+            {t('track_your_practice_progress')}
           </p>
         </div>
 
@@ -128,7 +132,7 @@ export default function MyExercisesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('total_attempts')}</p>
                   <p className="text-3xl font-bold">{totalSubmissions}</p>
                 </div>
                 <Target className="h-8 w-8 text-blue-500" />
@@ -140,7 +144,7 @@ export default function MyExercisesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">In Progress</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('in_progress')}</p>
                   <p className="text-3xl font-bold">{inProgressSubmissions.length}</p>
                 </div>
                 <PlayCircle className="h-8 w-8 text-orange-500" />
@@ -152,7 +156,7 @@ export default function MyExercisesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Completed</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('completed')}</p>
                   <p className="text-3xl font-bold">{completedSubmissions.length}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />
@@ -164,7 +168,7 @@ export default function MyExercisesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Average Score</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('average_score')}</p>
                   <p className="text-3xl font-bold">
                     {completedWithScore.length > 0 ? formatScore(averageScore) : "N/A"}
                   </p>
@@ -179,13 +183,13 @@ export default function MyExercisesPage() {
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
             <TabsTrigger value="all">
-              All Exercises ({submissions.length})
+              {t('all_exercises')} ({submissions.length})
             </TabsTrigger>
             <TabsTrigger value="in-progress">
-              In Progress ({inProgressSubmissions.length})
+              {t('in_progress')} ({inProgressSubmissions.length})
             </TabsTrigger>
             <TabsTrigger value="completed">
-              Completed ({completedSubmissions.length})
+              {t('completed')} ({completedSubmissions.length})
             </TabsTrigger>
           </TabsList>
 
@@ -198,12 +202,12 @@ export default function MyExercisesPage() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">No Exercises Yet</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t('no_exercises_yet')}</h3>
                   <p className="text-muted-foreground mb-6">
-                    Start practicing by attempting an exercise
+                    {t('start_practicing_by_attempting')}
                   </p>
                   <Button onClick={() => router.push('/exercises/list')}>
-                    Browse Exercises
+                    {t('browse_exercises')}
                   </Button>
                 </CardContent>
               </Card>
@@ -253,7 +257,7 @@ export default function MyExercisesPage() {
                               <div>
                                 <h3 className="text-xl font-bold mb-1">{exercise.title}</h3>
                                 <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {exercise.description || "No description available"}
+                                  {exercise.description || t('no_description_available')}
                                 </p>
                               </div>
                               <div className="flex flex-col gap-2 ml-4">
@@ -277,9 +281,9 @@ export default function MyExercisesPage() {
                             {/* Progress */}
                             <div className="mt-4 space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Progress</span>
+                                <span className="text-muted-foreground">{t('progress')}</span>
                                 <span className="font-semibold">
-                                  {submission.questions_answered}/{submission.total_questions} questions
+                                  {submission.questions_answered}/{submission.total_questions} {t('questions')}
                                 </span>
                               </div>
                               <Progress value={progressPct} className="h-2" />
@@ -305,7 +309,7 @@ export default function MyExercisesPage() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <Target className="h-4 w-4" />
-                                <span>Attempt #{submission.attempt_number}</span>
+                                <span>{t('attempt_number', { number: submission.attempt_number })}</span>
                               </div>
                             </div>
 
@@ -321,7 +325,7 @@ export default function MyExercisesPage() {
                                   }
                                 }}
                               >
-                                {submission.status === 'completed' ? 'View Results' : 'Continue Practice'}
+                                {submission.status === 'completed' ? t('view_results') : t('continue_practice')}
                               </Button>
                             </div>
                           </div>
@@ -340,7 +344,7 @@ export default function MyExercisesPage() {
                 <CardContent className="py-12 text-center">
                   <PlayCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">
-                    Start practicing to see your progress here
+                    {t('start_practicing_to_see_progress')}
                   </p>
                 </CardContent>
               </Card>
@@ -373,13 +377,13 @@ export default function MyExercisesPage() {
                             <h3 className="text-xl font-bold mb-2">{exercise.title}</h3>
                             <div className="mt-4 space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Progress</span>
+                                <span className="text-muted-foreground">{t('progress')}</span>
                                 <span className="font-semibold">{progressPct}%</span>
                               </div>
                               <Progress value={progressPct} className="h-2" />
                             </div>
                             <div className="mt-4">
-                              <Button size="sm">Continue Practice</Button>
+                              <Button size="sm">{t('continue_practice')}</Button>
                             </div>
                           </div>
                         </div>
@@ -397,7 +401,7 @@ export default function MyExercisesPage() {
                 <CardContent className="py-12 text-center">
                   <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">
-                    Complete your first exercise to see results here
+                    {t('complete_your_first_exercise')}
                   </p>
                 </CardContent>
               </Card>
@@ -429,16 +433,16 @@ export default function MyExercisesPage() {
                           <div className="flex-1">
                             <div className="flex items-start justify-between">
                               <h3 className="text-xl font-bold mb-2">{exercise.title}</h3>
-                              <Badge className="bg-green-500">Completed</Badge>
+                              <Badge className="bg-green-500">{t('completed')}</Badge>
                             </div>
                             {submission.score !== undefined && (
                               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                                 <span className="font-semibold text-foreground">
-                                  Score: {formatScore(submission.score)}
+                                  {t('score_label')} {formatScore(submission.score)}
                                 </span>
                                 {submission.band_score && (
                                   <span className="font-semibold text-foreground">
-                                    Band: {submission.band_score.toFixed(1)}
+                                    {t('band_label')} {submission.band_score.toFixed(1)}
                                   </span>
                                 )}
                                 <span>
@@ -447,7 +451,7 @@ export default function MyExercisesPage() {
                               </div>
                             )}
                             <div className="mt-4">
-                              <Button size="sm" variant="outline">View Results</Button>
+                              <Button size="sm" variant="outline">{t('view_results')}</Button>
                             </div>
                           </div>
                         </div>

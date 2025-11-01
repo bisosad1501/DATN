@@ -20,10 +20,14 @@ import {
 } from "recharts"
 import { TrendingUp, Users, BookOpen, Award, DollarSign } from "lucide-react"
 import { adminApi } from "@/lib/api/admin"
+import { useTranslations } from '@/lib/i18n'
 
 const COLORS = ["#ED372A", "#101615", "#FEF7EC", "#FF6B6B", "#4ECDC4"]
 
 export default function AdminAnalyticsPage() {
+
+  const t = useTranslations('common')
+
   const [timeRange, setTimeRange] = useState("30d")
   const [analytics, setAnalytics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -45,7 +49,7 @@ export default function AdminAnalyticsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading analytics...</div>
+    return <div className="text-center py-12">{t('loading_analytics')}</div>
   }
 
   const revenueData = [
@@ -74,18 +78,18 @@ export default function AdminAnalyticsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Analytics & Reports</h1>
-          <p className="text-muted-foreground mt-1">Comprehensive platform analytics and insights</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('analytics_reports')}</h1>
+          <p className="text-muted-foreground mt-1">{t('comprehensive_platform_analytics_and_ins')}</p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="7d">Last 7 days</SelectItem>
-            <SelectItem value="30d">Last 30 days</SelectItem>
-            <SelectItem value="90d">Last 90 days</SelectItem>
-            <SelectItem value="1y">Last year</SelectItem>
+            <SelectItem value="7d">{t('last_7_days')}</SelectItem>
+            <SelectItem value="30d">{t('last_30_days')}</SelectItem>
+            <SelectItem value="90d">{t('last_90_days')}</SelectItem>
+            <SelectItem value="1y">{t('last_year')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -93,7 +97,7 @@ export default function AdminAnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('total_revenue')}</CardTitle>
               <DollarSign className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -107,7 +111,7 @@ export default function AdminAnalyticsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('active_students')}</CardTitle>
               <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -121,7 +125,7 @@ export default function AdminAnalyticsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Course Enrollments</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('course_enrollments')}</CardTitle>
               <BookOpen className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -135,7 +139,7 @@ export default function AdminAnalyticsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Completion Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('avg_completion_rate')}</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -152,7 +156,7 @@ export default function AdminAnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Revenue & Expenses</CardTitle>
-              <CardDescription>Monthly revenue and expenses comparison</CardDescription>
+              <CardDescription>{t('monthly_revenue_and_expenses_comparison')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -171,8 +175,8 @@ export default function AdminAnalyticsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Course Completion Status</CardTitle>
-              <CardDescription>Distribution of course completion rates</CardDescription>
+              <CardTitle>{t('course_completion_status')}</CardTitle>
+              <CardDescription>{t('distribution_of_course_completion_rates')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -199,8 +203,8 @@ export default function AdminAnalyticsPage() {
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Skill Distribution</CardTitle>
-              <CardDescription>Number of students practicing each skill</CardDescription>
+              <CardTitle>{t('skill_distribution')}</CardTitle>
+              <CardDescription>{t('number_of_students_practicing_each_skill')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>

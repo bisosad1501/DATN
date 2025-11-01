@@ -10,8 +10,12 @@ import { instructorApi } from "@/lib/api/instructor"
 import type { Exercise } from "@/types"
 import { Plus, Search, Edit, Trash2, Eye, Clock, Target } from "lucide-react"
 import Link from "next/link"
+import { useTranslations } from '@/lib/i18n'
 
 export default function InstructorExercisesPage() {
+
+  const t = useTranslations('common')
+
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -35,7 +39,7 @@ export default function InstructorExercisesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this exercise?")) return
+    if (!confirm(t('are_you_sure_delete_exercise'))) return
 
     try {
       await instructorApi.deleteExercise(id)
@@ -55,7 +59,7 @@ export default function InstructorExercisesPage() {
     return (
       <InstructorLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading exercises...</div>
+          <div className="text-muted-foreground">{t('loading_exercises')}</div>
         </div>
       </InstructorLayout>
     )
@@ -67,13 +71,13 @@ export default function InstructorExercisesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">My Exercises</h1>
-            <p className="text-muted-foreground mt-1">Create and manage practice exercises</p>
+            <h1 className="text-3xl font-bold text-foreground">{t('my_exercises')}</h1>
+            <p className="text-muted-foreground mt-1">{t('create_and_manage_practice_exercises')}</p>
           </div>
           <Link href="/instructor/exercises/create">
             <Button className="bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
-              Create Exercise
+              {t('create_exercise')}
             </Button>
           </Link>
         </div>
@@ -83,7 +87,7 @@ export default function InstructorExercisesPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search exercises..."
+              placeholder={t('search_exercises')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -94,11 +98,11 @@ export default function InstructorExercisesPage() {
             onChange={(e) => setFilterType(e.target.value)}
             className="px-4 py-2 border rounded-md"
           >
-            <option value="all">All Types</option>
-            <option value="listening">Listening</option>
-            <option value="reading">Reading</option>
-            <option value="writing">Writing</option>
-            <option value="speaking">Speaking</option>
+            <option value="all">{t('all_types')}</option>
+            <option value="listening">{t('listening')}</option>
+            <option value="reading">{t('reading')}</option>
+            <option value="writing">{t('writing')}</option>
+            <option value="speaking">{t('speaking')}</option>
           </select>
         </div>
 
@@ -165,17 +169,17 @@ export default function InstructorExercisesPage() {
         {filteredExercises.length === 0 && (
           <div className="text-center py-12">
             <Target className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No exercises found</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">{t('no_exercises_found')}</h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery || filterType !== "all"
-                ? "Try adjusting your filters"
-                : "Create your first exercise to get started"}
+                ? t('try_adjusting_your_search')
+                : t('create_your_first_exercise_to_get_starte')}
             </p>
             {!searchQuery && filterType === "all" && (
               <Link href="/instructor/exercises/create">
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Exercise
+                  {t('create_exercise')}
                 </Button>
               </Link>
             )}

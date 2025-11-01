@@ -12,8 +12,12 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Users, BookOpen, Trophy, Sparkles } from "lucide-react"
 import { Logo } from "@/components/layout/logo"
+import { useTranslations } from '@/lib/i18n'
 
 export default function LoginPage() {
+
+  const t = useTranslations('auth')
+
   const { login, loginWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
     email: "",
@@ -29,15 +33,15 @@ export default function LoginPage() {
     const newErrors: Record<string, string> = {}
 
     if (!formData.email) {
-      newErrors.email = "Email is required"
+      newErrors.email = t('email_is_required')
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid"
+      newErrors.email = t('email_is_invalid')
     }
 
     if (!formData.password) {
-      newErrors.password = "Password is required"
+      newErrors.password = t('password_is_required')
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+      newErrors.password = t('password_must_be_at_least_6')
     }
 
     setErrors(newErrors)
@@ -59,7 +63,7 @@ export default function LoginPage() {
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message 
         || error.message 
-        || "Login failed. Please try again."
+        || t('login_failed_please_try_again')
       setApiError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -74,7 +78,7 @@ export default function LoginPage() {
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message 
         || error.message 
-        || "Google login failed. Please try again."
+        || t('google_login_failed_please_try_again')
       setApiError(errorMessage)
       setIsGoogleLoading(false)
     }
@@ -94,10 +98,10 @@ export default function LoginPage() {
             <Logo className="justify-center" />
             <div className="space-y-2">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                Chào mừng trở lại
+                {t('welcome_back')}
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground">
-                Đăng nhập để tiếp tục hành trình IELTS của bạn
+                {t('login_continue_journey')}
               </p>
             </div>
           </div>
@@ -113,10 +117,10 @@ export default function LoginPage() {
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5 bg-card/50 backdrop-blur-sm p-6 rounded-lg border border-border/50 shadow-sm">
             <FormField
-              label="Email"
+              label={t('auth.email')}
               name="email"
               type="email"
-              placeholder="your.email@example.com"
+              placeholder={t('auth.youremailexamplecom')}
               value={formData.email}
               onChange={(value) => setFormData({ ...formData, email: value })}
               error={errors.email}
@@ -124,10 +128,10 @@ export default function LoginPage() {
             />
 
             <FormField
-              label="Password"
+              label={t('auth.password')}
               name="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder={t('auth.enter_your_password')}
               value={formData.password}
               onChange={(value) => setFormData({ ...formData, password: value })}
               error={errors.password}
@@ -142,16 +146,16 @@ export default function LoginPage() {
                   onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: checked as boolean })}
                 />
                 <Label htmlFor="remember" className="text-sm cursor-pointer">
-                  Ghi nhớ đăng nhập
+                  {t('remember_me')}
                 </Label>
               </div>
               <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                Quên mật khẩu?
+                {t('forgot_password')}
               </Link>
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+              {isLoading ? t('logging_in') : t('login_button')}
             </Button>
           </form>
 
@@ -161,7 +165,7 @@ export default function LoginPage() {
               <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-muted-foreground">Hoặc đăng nhập bằng</span>
+              <span className="px-2 bg-background text-muted-foreground">{t('or_login_with')}</span>
             </div>
           </div>
 
@@ -197,7 +201,7 @@ export default function LoginPage() {
                 />
               </svg>
               <span className="font-medium text-foreground group-hover:text-foreground">
-                {isGoogleLoading ? "Đang kết nối..." : "Đăng nhập với Google"}
+                {isGoogleLoading ? t('connecting') : t('login_with_google')}
               </span>
             </div>
           </Button>
@@ -205,9 +209,9 @@ export default function LoginPage() {
           {/* Register Link */}
           <div className="text-center pt-4">
             <p className="text-sm text-muted-foreground">
-              Chưa có tài khoản?{" "}
+              {t('no_account_yet')}{" "}
               <Link href="/register" className="text-primary hover:underline font-medium">
-                Đăng ký ngay
+                {t('signup_now')}
               </Link>
             </p>
           </div>
@@ -233,10 +237,10 @@ export default function LoginPage() {
           {/* Header with gradient text effect */}
           <div className="space-y-4">
             <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground lg:whitespace-nowrap">
-              Chinh phục IELTS với tự tin
+              {t('conquer_ielts_with_confidence')}
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Tham gia cùng hàng nghìn học viên đạt được điểm số mục tiêu với nền tảng học tập toàn diện của chúng tôi.
+              {t('join_thousands_of_students')}
             </p>
           </div>
           
@@ -249,7 +253,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="text-2xl sm:text-3xl font-bold text-primary group-hover:scale-110 transition-transform">10K+</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Học viên</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">{t('students_label')}</div>
             </div>
             <div className="group text-center space-y-2 p-5 rounded-xl bg-card/40 backdrop-blur-md border-2 border-border/40 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1">
               <div className="flex justify-center mb-2">
@@ -258,7 +262,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="text-2xl sm:text-3xl font-bold text-primary group-hover:scale-110 transition-transform">500+</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Bài học</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">{t('lessons_label')}</div>
             </div>
             <div className="group text-center space-y-2 p-5 rounded-xl bg-card/40 backdrop-blur-md border-2 border-border/40 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1">
               <div className="flex justify-center mb-2">
@@ -267,7 +271,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="text-2xl sm:text-3xl font-bold text-primary group-hover:scale-110 transition-transform">8.0</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Điểm TB</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">{t('avg_score_label')}</div>
             </div>
           </div>
         </div>

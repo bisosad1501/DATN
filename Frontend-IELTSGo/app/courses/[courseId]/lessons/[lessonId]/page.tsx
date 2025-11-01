@@ -31,8 +31,12 @@ import type { Lesson, Module } from "@/types"
 import { formatDuration } from "@/lib/utils/format"
 import { useYouTubeProgress } from "@/lib/hooks/use-youtube-progress"
 import { usePreferences } from "@/lib/contexts/preferences-context"
+import { useTranslations } from '@/lib/i18n'
 
 export default function LessonPlayerPage() {
+
+  const t = useTranslations('courses')
+
   const params = useParams()
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -474,8 +478,8 @@ export default function LessonPlayerPage() {
     return (
       <AppLayout showSidebar={false} showFooter={false}>
         <PageContainer className="py-20 text-center">
-          <h1 className="text-2xl font-bold mb-4">Lesson not found</h1>
-          <Button onClick={() => router.push(`/courses/${params.courseId}`)}>Back to Course</Button>
+          <h1 className="text-2xl font-bold mb-4">{t('lesson_not_found')}</h1>
+          <Button onClick={() => router.push(`/courses/${params.courseId}`)}>{t('back_to_course')}</Button>
         </PageContainer>
       </AppLayout>
     )
@@ -500,7 +504,7 @@ export default function LessonPlayerPage() {
               className="flex-shrink-0"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Quay lại
+              {t('back')}
             </Button>
             
             <h1 className="text-base md:text-lg font-semibold truncate flex-1 text-center px-4">
@@ -514,7 +518,7 @@ export default function LessonPlayerPage() {
               disabled={!hasNext}
             >
               <CheckCircle className="w-4 h-4 mr-1" />
-              Tiếp theo
+              {t('next')}
             </Button>
           </div>
         </div>
@@ -567,7 +571,7 @@ export default function LessonPlayerPage() {
                         {videos[0]?.duration_seconds 
                           ? formatDuration(videos[0].duration_seconds)
                           : lesson.duration_minutes 
-                            ? `${lesson.duration_minutes} phút`
+                            ? `${lesson.duration_minutes} ${t('minutes_full')}`
                             : ''
                         }
                       </div>
@@ -586,11 +590,11 @@ export default function LessonPlayerPage() {
                 className="flex-1 max-w-[200px]"
               >
                 <ChevronLeft className="w-4 h-4 mr-2" />
-                Bài trước
+                {t('previous_lesson')}
               </Button>
               
               <div className="text-sm text-muted-foreground">
-                Bài {currentIndex + 1} / {allLessons.length}
+                {t('lesson')} {currentIndex + 1} / {allLessons.length}
               </div>
               
               <Button
@@ -598,7 +602,7 @@ export default function LessonPlayerPage() {
                 disabled={!hasNext}
                 className="flex-1 max-w-[200px]"
               >
-                Bài sau
+                {t('next_lesson')}
                 <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -619,26 +623,26 @@ export default function LessonPlayerPage() {
             {/* TODO: Backend notes feature not implemented yet
             <Card>
               <CardHeader>
-                <CardTitle>Lesson Notes</CardTitle>
+                <CardTitle>{t('courses.lesson_notes')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="add">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="add">Add Note</TabsTrigger>
+                    <TabsTrigger value="add">{t('courses.add_note')}</TabsTrigger>
                     <TabsTrigger value="view">View Notes ({notes.length})</TabsTrigger>
                   </TabsList>
                   <TabsContent value="add" className="space-y-4">
                     <Textarea
-                      placeholder="Write your notes here..."
+                      placeholder={t('courses.write_your_notes_here')}
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       rows={4}
                     />
-                    <Button onClick={handleAddNote}>Save Note</Button>
+                    <Button onClick={handleAddNote}>{t('courses.save_note')}</Button>
                   </TabsContent>
                   <TabsContent value="view">
                     {notes.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-8">No notes yet</p>
+                      <p className="text-muted-foreground text-center py-8">{t('courses.no_notes_yet')}</p>
                     ) : (
                       <div className="space-y-3">
                         {notes.map((n) => (
@@ -665,7 +669,7 @@ export default function LessonPlayerPage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-20">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Nội dung khóa học</CardTitle>
+                <CardTitle className="text-base">{t('course_content')}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
@@ -674,9 +678,9 @@ export default function LessonPlayerPage() {
                       <div className="p-4 bg-muted/50">
                         <h4 className="font-semibold text-sm">{module.title}</h4>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {module.lessons?.length || 0} bài học
+                          {module.lessons?.length || 0} {t('lesson_plural')}
                           {(module.exercises?.length || 0) > 0 && (
-                            <span className="text-pink-600 dark:text-pink-400"> • {module.exercises?.length || 0} bài tập</span>
+                            <span className="text-pink-600 dark:text-pink-400"> • {module.exercises?.length || 0} {t('exercise_plural')}</span>
                           )}
                         </p>
                       </div>
@@ -722,7 +726,7 @@ export default function LessonPlayerPage() {
                                       <>
                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                                           <PlayCircle className="w-3 h-3" />
-                                          Video
+                                          {t('video')}
                                         </span>
                                         {durationSeconds > 0 && (
                                           <span className="text-xs text-muted-foreground">
@@ -734,7 +738,7 @@ export default function LessonPlayerPage() {
                                     {contentType === "article" && (
                                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                                         <FileText className="w-3 h-3" />
-                                        Bài đọc
+                                        {t('article')}
                                       </span>
                                     )}
                                   </div>
@@ -764,11 +768,11 @@ export default function LessonPlayerPage() {
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-xs text-pink-600 dark:text-pink-400 flex items-center gap-1 font-medium">
                                       <PenTool className="w-3 h-3" />
-                                      {ex.total_questions} câu hỏi
+                                      {ex.total_questions} {t('questions')}
                                     </span>
                                     {ex.time_limit_minutes && (
                                       <span className="text-xs text-pink-600 dark:text-pink-400">
-                                        • {ex.time_limit_minutes}m
+                                        • {ex.time_limit_minutes}{t('minutes_short')}
                                       </span>
                                     )}
                                   </div>

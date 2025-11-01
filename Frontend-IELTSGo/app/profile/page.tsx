@@ -18,8 +18,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Camera, CheckCircle2, Edit2, Save, X } from "lucide-react"
 import { userApi } from "@/lib/api/user"
 import { authApi } from "@/lib/api/auth"
+import { useTranslations } from '@/lib/i18n'
 
 export default function ProfilePage() {
+
+  const t = useTranslations('profile')
+
   return (
     <ProtectedRoute>
       <ProfileContent />
@@ -28,6 +32,7 @@ export default function ProfilePage() {
 }
 
 function ProfileContent() {
+  const t = useTranslations('profile')
   const { user, updateProfile, refreshUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -76,7 +81,7 @@ function ProfileContent() {
 
     const newErrors: Record<string, string> = {}
     if (!formData.fullName) {
-      newErrors.fullName = "Full name is required"
+      newErrors.fullName = t('full_name_is_required')
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -91,7 +96,7 @@ function ProfileContent() {
         bio: formData.bio?.trim() || "",
         targetBandScore: formData.targetBandScore ? parseFloat(formData.targetBandScore) : undefined,
       })
-      setSuccessMessage("Profile updated successfully!")
+      setSuccessMessage(t('profile_updated_successfully'))
       setIsEditing(false)
       
       // Refresh user data from backend to get updated values
@@ -106,7 +111,7 @@ function ProfileContent() {
       const errorMessage = error.response?.data?.error?.message 
         || error.response?.data?.message 
         || error.message 
-        || "Failed to update profile"
+        || t('failed_to_update_profile')
       setErrors({ general: errorMessage })
     } finally {
       setIsLoading(false)
@@ -119,13 +124,13 @@ function ProfileContent() {
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      setErrors({ avatar: "File size must be less than 2MB" })
+      setErrors({ avatar: t('file_size_must_be_less_than_2mb') })
       return
     }
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      setErrors({ avatar: "File must be an image" })
+      setErrors({ avatar: t('file_must_be_an_image') })
       return
     }
 
@@ -148,21 +153,21 @@ function ProfileContent() {
             refreshUser()
           }
           
-          setSuccessMessage("Avatar updated successfully!")
+          setSuccessMessage(t('avatar_updated_successfully'))
           setTimeout(() => setSuccessMessage(""), 3000)
         } catch (error: any) {
-          setErrors({ avatar: error.response?.data?.error?.message || "Failed to upload avatar" })
+          setErrors({ avatar: error.response?.data?.error?.message || t('failed_to_upload_avatar') })
         } finally {
           setIsUploadingAvatar(false)
         }
       }
       reader.onerror = () => {
-        setErrors({ avatar: "Failed to read file" })
+        setErrors({ avatar: t('failed_to_read_file') })
         setIsUploadingAvatar(false)
       }
       reader.readAsDataURL(file)
     } catch (error: any) {
-      setErrors({ avatar: "Failed to process file" })
+      setErrors({ avatar: t('failed_to_process_file') })
       setIsUploadingAvatar(false)
     }
   }
@@ -174,15 +179,15 @@ function ProfileContent() {
 
     const newErrors: Record<string, string> = {}
     if (!passwordData.currentPassword) {
-      newErrors.currentPassword = "Current password is required"
+      newErrors.currentPassword = t('current_password_is_required')
     }
     if (!passwordData.newPassword) {
-      newErrors.newPassword = "New password is required"
+      newErrors.newPassword = t('new_password_is_required')
     } else if (passwordData.newPassword.length < 8) {
-      newErrors.newPassword = "Password must be at least 8 characters"
+      newErrors.newPassword = t('password_must_be_at_least_8_characters')
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
+      newErrors.confirmPassword = t('passwords_do_not_match')
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -198,23 +203,23 @@ function ProfileContent() {
       )
       
       if (response.success) {
-        setSuccessMessage("Password changed successfully!")
+        setSuccessMessage(t('password_changed_successfully'))
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
         setTimeout(() => setSuccessMessage(""), 3000)
       } else {
-        setErrors({ general: response.message || "Failed to change password" })
+        setErrors({ general: response.message || t('failed_to_change_password') })
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message 
         || error.response?.data?.message 
         || error.message 
-        || "Failed to change password"
+        || t('failed_to_change_password')
       
       // Handle specific error codes from backend
       if (error.response?.data?.error?.code === "CHANGE_PASSWORD_FAILED") {
         const message = error.response.data.error.message
         if (message.includes("invalid old password")) {
-          setErrors({ currentPassword: "Current password is incorrect" })
+          setErrors({ currentPassword: t('current_password_is_incorrect') })
         } else {
           setErrors({ general: message })
         }
@@ -232,8 +237,8 @@ function ProfileContent() {
         <div className="space-y-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
-            <p className="text-base text-muted-foreground mt-2">Manage your account settings and preferences</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('profile_settings')}</h1>
+            <p className="text-base text-muted-foreground mt-2">{t('manage_your_account_settings_and_prefere')}</p>
           </div>
 
           {/* Success Message */}
@@ -246,8 +251,8 @@ function ProfileContent() {
 
           <Tabs defaultValue="profile" className="space-y-6">
             <TabsList>
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="profile">{t('profile')}</TabsTrigger>
+              <TabsTrigger value="security">{t('security')}</TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
@@ -256,8 +261,8 @@ function ProfileContent() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Profile Information</CardTitle>
-                      <CardDescription>Update your personal information and profile picture</CardDescription>
+                      <CardTitle>{t('profile_information')}</CardTitle>
+                      <CardDescription>{t('update_your_personal_information_and_profi')}</CardDescription>
                     </div>
                     {!isEditing && (
                       <Button
@@ -268,7 +273,7 @@ function ProfileContent() {
                         className="gap-2"
                       >
                         <Edit2 className="h-4 w-4" />
-                        Edit profile
+                        {t('edit_profile')}
                       </Button>
                     )}
                   </div>
@@ -303,12 +308,12 @@ function ProfileContent() {
                         `}
                       >
                         <Camera className="mr-2 h-4 w-4" />
-                        {isUploadingAvatar ? "Uploading..." : "Change photo"}
+                        {isUploadingAvatar ? t('uploading') : t('change_photo')}
                       </label>
                       {errors.avatar && (
                         <p className="text-xs text-destructive mt-1">{errors.avatar}</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">JPG, PNG or GIF. Max size 2MB.</p>
+                      <p className="text-xs text-muted-foreground mt-2">{t('jpg_png_or_gif_max_size_2mb')}</p>
                     </div>
                   </div>
 
@@ -317,7 +322,7 @@ function ProfileContent() {
                     {isEditing ? (
                       <>
                         <FormField
-                          label="Full Name"
+                          label={t('full_name')}
                           name="fullName"
                           value={formData.fullName}
                           onChange={(value) => setFormData({ ...formData, fullName: value })}
@@ -327,7 +332,7 @@ function ProfileContent() {
                         />
 
                         <FormField
-                          label="Email"
+                          label={t('email')}
                           name="email"
                           type="email"
                           value={formData.email}
@@ -337,23 +342,23 @@ function ProfileContent() {
                         />
 
                         <FormField
-                          label="Bio"
+                          label={t('bio')}
                           name="bio"
                           type="textarea"
-                          placeholder="Tell us about yourself..."
+                          placeholder={t('tell_us_about_yourself')}
                           value={formData.bio}
                           onChange={(value) => setFormData({ ...formData, bio: value })}
                           rows={3}
                         />
 
                         <div className="space-y-2">
-                          <Label htmlFor="targetBandScore">Target Band Score</Label>
+                          <Label htmlFor="targetBandScore">{t('target_band_score')}</Label>
                           <Select
                             value={formData.targetBandScore}
                             onValueChange={(value) => setFormData({ ...formData, targetBandScore: value })}
                           >
                             <SelectTrigger id="targetBandScore">
-                              <SelectValue placeholder="Select your target score" />
+                              <SelectValue placeholder={t('select_your_target_score')} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="5.5">5.5</SelectItem>
@@ -392,11 +397,11 @@ function ProfileContent() {
                             className="gap-2"
                           >
                             <X className="h-4 w-4" />
-                            Cancel
+                            {t('cancel')}
                           </Button>
                           <Button type="submit" disabled={isLoading} className="gap-2">
                             <Save className="h-4 w-4" />
-                            {isLoading ? "Saving..." : "Save changes"}
+                            {isLoading ? t('saving') : t('save_changes')}
                           </Button>
                         </div>
                       </>
@@ -405,26 +410,26 @@ function ProfileContent() {
                         {/* View Mode - Display as read-only */}
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-muted-foreground">Full Name</Label>
-                            <p className="text-sm font-medium">{formData.fullName || "Not set"}</p>
+                            <Label className="text-sm font-medium text-muted-foreground">{t('full_name')}</Label>
+                            <p className="text-sm font-medium">{formData.fullName || t('not_set')}</p>
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">{t('email')}</Label>
                             <p className="text-sm">{formData.email}</p>
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-muted-foreground">Bio</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">{t('bio')}</Label>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {formData.bio || "No bio added yet."}
+                              {formData.bio || t('no_bio_added_yet')}
                             </p>
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-muted-foreground">Target Band Score</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">{t('target_band_score')}</Label>
                             <p className="text-sm">
-                              {formData.targetBandScore ? `Band ${formData.targetBandScore}` : "Not set"}
+                              {formData.targetBandScore ? `${t('band')} ${formData.targetBandScore}` : t('not_set')}
                             </p>
                           </div>
                         </div>
@@ -439,13 +444,13 @@ function ProfileContent() {
             <TabsContent value="security" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Change Password</CardTitle>
-                  <CardDescription>Update your password to keep your account secure</CardDescription>
+                  <CardTitle>{t('change_password')}</CardTitle>
+                  <CardDescription>{t('update_your_password_to_keep_your_accoun')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handlePasswordChange} className="space-y-4">
                     <FormField
-                      label="Current Password"
+                      label={t('current_password')}
                       name="currentPassword"
                       type="password"
                       value={passwordData.currentPassword}
@@ -455,7 +460,7 @@ function ProfileContent() {
                     />
 
                     <FormField
-                      label="New Password"
+                      label={t('new_password')}
                       name="newPassword"
                       type="password"
                       value={passwordData.newPassword}
@@ -465,7 +470,7 @@ function ProfileContent() {
                     />
 
                     <FormField
-                      label="Confirm New Password"
+                      label={t('confirm_new_password')}
                       name="confirmPassword"
                       type="password"
                       value={passwordData.confirmPassword}
@@ -481,7 +486,7 @@ function ProfileContent() {
                     )}
 
                     <Button type="submit" disabled={isLoading}>
-                      {isLoading ? "Changing password..." : "Change password"}
+                      {isLoading ? t('changing_password') : t('change_password')}
                     </Button>
                   </form>
                 </CardContent>

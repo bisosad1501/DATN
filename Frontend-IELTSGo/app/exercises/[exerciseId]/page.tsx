@@ -12,12 +12,15 @@ import { Loader2, Clock, BookOpen, FileText, PlayCircle, Award, Target, CheckCir
 import { exercisesApi } from "@/lib/api/exercises"
 import type { ExerciseDetailResponse } from "@/types"
 import { useAuth } from "@/lib/contexts/auth-context"
+import { useTranslations } from "@/lib/i18n"
 
 export default function ExerciseDetailPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
+  const t = useTranslations('exercises')
+  const tCommon = useTranslations('common')
 
   const exerciseId = params.exerciseId as string
 
@@ -71,13 +74,13 @@ export default function ExerciseDetailPage() {
 
       // Better error messages
       if (error.response?.status === 401) {
-        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        alert(t('session_expired_please_login_again'))
         router.push('/login')
       } else if (error.response?.status === 404) {
-        alert('Không tìm thấy bài tập. Vui lòng thử lại.')
+        alert(t('exercise_not_found'))
       } else {
-        const errorMsg = error.response?.data?.error?.message || error.message || 'Không thể bắt đầu bài tập'
-        alert(errorMsg + '. Vui lòng thử lại.')
+        const errorMsg = error.response?.data?.error?.message || error.message || t('cannot_start_exercise_please_try_again')
+        alert(errorMsg + ' ' + tCommon('please_try_again'))
       }
     } finally {
       setStarting(false)
@@ -98,9 +101,9 @@ export default function ExerciseDetailPage() {
     return (
       <AppLayout>
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold">Không tìm thấy bài tập</h2>
+          <h2 className="text-2xl font-bold">{t('exercise_not_found')}</h2>
           <Button onClick={() => router.back()} className="mt-4">
-            Quay lại
+            {tCommon('go_back')}
           </Button>
         </div>
       </AppLayout>
@@ -113,6 +116,16 @@ export default function ExerciseDetailPage() {
     return sum + (sectionData.section?.total_questions || 0)
   }, 0) || 0
 
+  const getSkillLabel = (skillType: string) => {
+    const skillMap: Record<string, string> = {
+      listening: '🎧 Listening',
+      reading: '📖 Reading',
+      writing: '✍️ Writing',
+      speaking: '🗣️ Speaking'
+    }
+    return skillMap[skillType] || skillType
+  }
+
   return (
     <AppLayout>
       <PageContainer maxWidth="6xl">
@@ -124,17 +137,14 @@ export default function ExerciseDetailPage() {
             className="mb-4"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Quay lại bài học
+            {t('back_to_lessons')}
           </Button>
         )}
 
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
             <Badge className="capitalize">
-              {exercise.skill_type === 'listening' && '🎧 Listening'}
-              {exercise.skill_type === 'reading' && '📖 Reading'}
-              {exercise.skill_type === 'writing' && '✍️ Writing'}
-              {exercise.skill_type === 'speaking' && '🗣️ Speaking'}
+              {getSkillLabel(exercise.skill_type)}
             </Badge>
             <Badge variant="outline" className="capitalize">{exercise.difficulty_level}</Badge>
             {exercise.is_official && (
@@ -155,16 +165,16 @@ export default function ExerciseDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Thông tin bài tập</CardTitle>
+                <CardTitle>{t('exercise_information')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
                     <Clock className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Thời gian</p>
+                      <p className="text-sm text-muted-foreground">{t('time_limit')}</p>
                       <p className="font-medium">
-                        {exercise.time_limit_minutes ? `${exercise.time_limit_minutes} phút` : 'Không giới hạn'}
+                        {exercise.time_limit_minutes ? `${exercise.time_limit_minutes} ${t('minutes')}` : t('no_time_limit')}
                       </p>
                     </div>
                   </div>
@@ -172,17 +182,17 @@ export default function ExerciseDetailPage() {
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Số câu hỏi</p>
-                      <p className="font-medium">{totalQuestions} câu</p>
+                      <p className="text-sm text-muted-foreground">{t('number_of_questions')}</p>
+                      <p className="font-medium">{totalQuestions} {t('questions')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
                     <Target className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Điểm tối đa</p>
+                      <p className="text-sm text-muted-foreground">{t('maximum_score')}</p>
                       <p className="font-medium">
-                        {exercise.total_points || exercise.max_score || totalQuestions} điểm
+                        {exercise.total_points || exercise.max_score || totalQuestions} {t('points')}
                       </p>
                     </div>
                   </div>
@@ -190,8 +200,8 @@ export default function ExerciseDetailPage() {
                   <div className="flex items-center gap-3">
                     <BookOpen className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Số phần</p>
-                      <p className="font-medium">{sections.length} phần</p>
+                      <p className="text-sm text-muted-foreground">{t('number_of_sections')}</p>
+                      <p className="font-medium">{sections.length} {t('sections')}</p>
                     </div>
                   </div>
                 </div>
@@ -200,7 +210,7 @@ export default function ExerciseDetailPage() {
                   <>
                     <Separator />
                     <div>
-                      <h4 className="font-semibold mb-2">Hướng dẫn</h4>
+                      <h4 className="font-semibold mb-2">{t('instructions')}</h4>
                       <div 
                         className="prose prose-sm max-w-none text-muted-foreground"
                         dangerouslySetInnerHTML={{ __html: exercise.instructions }}
@@ -213,9 +223,9 @@ export default function ExerciseDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Cấu trúc bài tập</CardTitle>
+                <CardTitle>{t('exercise_structure')}</CardTitle>
                 <CardDescription>
-                  {sections.length} phần với tổng {totalQuestions} câu hỏi
+                  {t('sections_with_total_questions', { sections: sections.length.toString(), total: totalQuestions.toString() })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -243,14 +253,14 @@ export default function ExerciseDetailPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>{questionCount} câu</span>
+                            <span>{questionCount} {t('questions')}</span>
                           </div>
                         </div>
                       )
                     })
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Chưa có phần nào
+                      {t('no_sections_yet')}
                     </p>
                   )}
                 </div>
@@ -259,25 +269,25 @@ export default function ExerciseDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Lưu ý khi làm bài</CardTitle>
+                <CardTitle>{t('important_notes')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
-                    <span>Đọc kỹ hướng dẫn của từng phần trước khi bắt đầu</span>
+                    <span>{t('read_instructions_carefully')}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
-                    <span>Quản lý thời gian hợp lý cho từng phần</span>
+                    <span>{t('manage_time_effectively')}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
-                    <span>Kiểm tra lại câu trả lời trước khi nộp bài</span>
+                    <span>{t('review_answers_before_submit')}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 text-green-500" />
-                    <span>Bạn có thể lưu nháp và tiếp tục sau</span>
+                    <span>{t('save_draft_and_continue')}</span>
                   </li>
                 </ul>
               </CardContent>
@@ -287,7 +297,7 @@ export default function ExerciseDetailPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Bắt đầu làm bài</CardTitle>
+                <CardTitle>{t('start_exercise')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button 
@@ -299,20 +309,20 @@ export default function ExerciseDetailPage() {
                   {starting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Đang chuẩn bị...
+                      {t('preparing')}
                     </>
                   ) : (
                     <>
                       <PlayCircle className="w-4 h-4 mr-2" />
-                      Bắt đầu làm bài
+                      {t('start_exercise')}
                     </>
                   )}
                 </Button>
                 
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p>• Thời gian: {exercise.time_limit_minutes ? `${exercise.time_limit_minutes} phút` : 'Không giới hạn'}</p>
-                  <p>• Số câu: {totalQuestions} câu hỏi</p>
-                  <p>• Có thể làm lại nhiều lần</p>
+                  <p>• {t('time_limit')}: {exercise.time_limit_minutes ? `${exercise.time_limit_minutes} ${t('minutes')}` : t('no_time_limit')}</p>
+                  <p>• {t('number_of_questions')}: {totalQuestions} {t('questions')}</p>
+                  <p>• {t('can_retry_multiple_times')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -320,19 +330,19 @@ export default function ExerciseDetailPage() {
             {(exercise.total_attempts || exercise.average_score) && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Thống kê</CardTitle>
+                  <CardTitle>{t('statistics')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {exercise.total_attempts !== null && exercise.total_attempts !== undefined && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Số lượt làm</span>
+                      <span className="text-sm text-muted-foreground">{t('total_attempts_count')}</span>
                       <span className="font-semibold">{exercise.total_attempts}</span>
                     </div>
                   )}
 
                   {exercise.average_score !== null && exercise.average_score !== undefined && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Điểm trung bình</span>
+                      <span className="text-sm text-muted-foreground">{t('average_score')}</span>
                       <span className="font-semibold text-primary">
                         {exercise.average_score.toFixed(1)}/{exercise.total_points || totalQuestions}
                       </span>
@@ -344,27 +354,27 @@ export default function ExerciseDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Thông tin chi tiết</CardTitle>
+                <CardTitle>{t('exercise_details')}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Loại kỹ năng:</span>
+                  <span className="text-muted-foreground">{t('skill_type_label')}</span>
                   <span className="font-medium">{exercise.skill_type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Độ khó:</span>
+                  <span className="text-muted-foreground">{t('difficulty_level_label')}</span>
                   <span className="font-medium">{exercise.difficulty_level}</span>
                 </div>
                 {exercise.target_band_score && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Band điểm:</span>
+                    <span className="text-muted-foreground">{t('band_score_label')}</span>
                     <span className="font-medium">{exercise.target_band_score}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Trạng thái:</span>
+                  <span className="text-muted-foreground">{t('status_label')}</span>
                   <Badge variant={exercise.is_published ? "default" : "secondary"}>
-                    {exercise.is_published ? "Đã xuất bản" : "Nháp"}
+                    {exercise.is_published ? t('published') : t('draft')}
                   </Badge>
                 </div>
               </CardContent>

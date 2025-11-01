@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { Course } from "@/types"
 import { formatDuration, formatNumber } from "@/lib/utils/format"
+import { useTranslations } from '@/lib/i18n'
 
 interface CourseCardProps {
   course: Course
@@ -16,6 +17,10 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, showProgress, progress }: CourseCardProps) {
+
+  const t = useTranslations('common')
+  const tCourses = useTranslations('courses')
+
   const skillColors: Record<string, string> = {
     listening: "bg-blue-500",
     reading: "bg-green-500",
@@ -55,10 +60,10 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
           )}
           <div className="absolute top-3 left-3 flex gap-2">
             <Badge className={skillColors[skillType.toLowerCase()] || skillColors.general}>
-              {skillType.toUpperCase()}
+              {t(skillType.toLowerCase() || 'general').toUpperCase()}
             </Badge>
             <Badge className={levelColors[level.toLowerCase()] || levelColors.beginner} variant="secondary">
-              {level.toUpperCase()}
+              {t(level.toLowerCase() || 'beginner').toUpperCase()}
             </Badge>
           </div>
           {(enrollmentType === "premium" || enrollmentType === "PAID") && course.price > 0 && (
@@ -103,7 +108,7 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
         <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <BookOpen className="w-4 h-4" />
-            <span>{course.total_lessons || course.lessonCount || 0} lessons</span>
+            <span>{course.total_lessons || course.lessonCount || 0} {tCourses('lessons')}</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
@@ -114,7 +119,7 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
         {showProgress && progress !== undefined && (
           <div className="mt-3">
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Progress</span>
+              <span className="text-muted-foreground">{t('progress')}</span>
               <span className="font-medium">{progress}%</span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
@@ -126,7 +131,7 @@ export function CourseCard({ course, showProgress, progress }: CourseCardProps) 
 
       <CardFooter className="p-4 pt-0">
         <Button asChild className="w-full">
-          <Link href={`/courses/${course.id}`}>{showProgress ? "Continue Learning" : "View Course"}</Link>
+          <Link href={`/courses/${course.id}`}>{showProgress ? t('continue_learning') : t('view_course')}</Link>
         </Button>
       </CardFooter>
     </Card>

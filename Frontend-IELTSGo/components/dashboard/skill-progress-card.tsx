@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { SkillType } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 interface SkillProgressCardProps {
   skill: SkillType
@@ -29,6 +30,7 @@ const skillConfig: Record<SkillType, { label: string; color: string }> = {
 }
 
 export function SkillProgressCard({ skill, currentScore, targetScore, exercisesCompleted }: SkillProgressCardProps) {
+  const t = useTranslations('common')
   const config = skillConfig[skill]
   
   // Ensure valid numbers to prevent NaN
@@ -37,24 +39,33 @@ export function SkillProgressCard({ skill, currentScore, targetScore, exercisesC
   const validExercisesCompleted = typeof exercisesCompleted === 'number' && !isNaN(exercisesCompleted) ? exercisesCompleted : 0
   
   const progress = validTargetScore > 0 ? (validCurrentScore / validTargetScore) * 100 : 0
+  
+  // Translate skill label
+  const skillLabelMap: Record<SkillType, string> = {
+    LISTENING: t('listening'),
+    READING: t('reading'),
+    WRITING: t('writing'),
+    SPEAKING: t('speaking'),
+  }
+  const translatedLabel = skillLabelMap[skill] || config?.label || 'Unknown'
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
-          <span>{config?.label || 'Unknown'}</span>
+          <span>{translatedLabel}</span>
           <span className="text-2xl font-bold">{validCurrentScore.toFixed(1)}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Progress to target</span>
+            <span>{t('progress_to_target')}</span>
             <span>{validTargetScore.toFixed(1)}</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        <div className="text-sm text-muted-foreground">{validExercisesCompleted} exercises completed</div>
+        <div className="text-sm text-muted-foreground">{validExercisesCompleted} {t('exercises')} {t('completed')}</div>
       </CardContent>
     </Card>
   )

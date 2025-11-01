@@ -18,8 +18,13 @@ import type { Course, Module, LessonProgress } from "@/types"
 import { formatDuration, formatNumber } from "@/lib/utils/format"
 import { ReviewList } from "@/components/course/review-list"
 import { ReviewForm } from "@/components/course/review-form"
+import { useTranslations } from '@/lib/i18n'
 
 export default function CourseDetailPage() {
+
+  const tCourses = useTranslations('courses')
+  const t = useTranslations('common')
+
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
@@ -158,8 +163,8 @@ export default function CourseDetailPage() {
     return (
       <AppLayout>
         <PageContainer className="py-20 text-center">
-          <h1 className="text-2xl font-bold mb-4">Course not found</h1>
-          <Button onClick={() => router.push("/courses")}>Back to Courses</Button>
+          <h1 className="text-2xl font-bold mb-4">{tCourses('course_not_found')}</h1>
+          <Button onClick={() => router.push("/courses")}>{tCourses('back_to_courses')}</Button>
         </PageContainer>
       </AppLayout>
     )
@@ -197,10 +202,10 @@ export default function CourseDetailPage() {
             <div className="lg:col-span-2">
               <div className="flex gap-3 mb-4">
                 <Badge className={skillColors[(course.skill_type || course.skillType || 'listening').toUpperCase()]}>
-                  {(course.skill_type || course.skillType || 'listening').toUpperCase()}
+                  {t((course.skill_type || course.skillType || 'listening').toLowerCase()).toUpperCase()}
                 </Badge>
                 <Badge className={levelColors[(course.level || 'beginner').toUpperCase()]} variant="secondary">
-                  {(course.level || 'beginner').toUpperCase()}
+                  {t((course.level || 'beginner').toLowerCase()).toUpperCase()}
                 </Badge>
               </div>
 
@@ -211,11 +216,11 @@ export default function CourseDetailPage() {
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                   <span className="font-semibold">{(course.average_rating || course.rating || 0).toFixed(1)}</span>
-                  <span className="text-muted-foreground">({formatNumber(course.total_reviews || course.reviewCount || 0)} reviews)</span>
+                  <span className="text-muted-foreground">({formatNumber(course.total_reviews || course.reviewCount || 0)} {tCourses('reviews')})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-muted-foreground" />
-                  <span>{formatNumber(course.total_enrollments || course.enrollmentCount || 0)} students</span>
+                  <span>{formatNumber(course.total_enrollments || course.enrollmentCount || 0)} {t('students')}</span>
                 </div>
               </div>
 
@@ -225,7 +230,7 @@ export default function CourseDetailPage() {
                     <span className="text-lg font-semibold text-primary">{course.instructor_name.charAt(0)}</span>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Instructor</p>
+                    <p className="text-sm text-muted-foreground">{tCourses('instructor')}</p>
                     <p className="font-semibold">{course.instructor_name}</p>
                   </div>
                 </div>
@@ -295,19 +300,19 @@ export default function CourseDetailPage() {
 
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Duration</span>
+                      <span className="text-muted-foreground">{tCourses('duration')}</span>
                       <span className="font-medium">{formatDuration((course.duration_hours || course.duration || 0) * 3600)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Lessons</span>
-                      <span className="font-medium">{course.total_lessons || course.lessonCount || 0} lessons</span>
+                      <span className="text-muted-foreground">{tCourses('lessons')}</span>
+                      <span className="font-medium">{course.total_lessons || course.lessonCount || 0} {tCourses('lesson_plural')}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Level</span>
+                      <span className="text-muted-foreground">{tCourses('level')}</span>
                       <span className="font-medium">{course.level}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Skill</span>
+                      <span className="text-muted-foreground">{tCourses('skill')}</span>
                       <span className="font-medium capitalize">{course.skill_type || course.skillType}</span>
                     </div>
                   </div>
@@ -321,24 +326,24 @@ export default function CourseDetailPage() {
       <PageContainer>
         <Tabs defaultValue="curriculum" className="w-full">
           <TabsList className="grid w-full max-w-3xl grid-cols-3">
-            <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
-            <TabsTrigger value="about">About</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="curriculum">{tCourses('curriculum')}</TabsTrigger>
+            <TabsTrigger value="about">{tCourses('about')}</TabsTrigger>
+            <TabsTrigger value="reviews">{tCourses('reviews')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="curriculum" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Nội dung khóa học</CardTitle>
+                <CardTitle>{tCourses('course_content')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {modules.length === 0 ? (
                   <div className="text-center py-12">
                     <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-semibold mb-2">Nội dung đang được cập nhật</p>
+                    <p className="text-lg font-semibold mb-2">{tCourses('content_being_updated')}</p>
                     <p className="text-sm text-muted-foreground">
-                      Khóa học này sẽ có {course.total_lessons || course.lessonCount || 0} bài học. 
-                      Nội dung đang được chuẩn bị và sẽ sớm được cập nhật.
+                      {tCourses('course_will_have_lessons', { count: (course.total_lessons || course.lessonCount || 0).toString() })}
+                      {' '}{tCourses('content_being_prepared')}
                     </p>
                   </div>
                 ) : (
@@ -349,10 +354,10 @@ export default function CourseDetailPage() {
                           <div className="flex items-center justify-between w-full pr-4">
                             <span className="font-semibold">{module.title}</span>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                              <span>{module.lessons?.length || 0} bài học</span>
+                              <span>{module.lessons?.length || 0} {tCourses('lesson_plural')}</span>
                               {(module.exercises?.length || 0) > 0 && (
                                 <span className="text-pink-600 dark:text-pink-400">
-                                  • {module.exercises?.length || 0} bài tập
+                                  • {module.exercises?.length || 0} {tCourses('exercise_plural')}
                                 </span>
                               )}
                             </div>
@@ -364,7 +369,7 @@ export default function CourseDetailPage() {
                           {module.lessons && module.lessons.length > 0 && (
                             <div className="space-y-2">
                               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3">
-                                📚 Lessons
+                                📚 {tCourses('lessons')}
                               </h4>
                               {module.lessons.map((lesson) => {
                                 const contentType = (lesson.content_type || lesson.contentType || 'video').toUpperCase()
@@ -388,7 +393,7 @@ export default function CourseDetailPage() {
                                   if (isEnrolled || isPreview) {
                                     router.push(`/courses/${params.courseId}/lessons/${lesson.id}`)
                                   } else {
-                                    alert('Vui lòng đăng ký khóa học để xem bài học này')
+                                    alert(tCourses('please_enroll_to_view_lesson'))
                                   }
                                 }
 
@@ -421,7 +426,7 @@ export default function CourseDetailPage() {
                                             {formatDuration(durationSeconds)}
                                           </span>
                                         )}
-                                        {isPreview && <Badge variant="outline">Preview</Badge>}
+                                        {isPreview && <Badge variant="outline">{tCourses('preview')}</Badge>}
                                       </div>
                                     </div>
                                     {/* ✅ Progress bar */}
@@ -443,14 +448,14 @@ export default function CourseDetailPage() {
                           {module.exercises && module.exercises.length > 0 && (
                             <div className="space-y-2">
                               <h4 className="text-xs font-semibold text-pink-600 dark:text-pink-400 uppercase tracking-wide px-3">
-                                ✍️ Practice Exercises
+                                ✍️ {tCourses('practice_exercises')}
                               </h4>
                               {module.exercises.map((exercise) => {
                                 const handleExerciseClick = () => {
                                   if (isEnrolled || exercise.is_free) {
                                     router.push(`/exercises/${exercise.id}`)
                                   } else {
-                                    alert('Vui lòng đăng ký khóa học để làm bài tập này')
+                                    alert(tCourses('please_enroll_to_take_exercise'))
                                   }
                                 }
 
@@ -478,11 +483,11 @@ export default function CourseDetailPage() {
                                     </div>
                                     <div className="flex items-center gap-3">
                                       <div className="text-xs text-pink-600 dark:text-pink-400 font-medium flex items-center gap-2">
-                                        <span>{exercise.total_questions} Qs</span>
+                                        <span>{exercise.total_questions} {tCourses('questions_short')}</span>
                                         {exercise.time_limit_minutes && (
                                           <>
                                             <span>•</span>
-                                            <span>{exercise.time_limit_minutes}m</span>
+                                            <span>{exercise.time_limit_minutes}{tCourses('minutes_short')}</span>
                                           </>
                                         )}
                                       </div>
@@ -505,12 +510,12 @@ export default function CourseDetailPage() {
           <TabsContent value="about" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Về khóa học này</CardTitle>
+                <CardTitle>{tCourses('about_this_course')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm max-w-none">
                   <p>{course.description || course.short_description}</p>
-                  <h3 className="font-semibold mt-6 mb-3">Bạn sẽ học được gì</h3>
+                  <h3 className="font-semibold mt-6 mb-3">{tCourses('what_you_will_learn')}</h3>
                   <ul className="space-y-3 text-muted-foreground">
                     <li>Nắm vững các kỹ thuật {(course.skill_type || course.skillType || 'IELTS').toLowerCase()} cần thiết cho IELTS</li>
                     <li>Thực hành với tài liệu chính thống</li>

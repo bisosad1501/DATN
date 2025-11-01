@@ -1,4 +1,7 @@
+"use client"
+
 import { cn } from "@/lib/utils"
+import { useTranslations } from '@/lib/i18n'
 
 interface BrandTextProps {
   className?: string
@@ -12,6 +15,7 @@ interface BrandTextProps {
  * - Go: màu đỏ (#ED372A)
  */
 export function BrandText({ className = "", variant = "default", size = "md" }: BrandTextProps) {
+  const t = useTranslations('common')
   // In dark mode, use white/s Foreground colors. In light mode, use brand colors.
   const ieltsColor = variant === "white" 
     ? "text-white" 
@@ -42,7 +46,7 @@ export function BrandText({ className = "", variant = "default", size = "md" }: 
       className={cn("font-heading font-bold inline-flex items-center", sizeClass, className)} 
       style={{ lineHeight: 'inherit' }}
     >
-      <span className={ieltsColor} style={innerSpanStyle}>IELTS</span>
+      <span className={ieltsColor} style={innerSpanStyle}>{t('ielts')}</span>
       <span className={goColor} style={innerSpanStyle}>Go</span>
     </span>
   )

@@ -14,12 +14,16 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useTranslations } from '@/lib/i18n'
 
 interface AdminHeaderProps {
   breadcrumbs?: { label: string; href?: string }[]
 }
 
 export function AdminHeader({ breadcrumbs }: AdminHeaderProps) {
+
+  const t = useTranslations('common')
+
   const { user, logout } = useAuth()
   const router = useRouter()
 
@@ -53,7 +57,7 @@ export function AdminHeader({ breadcrumbs }: AdminHeaderProps) {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#101615]/40" />
             <Input 
               type="search" 
-              placeholder="Search users, courses, exercises..." 
+              placeholder={t('search_users_courses_exercises')} 
               className="pl-10 bg-[#FEF7EC]/50 border-[#ED372A]/20 focus:bg-white focus:border-[#ED372A]" 
             />
           </div>
@@ -81,7 +85,7 @@ export function AdminHeader({ breadcrumbs }: AdminHeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('admin_account')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <User className="mr-2 h-4 w-4" />

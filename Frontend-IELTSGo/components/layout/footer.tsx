@@ -1,26 +1,31 @@
+"use client"
+
 import Link from "next/link"
 import { Logo } from "./logo"
 import { APP_CONFIG } from "@/lib/constants/config"
-
-const FOOTER_LINKS = {
-  product: [
-    { title: "Khóa học", href: "/courses" },
-    { title: "Luyện tập", href: "/exercises" },
-    { title: "Bảng xếp hạng", href: "/leaderboard" },
-  ],
-  company: [
-    { title: "Về chúng tôi", href: "/about" },
-    { title: "Liên hệ", href: "/contact" },
-    { title: "Blog", href: "/blog" },
-  ],
-  legal: [
-    { title: "Điều khoản", href: "/terms" },
-    { title: "Chính sách", href: "/privacy" },
-    { title: "Cookies", href: "/cookies" },
-  ],
-}
+import { useTranslations } from "@/lib/i18n"
 
 export function Footer() {
+  const t = useTranslations('common')
+  const tFooter = useTranslations('footer')
+  
+  const FOOTER_LINKS = {
+    product: [
+      { title: t('courses'), href: "/courses" },
+      { title: t('exercises'), href: "/exercises" },
+      { title: t('leaderboard'), href: "/leaderboard" },
+    ],
+    company: [
+      { title: tFooter('aboutUs'), href: "/about" },
+      { title: tFooter('contact'), href: "/contact" },
+      { title: tFooter('blog'), href: "/blog" },
+    ],
+    legal: [
+      { title: tFooter('terms'), href: "/terms" },
+      { title: tFooter('privacy'), href: "/privacy" },
+      { title: tFooter('cookies'), href: "/cookies" },
+    ],
+  }
   return (
     <footer className="border-t border-border/40 bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
@@ -29,13 +34,13 @@ export function Footer() {
           <div className="lg:col-span-2 space-y-3">
             <Logo className="mb-3" />
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {APP_CONFIG.description}. Học IELTS hiệu quả với phương pháp hiện đại và giáo viên chuyên nghiệp.
+              {tFooter('description')}
             </p>
           </div>
 
           {/* Links sections */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold mb-2">Sản phẩm</h3>
+            <h3 className="text-sm font-semibold mb-2">{tFooter('product')}</h3>
             <ul className="space-y-1.5">
               {FOOTER_LINKS.product.map((link) => (
                 <li key={link.href}>
@@ -48,7 +53,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold mb-2">Công ty</h3>
+            <h3 className="text-sm font-semibold mb-2">{tFooter('company')}</h3>
             <ul className="space-y-1.5">
               {FOOTER_LINKS.company.map((link) => (
                 <li key={link.href}>
@@ -61,7 +66,7 @@ export function Footer() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold mb-2">Pháp lý</h3>
+            <h3 className="text-sm font-semibold mb-2">{tFooter('legal')}</h3>
             <ul className="space-y-1.5">
               {FOOTER_LINKS.legal.map((link) => (
                 <li key={link.href}>

@@ -7,8 +7,12 @@ import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
 import { useState, useEffect } from "react"
 import { progressApi } from "@/lib/api/progress"
 import { Button } from "@/components/ui/button"
+import { useTranslations } from '@/lib/i18n'
 
 export default function HistoryPage() {
+
+  const t = useTranslations('common')
+
   return (
     <ProtectedRoute>
       <HistoryContent />
@@ -54,15 +58,15 @@ function HistoryContent() {
     <AppLayout showSidebar={true} showFooter={false}>
       <PageContainer maxWidth="4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Study History</h1>
-          <p className="text-muted-foreground">Complete log of your learning activities</p>
+          <h1 className="text-3xl font-bold mb-2">{t('study_history')}</h1>
+          <p className="text-muted-foreground">{t('complete_log_of_your_learning_activities')}</p>
         </div>
 
         {loading && page === 1 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading history...</p>
+              <p className="text-muted-foreground">{t('loading_history')}</p>
             </div>
           </div>
         ) : (

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { SIDEBAR_NAV_ITEMS } from "@/lib/constants/navigation"
+import { useSidebarNavItems } from "@/components/navigation/all-nav-items"
 import { cn } from "@/lib/utils"
 import * as Icons from "lucide-react"
 
@@ -18,6 +18,7 @@ interface SidebarProps {
 export function Sidebar({ className, defaultCollapsed = false }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
+  const SIDEBAR_NAV_ITEMS = useSidebarNavItems()
 
   return (
     <aside

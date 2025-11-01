@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { cn } from "@/lib/utils"
+import { useTranslations } from '@/lib/i18n'
 
 interface PageContainerProps {
   children: React.ReactNode
@@ -34,7 +35,7 @@ const maxWidthClasses = {
  * @example
  * ```tsx
  * <PageContainer>
- *   <h1>Page Title</h1>
+ *   <h1>{t('page_title')}</h1>
  * </PageContainer>
  * ```
  * 
@@ -51,6 +52,9 @@ export function PageContainer({
   maxWidth,
   variant = "default"
 }: PageContainerProps) {
+
+  const t = useTranslations('common')
+
   // Variant-based max width (if maxWidth prop not provided)
   const variantMaxWidth = variant === "narrow" ? "4xl" : variant === "wide" ? "7xl" : undefined
   const finalMaxWidth = maxWidth || variantMaxWidth

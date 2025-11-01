@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, Clock, Target, TrendingUp, Eye, Calendar } from "lucide-react"
 import { exercisesApi } from "@/lib/api/exercises"
 import type { Submission, Exercise } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 interface SubmissionWithExercise {
   submission: Submission
@@ -17,6 +18,10 @@ interface SubmissionWithExercise {
 }
 
 export default function ExerciseHistoryPage() {
+
+  const t = useTranslations('exercises')
+  const tCommon = useTranslations('common')
+
   const router = useRouter()
   const [submissions, setSubmissions] = useState<SubmissionWithExercise[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,9 +86,9 @@ export default function ExerciseHistoryPage() {
       <PageContainer>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Exercise History</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('my_exercise_history')}</h1>
           <p className="text-muted-foreground">
-            View all your completed and in-progress exercises
+            {t('history_description')}
           </p>
         </div>
 
@@ -94,7 +99,7 @@ export default function ExerciseHistoryPage() {
               <div className="flex items-center gap-3">
                 <Target className="w-8 h-8 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Attempts</p>
+                  <p className="text-sm text-muted-foreground">{t('total_attempts')}</p>
                   <p className="text-2xl font-bold">{total}</p>
                 </div>
               </div>
@@ -105,7 +110,7 @@ export default function ExerciseHistoryPage() {
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-8 h-8 text-green-600" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Completed</p>
+                  <p className="text-sm text-muted-foreground">{tCommon('completed')}</p>
                   <p className="text-2xl font-bold">
                     {submissions.filter((s) => s.submission.status === "completed").length}
                   </p>
@@ -118,7 +123,7 @@ export default function ExerciseHistoryPage() {
               <div className="flex items-center gap-3">
                 <Clock className="w-8 h-8 text-yellow-600" />
                 <div>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
+                  <p className="text-sm text-muted-foreground">{tCommon('in_progress')}</p>
                   <p className="text-2xl font-bold">
                     {submissions.filter((s) => s.submission.status === "in_progress").length}
                   </p>
@@ -131,7 +136,7 @@ export default function ExerciseHistoryPage() {
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-8 h-8 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Avg Score</p>
+                  <p className="text-sm text-muted-foreground">{t('avg_score')}</p>
                   <p className="text-2xl font-bold">
                     {submissions.length > 0
                       ? (
@@ -140,7 +145,7 @@ export default function ExerciseHistoryPage() {
                             .reduce((sum, s) => sum + (s.submission.score || 0), 0) /
                           submissions.filter((s) => s.submission.score !== undefined).length
                         ).toFixed(1)
-                      : "N/A"}
+                      : t('not_available')}
                   </p>
                 </div>
               </div>
@@ -157,9 +162,9 @@ export default function ExerciseHistoryPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                You haven't attempted any exercises yet.
+                {t('no_attempts_yet')}
               </p>
-              <Button onClick={() => router.push("/exercises/list")}>Browse Exercises</Button>
+              <Button onClick={() => router.push("/exercises/list")}>{t('browse_exercises')}</Button>
             </CardContent>
           </Card>
         ) : (
@@ -190,13 +195,19 @@ export default function ExerciseHistoryPage() {
                           {formatDate(submission.started_at)}
                           {submission.completed_at && (
                             <span className="ml-2">
-                              • Completed: {formatDate(submission.completed_at)}
+                              • {t('completed_label')} {formatDate(submission.completed_at)}
                             </span>
                           )}
                         </CardDescription>
                       </div>
                       <Badge className={getStatusColor(submission.status)}>
-                        {submission.status.replace("_", " ")}
+                        {submission.status === "completed" 
+                          ? t('status_completed')
+                          : submission.status === "in_progress"
+                          ? t('status_in_progress')
+                          : submission.status === "abandoned"
+                          ? t('status_abandoned')
+                          : submission.status.replace("_", " ")}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -204,21 +215,21 @@ export default function ExerciseHistoryPage() {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       {/* Attempt Number */}
                       <div>
-                        <p className="text-sm text-muted-foreground">Attempt</p>
+                        <p className="text-sm text-muted-foreground">{t('attempt')}</p>
                         <p className="text-lg font-semibold">#{submission.attempt_number}</p>
                       </div>
 
                       {/* Score */}
                       {submission.status === "completed" && submission.score !== undefined ? (
                         <div>
-                          <p className="text-sm text-muted-foreground">Score</p>
+                          <p className="text-sm text-muted-foreground">{t('score')}</p>
                           <p className={`text-lg font-semibold ${getScoreColor(percentage)}`}>
                             {submission.score}/{submission.total_questions}
                           </p>
                         </div>
                       ) : (
                         <div>
-                          <p className="text-sm text-muted-foreground">Progress</p>
+                          <p className="text-sm text-muted-foreground">{t('progress')}</p>
                           <p className="text-lg font-semibold">
                             {submission.questions_answered}/{submission.total_questions}
                           </p>
@@ -228,7 +239,7 @@ export default function ExerciseHistoryPage() {
                       {/* Percentage */}
                       {submission.status === "completed" && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Percentage</p>
+                          <p className="text-sm text-muted-foreground">{t('percentage')}</p>
                           <p className={`text-lg font-semibold ${getScoreColor(percentage)}`}>
                             {percentage.toFixed(1)}%
                           </p>
@@ -238,7 +249,7 @@ export default function ExerciseHistoryPage() {
                       {/* Band Score */}
                       {submission.band_score && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Band Score</p>
+                          <p className="text-sm text-muted-foreground">{t('band_score')}</p>
                           <p className="text-lg font-semibold text-primary">
                             {submission.band_score}
                           </p>
@@ -247,7 +258,7 @@ export default function ExerciseHistoryPage() {
 
                       {/* Time Spent */}
                       <div>
-                        <p className="text-sm text-muted-foreground">Time Spent</p>
+                        <p className="text-sm text-muted-foreground">{t('time_spent')}</p>
                         <p className="text-lg font-semibold">
                           {formatTime(submission.time_spent_seconds)}
                         </p>
@@ -269,7 +280,7 @@ export default function ExerciseHistoryPage() {
                         }}
                       >
                         <Eye className="w-4 h-4 mr-2" />
-                        {submission.status === "completed" ? "View Results" : "Continue"}
+                        {submission.status === "completed" ? t('view_results') : t('continue')}
                       </Button>
                     </div>
                   </CardContent>
@@ -287,17 +298,17 @@ export default function ExerciseHistoryPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
-              Previous
+              {tCommon('previous')}
             </Button>
             <span className="flex items-center px-4">
-              Page {page} of {Math.ceil(total / 20)}
+              {tCommon('page_of', { page: page.toString(), totalPages: Math.ceil(total / 20).toString() })}
             </span>
             <Button
               variant="outline"
               onClick={() => setPage((p) => p + 1)}
               disabled={page >= Math.ceil(total / 20)}
             >
-              Next
+              {tCommon('next')}
             </Button>
           </div>
         )}

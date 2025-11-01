@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import { Bell, Monitor, BookOpen, Lock, Save, Loader2, CheckCircle2, Clock, Settings } from "lucide-react"
 import type { UserPreferences, UpdatePreferencesRequest, NotificationPreferences, UpdateNotificationPreferencesRequest } from "@/types"
 import { notificationsApi } from "@/lib/api/notifications"
+import { useLocale, useTranslations } from "@/lib/i18n/hooks"
 
 export default function SettingsPage() {
   return (
@@ -28,6 +29,9 @@ export default function SettingsPage() {
 function SettingsContent() {
   const { user } = useAuth()
   const { preferences: contextPrefs, isLoading: contextLoading, updatePreferences: updateContextPrefs } = usePreferences()
+  const { setLocale } = useLocale()
+  const t = useTranslations("settings")
+  const tCommon = useTranslations("common")
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [originalPreferences, setOriginalPreferences] = useState<UserPreferences | null>(null)
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null)
@@ -93,6 +97,9 @@ function SettingsContent() {
       if (preferences.font_size !== originalPreferences.font_size) {
         updateData.font_size = preferences.font_size
       }
+      if (preferences.locale !== originalPreferences.locale) {
+        updateData.locale = preferences.locale
+      }
       if (preferences.auto_play_next_lesson !== originalPreferences.auto_play_next_lesson) {
         updateData.auto_play_next_lesson = preferences.auto_play_next_lesson
       }
@@ -119,6 +126,11 @@ function SettingsContent() {
 
       // Use context update which handles API call and state sync
       await updateContextPrefs(updateData)
+      
+      // If locale changed, update i18n store immediately
+      if (updateData.locale) {
+        setLocale(updateData.locale)
+      }
       
       // Also update notification preferences if changed
       if (notificationPreferences && originalNotificationPreferences) {
@@ -162,14 +174,14 @@ function SettingsContent() {
         }
       }
       
-      setSuccessMessage("Settings saved successfully!")
+      setSuccessMessage(t("saveSuccess"))
       setTimeout(() => setSuccessMessage(""), 3000)
       
       // Preferences will be updated via context useEffect
     } catch (error: any) {
-      setErrors({
-        general: error.response?.data?.error?.message || "Failed to save settings",
-      })
+        setErrors({
+          general: error.response?.data?.error?.message || t("saveError"),
+        })
     } finally {
       setIsSaving(false)
     }
@@ -181,8 +193,8 @@ function SettingsContent() {
         <div className="space-y-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight mb-2 text-foreground">Settings</h1>
-            <p className="text-base text-muted-foreground dark:text-muted-foreground">Manage your account settings and preferences</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 text-foreground">{t("title")}</h1>
+            <p className="text-base text-muted-foreground dark:text-muted-foreground">{t("description")}</p>
           </div>
 
           {/* Success Message */}
@@ -197,7 +209,7 @@ function SettingsContent() {
             <Card>
               <CardContent className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Loading settings...</span>
+                <span className="ml-2 text-muted-foreground">{tCommon("loading")}</span>
               </CardContent>
             </Card>
           ) : preferences ? (
@@ -207,22 +219,22 @@ function SettingsContent() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Bell className="h-5 w-5 text-primary" />
-                    <CardTitle>Notifications</CardTitle>
+                    <CardTitle>{t("notifications.title")}</CardTitle>
                   </div>
-                  <CardDescription>Manage how and when you receive notifications</CardDescription>
+                  <CardDescription>{t("notifications.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Master Switches */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Settings className="h-4 w-4 text-muted-foreground" />
-                      <Label className="text-base font-medium text-foreground dark:text-foreground">General Settings</Label>
+                      <Label className="text-base font-medium text-foreground dark:text-foreground">{t("notifications.general")}</Label>
                     </div>
                     
                     <div className="flex items-center justify-between py-2">
                       <div className="space-y-0.5 flex-1">
-                        <Label htmlFor="push_notifications" className="text-base text-foreground dark:text-foreground">Push Notifications</Label>
-                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">Enable push and in-app notifications</p>
+                        <Label htmlFor="push_notifications" className="text-base text-foreground dark:text-foreground">{t("notifications.pushNotifications")}</Label>
+                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">{t("notifications.pushNotificationsDesc")}</p>
                       </div>
                       <Switch
                         id="push_notifications"
@@ -245,8 +257,8 @@ function SettingsContent() {
 
                     <div className="flex items-center justify-between py-2">
                       <div className="space-y-0.5 flex-1">
-                        <Label htmlFor="email_notifications" className="text-base text-foreground dark:text-foreground">Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive notifications via email</p>
+                        <Label htmlFor="email_notifications" className="text-base text-foreground dark:text-foreground">{t("notifications.emailNotifications")}</Label>
+                        <p className="text-sm text-muted-foreground dark:text-muted-foreground">{t("notifications.emailNotificationsDesc")}</p>
                       </div>
                       <Switch
                         id="email_notifications"
@@ -265,14 +277,14 @@ function SettingsContent() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Bell className="h-4 w-4 text-muted-foreground" />
-                        <Label className="text-base font-medium text-foreground dark:text-foreground">What to Notify</Label>
+                        <Label className="text-base font-medium text-foreground dark:text-foreground">{t("notifications.whatToNotify")}</Label>
                       </div>
                       
                       <div className="space-y-3 pl-2">
                         <div className="flex items-center justify-between py-2">
                           <div className="space-y-0.5 flex-1">
-                            <Label htmlFor="push_achievements" className="text-sm text-foreground dark:text-foreground">Achievements</Label>
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">When you earn achievements</p>
+                            <Label htmlFor="push_achievements" className="text-sm text-foreground dark:text-foreground">{t("notifications.achievements")}</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">{t("notifications.achievementsDesc")}</p>
                           </div>
                           <Switch
                             id="push_achievements"
@@ -287,8 +299,8 @@ function SettingsContent() {
 
                         <div className="flex items-center justify-between py-2">
                           <div className="space-y-0.5 flex-1">
-                            <Label htmlFor="push_reminders" className="text-sm text-foreground dark:text-foreground">Reminders</Label>
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">Scheduled activity reminders</p>
+                            <Label htmlFor="push_reminders" className="text-sm text-foreground dark:text-foreground">{t("notifications.reminders")}</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">{t("notifications.remindersDesc")}</p>
                           </div>
                           <Switch
                             id="push_reminders"
@@ -303,8 +315,8 @@ function SettingsContent() {
 
                         <div className="flex items-center justify-between py-2">
                           <div className="space-y-0.5 flex-1">
-                            <Label htmlFor="push_course_updates" className="text-sm text-foreground dark:text-foreground">Course Updates</Label>
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">Changes to your courses</p>
+                            <Label htmlFor="push_course_updates" className="text-sm text-foreground dark:text-foreground">{t("notifications.courseUpdates")}</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">{t("notifications.courseUpdatesDesc")}</p>
                           </div>
                           <Switch
                             id="push_course_updates"
@@ -319,8 +331,8 @@ function SettingsContent() {
 
                         <div className="flex items-center justify-between py-2">
                           <div className="space-y-0.5 flex-1">
-                            <Label htmlFor="push_exercise_graded" className="text-sm text-foreground dark:text-foreground">Exercise Results</Label>
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">When exercises are graded</p>
+                            <Label htmlFor="push_exercise_graded" className="text-sm text-foreground dark:text-foreground">{t("notifications.exerciseResults")}</Label>
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">{t("notifications.exerciseResultsDesc")}</p>
                           </div>
                           <Switch
                             id="push_exercise_graded"
@@ -337,7 +349,7 @@ function SettingsContent() {
                   {notificationPreferences && !preferences.push_notifications && (
                     <div className="rounded-lg bg-muted/50 p-4 border border-border">
                       <p className="text-sm text-muted-foreground dark:text-muted-foreground text-center">
-                        Enable "Push Notifications" to customize notification types
+                        {t("notifications.enablePushToCustomize")}
                       </p>
                     </div>
                   )}
@@ -348,14 +360,14 @@ function SettingsContent() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <Label className="text-base font-medium text-foreground dark:text-foreground">Schedule</Label>
+                      <Label className="text-base font-medium text-foreground dark:text-foreground">{t("notifications.schedule")}</Label>
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between py-2">
                         <div className="space-y-0.5 flex-1">
-                          <Label htmlFor="study_reminders" className="text-base text-foreground dark:text-foreground">Study Reminders</Label>
-                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">Get reminded about your study schedule</p>
+                          <Label htmlFor="study_reminders" className="text-base text-foreground dark:text-foreground">{t("notifications.studyReminders")}</Label>
+                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">{t("notifications.studyRemindersDesc")}</p>
                         </div>
                         <Switch
                           id="study_reminders"
@@ -370,8 +382,8 @@ function SettingsContent() {
 
                       <div className="flex items-center justify-between py-2">
                         <div className="space-y-0.5 flex-1">
-                          <Label htmlFor="weekly_report" className="text-base text-foreground dark:text-foreground">Weekly Report</Label>
-                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">Receive weekly progress reports</p>
+                          <Label htmlFor="weekly_report" className="text-base text-foreground dark:text-foreground">{t("notifications.weeklyReport")}</Label>
+                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">{t("notifications.weeklyReportDesc")}</p>
                         </div>
                         <Switch
                           id="weekly_report"
@@ -388,8 +400,8 @@ function SettingsContent() {
 
                           <div className="flex items-center justify-between py-2">
                             <div className="space-y-0.5 flex-1">
-                              <Label htmlFor="quiet_hours_enabled" className="text-base text-foreground dark:text-foreground">Quiet Hours</Label>
-                              <p className="text-sm text-muted-foreground dark:text-muted-foreground">Pause notifications during specified hours</p>
+                              <Label htmlFor="quiet_hours_enabled" className="text-base text-foreground dark:text-foreground">{t("notifications.quietHours")}</Label>
+                              <p className="text-sm text-muted-foreground dark:text-muted-foreground">{t("notifications.quietHoursDesc")}</p>
                             </div>
                             <Switch
                               id="quiet_hours_enabled"
@@ -403,7 +415,7 @@ function SettingsContent() {
                           {notificationPreferences.quiet_hours_enabled && (
                             <div className="grid grid-cols-2 gap-4 mt-4 pl-2">
                               <div className="space-y-2">
-                                <Label htmlFor="quiet_hours_start" className="text-sm text-foreground dark:text-foreground">Start Time</Label>
+                                <Label htmlFor="quiet_hours_start" className="text-sm text-foreground dark:text-foreground">{t("notifications.startTime")}</Label>
                                 <input
                                   id="quiet_hours_start"
                                   type="time"
@@ -416,7 +428,7 @@ function SettingsContent() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor="quiet_hours_end" className="text-sm text-foreground dark:text-foreground">End Time</Label>
+                                <Label htmlFor="quiet_hours_end" className="text-sm text-foreground dark:text-foreground">{t("notifications.endTime")}</Label>
                                 <input
                                   id="quiet_hours_end"
                                   type="time"
@@ -441,10 +453,10 @@ function SettingsContent() {
                       <Separator className="my-4" />
 
                       <div className="space-y-4">
-                        <Label className="text-base font-medium text-foreground dark:text-foreground">Advanced</Label>
+                        <Label className="text-base font-medium text-foreground dark:text-foreground">{t("notifications.advanced")}</Label>
                         
                         <div className="space-y-2 pl-2">
-                          <Label htmlFor="max_notifications_per_day" className="text-sm text-foreground dark:text-foreground">Maximum Notifications Per Day</Label>
+                          <Label htmlFor="max_notifications_per_day" className="text-sm text-foreground dark:text-foreground">{t("notifications.maxNotificationsPerDay")}</Label>
                           <input
                             id="max_notifications_per_day"
                             type="number"
@@ -458,7 +470,7 @@ function SettingsContent() {
                             className="w-full md:w-[200px] px-3 py-2 border border-border rounded-md bg-background text-foreground"
                           />
                           <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                            Limit daily notifications (0 = unlimited)
+                            {t("notifications.maxNotificationsPerDayDesc")}
                           </p>
                         </div>
                       </div>
@@ -472,13 +484,13 @@ function SettingsContent() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Monitor className="h-5 w-5 text-primary" />
-                    <CardTitle>Display</CardTitle>
+                    <CardTitle>{t("display.title")}</CardTitle>
                   </div>
-                  <CardDescription>Customize your viewing experience</CardDescription>
+                  <CardDescription>{t("display.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="theme" className="text-base text-foreground dark:text-foreground">Theme</Label>
+                    <Label htmlFor="theme" className="text-base text-foreground dark:text-foreground">{t("display.theme")}</Label>
                     <Select
                       value={preferences.theme}
                       onValueChange={(value: "light" | "dark" | "auto") =>
@@ -489,19 +501,19 @@ function SettingsContent() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="light">Light</SelectItem>
-                        <SelectItem value="dark">Dark</SelectItem>
-                        <SelectItem value="auto">Auto (System)</SelectItem>
+                        <SelectItem value="light">{t("display.themeLight")}</SelectItem>
+                        <SelectItem value="dark">{t("display.themeDark")}</SelectItem>
+                        <SelectItem value="auto">{t("display.themeAuto")}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">Choose your preferred color theme</p>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">{t("display.themeDesc")}</p>
                   </div>
 
                   <Separator />
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="font_size" className="text-base font-medium text-foreground dark:text-foreground">Font Size</Label>
+                      <Label htmlFor="font_size" className="text-base font-medium text-foreground dark:text-foreground">{t("display.fontSize")}</Label>
                       <span className="text-sm text-muted-foreground dark:text-muted-foreground">
                         {preferences.font_size === "small" && "14px"}
                         {preferences.font_size === "medium" && "16px (Default)"}
@@ -521,44 +533,77 @@ function SettingsContent() {
                         <SelectItem value="small">
                           <span className="flex items-center gap-2">
                             <span className="text-xs">Aa</span>
-                            <span>Small (14px)</span>
+                            <span>{t("display.fontSizeSmall")}</span>
                           </span>
                         </SelectItem>
                         <SelectItem value="medium">
                           <span className="flex items-center gap-2">
                             <span className="text-sm">Aa</span>
-                            <span>Medium (16px)</span>
+                            <span>{t("display.fontSizeMedium")}</span>
                           </span>
                         </SelectItem>
                         <SelectItem value="large">
                           <span className="flex items-center gap-2">
                             <span className="text-base">Aa</span>
-                            <span>Large (18px)</span>
+                            <span>{t("display.fontSizeLarge")}</span>
                           </span>
                         </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    </SelectContent>
+                  </Select>
                     <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Adjust the text size for better readability. All text elements will scale proportionally.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                    {t("display.fontSizeDesc")}
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label htmlFor="locale" className="text-base text-foreground dark:text-foreground">{t("display.language")}</Label>
+                  <Select
+                    value={preferences.locale}
+                    onValueChange={(value: "vi" | "en") =>
+                      setPreferences({ ...preferences, locale: value })
+                    }
+                  >
+                    <SelectTrigger id="locale" className="w-full md:w-[300px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vi">
+                        <span className="flex items-center gap-2">
+                          <span>🇻🇳</span>
+                          <span>Tiếng Việt</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="en">
+                        <span className="flex items-center gap-2">
+                          <span>🇬🇧</span>
+                          <span>{t('settings.english')}</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                    {t("display.languageDesc")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
               {/* Study Preferences Section */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5 text-primary" />
-                    <CardTitle>Study Preferences</CardTitle>
+                    <CardTitle>{t("study.title")}</CardTitle>
                   </div>
-                  <CardDescription>Customize your learning experience</CardDescription>
+                  <CardDescription>{t("study.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="auto_play_next_lesson" className="text-base">Auto-play Next Lesson</Label>
-                      <p className="text-sm text-muted-foreground">Automatically start the next lesson after completion</p>
+                      <Label htmlFor="auto_play_next_lesson" className="text-base">{t("study.autoPlayNext")}</Label>
+                      <p className="text-sm text-muted-foreground">{t("study.autoPlayNextDesc")}</p>
                     </div>
                     <Switch
                       id="auto_play_next_lesson"
@@ -573,8 +618,8 @@ function SettingsContent() {
 
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="show_answer_explanation" className="text-base">Show Answer Explanations</Label>
-                      <p className="text-sm text-muted-foreground">Display explanations after answering questions</p>
+                      <Label htmlFor="show_answer_explanation" className="text-base">{t("study.showExplanations")}</Label>
+                      <p className="text-sm text-muted-foreground">{t("study.showExplanationsDesc")}</p>
                     </div>
                     <Switch
                       id="show_answer_explanation"
@@ -588,7 +633,7 @@ function SettingsContent() {
                   <Separator />
 
                   <div className="space-y-2">
-                    <Label htmlFor="playback_speed" className="text-base">Playback Speed</Label>
+                    <Label htmlFor="playback_speed" className="text-base">{t("study.playbackSpeed")}</Label>
                     <Select
                       value={preferences.playback_speed.toString()}
                       onValueChange={(value) =>
@@ -606,7 +651,7 @@ function SettingsContent() {
                         <SelectItem value="2.0">2.0x</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">Video playback speed for lessons</p>
+                    <p className="text-sm text-muted-foreground">{t("study.playbackSpeedDesc")}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -616,13 +661,13 @@ function SettingsContent() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Lock className="h-5 w-5 text-primary" />
-                    <CardTitle>Privacy</CardTitle>
+                    <CardTitle>{t("privacy.title")}</CardTitle>
                   </div>
-                  <CardDescription>Control your privacy settings</CardDescription>
+                  <CardDescription>{t("privacy.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="profile_visibility" className="text-base">Profile Visibility</Label>
+                    <Label htmlFor="profile_visibility" className="text-base">{t("privacy.profileVisibility")}</Label>
                     <Select
                       value={preferences.profile_visibility}
                       onValueChange={(value: "public" | "friends" | "private") =>
@@ -633,20 +678,20 @@ function SettingsContent() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="public">Public</SelectItem>
-                        <SelectItem value="friends">Friends Only</SelectItem>
-                        <SelectItem value="private">Private</SelectItem>
+                        <SelectItem value="public">{t("privacy.profileVisibilityPublic")}</SelectItem>
+                        <SelectItem value="friends">{t("privacy.profileVisibilityFriends")}</SelectItem>
+                        <SelectItem value="private">{t("privacy.profileVisibilityPrivate")}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">Control who can see your profile</p>
+                    <p className="text-sm text-muted-foreground">{t("privacy.profileVisibilityDesc")}</p>
                   </div>
 
                   <Separator />
 
                   <div className="flex items-center justify-between py-2">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="show_study_stats" className="text-base">Show Study Stats</Label>
-                      <p className="text-sm text-muted-foreground">Display your study statistics publicly</p>
+                      <Label htmlFor="show_study_stats" className="text-base">{t("privacy.showStudyStats")}</Label>
+                      <p className="text-sm text-muted-foreground">{t("privacy.showStudyStatsDesc")}</p>
                     </div>
                     <Switch
                       id="show_study_stats"
@@ -677,7 +722,7 @@ function SettingsContent() {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      Save Settings
+                      {t("saveButton")}
                     </>
                   )}
                 </Button>
@@ -686,7 +731,7 @@ function SettingsContent() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Failed to load settings</p>
+                <p className="text-muted-foreground">{t("loadError")}</p>
               </CardContent>
             </Card>
           )}

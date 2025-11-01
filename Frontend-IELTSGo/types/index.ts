@@ -65,6 +65,7 @@ export interface UserPreferences {
   weekly_report: boolean
   theme: "light" | "dark" | "auto"
   font_size: "small" | "medium" | "large"
+  locale: "vi" | "en"
   auto_play_next_lesson: boolean
   show_answer_explanation: boolean
   playback_speed: number // 0.75, 1.0, 1.25, 1.5, 2.0

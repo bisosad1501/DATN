@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Award, BookOpen, UserPlus, UserMinus, Trophy, Target, Zap, Lock } from "lucide-react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { userApi } from "@/lib/api/user"
+import { useTranslations } from '@/lib/i18n'
 
 interface UserProfile {
   id: string
@@ -42,6 +43,9 @@ interface Achievement {
 }
 
 export default function UserProfilePage() {
+
+  const t = useTranslations('common')
+
   const params = useParams()
   const userId = params.id as string
   const { user: currentUser } = useAuth()
@@ -187,7 +191,7 @@ export default function UserProfilePage() {
     return (
       <AppLayout showSidebar showFooter>
         <PageContainer>
-          <div className="text-center">Loading profile...</div>
+          <div className="text-center">{t('loading_profile')}</div>
         </PageContainer>
       </AppLayout>
     )
@@ -217,12 +221,12 @@ export default function UserProfilePage() {
                       {profile.isFollowing ? (
                         <>
                           <UserMinus className="h-4 w-4 mr-2" />
-                          Unfollow
+                          {t('unfollow')}
                         </>
                       ) : (
                         <>
                           <UserPlus className="h-4 w-4 mr-2" />
-                          Follow
+                          {t('follow')}
                         </>
                       )}
                     </Button>
@@ -232,14 +236,14 @@ export default function UserProfilePage() {
                 <div className="flex gap-6 text-sm">
                   <div>
                     <span className="font-semibold">{profile.followersCount}</span>
-                    <span className="text-muted-foreground ml-1">Followers</span>
+                    <span className="text-muted-foreground ml-1">{t('followers')}</span>
                   </div>
                   <div>
                     <span className="font-semibold">{profile.followingCount}</span>
-                    <span className="text-muted-foreground ml-1">Following</span>
+                    <span className="text-muted-foreground ml-1">{t('following')}</span>
                   </div>
                   <div>
-                    <Badge variant="secondary">Level {profile.level}</Badge>
+                    <Badge variant="secondary">{t('level')} {profile.level}</Badge>
                   </div>
                 </div>
               </div>
@@ -258,7 +262,7 @@ export default function UserProfilePage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{profile.points}</p>
-                    <p className="text-sm text-muted-foreground">Total Points</p>
+                    <p className="text-sm text-muted-foreground">{t('total_points')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -271,7 +275,7 @@ export default function UserProfilePage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{profile.coursesCompleted}</p>
-                    <p className="text-sm text-muted-foreground">Courses Completed</p>
+                    <p className="text-sm text-muted-foreground">{t('courses_completed')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -284,7 +288,7 @@ export default function UserProfilePage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{profile.exercisesCompleted}</p>
-                    <p className="text-sm text-muted-foreground">Exercises Done</p>
+                    <p className="text-sm text-muted-foreground">{t('exercises_done')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -297,7 +301,7 @@ export default function UserProfilePage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{profile.streak}</p>
-                    <p className="text-sm text-muted-foreground">Day Streak</p>
+                    <p className="text-sm text-muted-foreground">{t('day_streak')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -308,9 +312,9 @@ export default function UserProfilePage() {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Lock className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-semibold mb-2">Profile is Private</p>
+                <p className="text-lg font-semibold mb-2">{t('profile_is_private')}</p>
                 <p className="text-sm text-muted-foreground">
-                  This user has set their profile to private.
+                  {t('this_user_has_set_their_profile_to_private')}
                 </p>
               </div>
             </CardContent>
@@ -322,7 +326,7 @@ export default function UserProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="h-5 w-5" />
-              Achievements ({achievements.length})
+              {t('achievements')} ({achievements.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -335,7 +339,7 @@ export default function UserProfilePage() {
                       <h4 className="font-semibold mb-1">{achievement.title}</h4>
                       <p className="text-sm opacity-80 mb-2">{achievement.description}</p>
                       <p className="text-xs opacity-60">
-                        Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
+                        {t('unlocked')} {new Date(achievement.unlockedAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

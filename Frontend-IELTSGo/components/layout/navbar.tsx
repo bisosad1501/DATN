@@ -15,10 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Logo } from "./logo"
-import { MAIN_NAV_ITEMS } from "@/lib/constants/navigation"
+import { useNavItems } from "@/components/navigation/nav-items"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { NotificationBell } from "@/components/notifications/notification-bell"
+import { LanguageSelector } from "./language-selector"
+import { useTranslations } from "@/lib/i18n"
 
 interface NavbarProps {
   onMenuClick?: () => void
@@ -31,6 +33,8 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, isAuthenticated, logout } = useAuth()
+  const t = useTranslations('common')
+  const MAIN_NAV_ITEMS = useNavItems()
 
   const handleLogout = async () => {
     try {
@@ -89,6 +93,9 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
         <div className="flex items-center gap-3 flex-shrink-0">
           {isAuthenticated ? (
             <>
+              {/* Language Selector */}
+              <LanguageSelector />
+
               {/* Notifications */}
               <NotificationBell />
 
@@ -117,25 +124,25 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="cursor-pointer">
                       <BookOpen className="mr-2 h-4 w-4" />
-                      Dashboard
+                      {t('dashboard')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
-                      Profile
+                      {t('profile')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                      {t('settings')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
-                    Log out
+                    {t('logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -143,10 +150,10 @@ export function Navbar({ onMenuClick, showMenuButton = false, hideLogo = false, 
           ) : (
             <>
               <Button variant="ghost" asChild className="hidden md:inline-flex text-sm sm:text-base">
-                <Link href="/login">Sign in</Link>
+                <Link href="/login">{t('login')}</Link>
               </Button>
               <Button asChild className="text-sm sm:text-base">
-                <Link href="/register">Get started</Link>
+                <Link href="/register">{t('register')}</Link>
               </Button>
             </>
           )}

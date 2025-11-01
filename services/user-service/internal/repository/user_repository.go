@@ -913,7 +913,7 @@ func (r *UserRepository) CheckAchievementUnlocked(userID uuid.UUID, achievementI
 func (r *UserRepository) GetPreferences(userID uuid.UUID) (*models.UserPreferences, error) {
 	query := `
 		SELECT user_id, email_notifications, push_notifications, study_reminders, weekly_report, 
-		       theme, font_size, auto_play_next_lesson, show_answer_explanation, playback_speed, 
+		       theme, font_size, locale, auto_play_next_lesson, show_answer_explanation, playback_speed, 
 		       profile_visibility, show_study_stats, updated_at
 		FROM user_preferences
 		WHERE user_id = $1
@@ -921,7 +921,7 @@ func (r *UserRepository) GetPreferences(userID uuid.UUID) (*models.UserPreferenc
 	prefs := &models.UserPreferences{}
 	err := r.db.DB.QueryRow(query, userID).Scan(
 		&prefs.UserID, &prefs.EmailNotifications, &prefs.PushNotifications, &prefs.StudyReminders, &prefs.WeeklyReport,
-		&prefs.Theme, &prefs.FontSize, &prefs.AutoPlayNextLesson, &prefs.ShowAnswerExplanation, &prefs.PlaybackSpeed,
+		&prefs.Theme, &prefs.FontSize, &prefs.Locale, &prefs.AutoPlayNextLesson, &prefs.ShowAnswerExplanation, &prefs.PlaybackSpeed,
 		&prefs.ProfileVisibility, &prefs.ShowStudyStats, &prefs.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -938,17 +938,17 @@ func (r *UserRepository) GetPreferences(userID uuid.UUID) (*models.UserPreferenc
 func (r *UserRepository) CreateDefaultPreferences(userID uuid.UUID) (*models.UserPreferences, error) {
 	query := `
 		INSERT INTO user_preferences (user_id, email_notifications, push_notifications, study_reminders, weekly_report, 
-		                              theme, font_size, auto_play_next_lesson, show_answer_explanation, playback_speed, 
+		                              theme, font_size, locale, auto_play_next_lesson, show_answer_explanation, playback_speed, 
 		                              profile_visibility, show_study_stats, updated_at)
-		VALUES ($1, true, true, true, true, 'light', 'medium', true, true, 1.0, 'private', true, NOW())
+		VALUES ($1, true, true, true, true, 'light', 'medium', 'vi', true, true, 1.0, 'private', true, NOW())
 		RETURNING user_id, email_notifications, push_notifications, study_reminders, weekly_report, 
-		          theme, font_size, auto_play_next_lesson, show_answer_explanation, playback_speed, 
+		          theme, font_size, locale, auto_play_next_lesson, show_answer_explanation, playback_speed, 
 		          profile_visibility, show_study_stats, updated_at
 	`
 	prefs := &models.UserPreferences{}
 	err := r.db.DB.QueryRow(query, userID).Scan(
 		&prefs.UserID, &prefs.EmailNotifications, &prefs.PushNotifications, &prefs.StudyReminders, &prefs.WeeklyReport,
-		&prefs.Theme, &prefs.FontSize, &prefs.AutoPlayNextLesson, &prefs.ShowAnswerExplanation, &prefs.PlaybackSpeed,
+		&prefs.Theme, &prefs.FontSize, &prefs.Locale, &prefs.AutoPlayNextLesson, &prefs.ShowAnswerExplanation, &prefs.PlaybackSpeed,
 		&prefs.ProfileVisibility, &prefs.ShowStudyStats, &prefs.UpdatedAt,
 	)
 	if err != nil {
@@ -962,12 +962,12 @@ func (r *UserRepository) UpdatePreferences(prefs *models.UserPreferences) error 
 	query := `
 		UPDATE user_preferences
 		SET email_notifications = $1, push_notifications = $2, study_reminders = $3, weekly_report = $4, 
-		    theme = $5, font_size = $6, auto_play_next_lesson = $7, show_answer_explanation = $8, playback_speed = $9, 
-		    profile_visibility = $10, show_study_stats = $11, updated_at = NOW()
-		WHERE user_id = $12
+		    theme = $5, font_size = $6, locale = $7, auto_play_next_lesson = $8, show_answer_explanation = $9, playback_speed = $10, 
+		    profile_visibility = $11, show_study_stats = $12, updated_at = NOW()
+		WHERE user_id = $13
 	`
 	_, err := r.db.DB.Exec(query, prefs.EmailNotifications, prefs.PushNotifications, prefs.StudyReminders, prefs.WeeklyReport,
-		prefs.Theme, prefs.FontSize, prefs.AutoPlayNextLesson, prefs.ShowAnswerExplanation, prefs.PlaybackSpeed,
+		prefs.Theme, prefs.FontSize, prefs.Locale, prefs.AutoPlayNextLesson, prefs.ShowAnswerExplanation, prefs.PlaybackSpeed,
 		prefs.ProfileVisibility, prefs.ShowStudyStats, prefs.UserID)
 	if err != nil {
 		return fmt.Errorf("failed to update preferences: %w", err)

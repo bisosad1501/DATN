@@ -37,6 +37,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       // Apply preferences immediately
       applyTheme(prefs.theme)
       applyFontSize(prefs.font_size)
+      applyLocale(prefs.locale || 'vi')
       
       // Store in localStorage for faster access
       localStorage.setItem("user_preferences", JSON.stringify(prefs))
@@ -80,6 +81,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         }
         if (updates.font_size !== undefined) {
           applyFontSize(updates.font_size)
+        }
+        if (updates.locale !== undefined) {
+          applyLocale(updates.locale)
         }
         
         // Store in localStorage
@@ -200,5 +204,17 @@ function applyFontSize(fontSize: "small" | "medium" | "large") {
     large: 1.125,
   }
   root.style.setProperty("--font-size-multiplier", multiplierMap[fontSize].toString())
+}
+
+function applyLocale(locale: "vi" | "en") {
+  if (typeof window === "undefined") return
+  
+  // Update HTML lang attribute
+  document.documentElement.lang = locale
+  
+  // Sync with i18n store (lazy import to avoid circular dependency)
+  import("@/lib/i18n/client").then(({ useI18nStore }) => {
+    useI18nStore.getState().setLocale(locale)
+  })
 }
 

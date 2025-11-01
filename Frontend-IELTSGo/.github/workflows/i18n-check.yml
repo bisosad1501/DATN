@@ -1,0 +1,35 @@
+name: I18n Validation
+
+on:
+  pull_request:
+    paths:
+      - 'Frontend-IELTSGo/messages/**'
+      - 'Frontend-IELTSGo/app/**'
+      - 'Frontend-IELTSGo/components/**'
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd Frontend-IELTSGo
+          npm install -g pnpm
+          pnpm install
+      - name: Validate translations
+        run: |
+          cd Frontend-IELTSGo
+          pnpm i18n:validate
+      - name: Check for missing translations
+        run: |
+          cd Frontend-IELTSGo
+          pnpm i18n:check
+

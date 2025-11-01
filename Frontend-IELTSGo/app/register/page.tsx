@@ -12,8 +12,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, BookOpen, PenTool, BarChart3, Sparkles, CheckCircle2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Logo } from "@/components/layout/logo"
+import { useTranslations } from '@/lib/i18n'
 
 export default function RegisterPage() {
+
+  const t = useTranslations('auth')
+
   const { register, loginWithGoogle } = useAuth()
   const [formData, setFormData] = useState({
     fullName: "",
@@ -33,21 +37,21 @@ export default function RegisterPage() {
     const newErrors: Record<string, string> = {}
 
     if (!formData.email) {
-      newErrors.email = "Email is required"
+      newErrors.email = t('email_is_required')
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid"
+      newErrors.email = t('email_is_invalid')
     }
 
     if (!formData.password) {
-      newErrors.password = "Password is required"
+      newErrors.password = t('password_is_required')
     } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters"
+      newErrors.password = t('password_must_be_at_least_8')
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password"
+      newErrors.confirmPassword = t('please_confirm_your_password')
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
+      newErrors.confirmPassword = t('passwords_do_not_match')
     }
 
     setErrors(newErrors)
@@ -73,7 +77,7 @@ export default function RegisterPage() {
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message 
         || error.message 
-        || "Registration failed. Please try again."
+        || t('registration_failed_please_try_again')
       setApiError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -88,7 +92,7 @@ export default function RegisterPage() {
     } catch (error: any) {
       const errorMessage = error.response?.data?.error?.message 
         || error.message 
-        || "Google registration failed. Please try again."
+        || t('google_registration_failed_please_try_ag')
       setApiError(errorMessage)
       setIsGoogleLoading(false)
     }
@@ -115,10 +119,10 @@ export default function RegisterPage() {
           {/* Header with gradient text effect */}
           <div className="space-y-4">
             <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground">
-              Bắt đầu hành trình IELTS ngay hôm nay
+              {t('start_ielts_journey_today')}
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Nhận lộ trình học tập cá nhân hóa, bài tập thực hành và hướng dẫn chuyên sâu để đạt được điểm số mục tiêu.
+              {t('personalized_learning_path')}
             </p>
           </div>
           
@@ -131,10 +135,10 @@ export default function RegisterPage() {
               <div className="flex-1">
                 <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                  Khóa học toàn diện
+                  {t('comprehensive_courses')}
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Truy cập 500+ bài học bao phủ tất cả kỹ năng IELTS
+                  {t('access_500_lessons')}
                 </p>
               </div>
             </div>
@@ -145,10 +149,10 @@ export default function RegisterPage() {
               <div className="flex-1">
                 <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                  Bài tập thực hành
+                  {t('practice_exercises_label')}
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Kiểm tra kỹ năng với câu hỏi theo phong cách IELTS thực tế
+                  {t('test_skills_real_ielts')}
                 </p>
               </div>
             </div>
@@ -159,10 +163,10 @@ export default function RegisterPage() {
               <div className="flex-1">
                 <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                  Theo dõi tiến độ
+                  {t('track_progress_label')}
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Giám sát sự tiến bộ với phân tích chi tiết
+                  {t('monitor_progress_analytics')}
                 </p>
               </div>
             </div>
@@ -182,10 +186,10 @@ export default function RegisterPage() {
             <Logo className="justify-center" />
             <div className="space-y-2">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                Tạo tài khoản
+                {t('create_account_title')}
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground">
-                Bắt đầu hành trình IELTS của bạn ngay hôm nay
+                {t('start_your_ielts_journey_today')}
               </p>
             </div>
           </div>
@@ -201,10 +205,10 @@ export default function RegisterPage() {
           {/* Register Form */}
           <form onSubmit={handleSubmit} className="space-y-5 bg-card/50 backdrop-blur-sm p-6 rounded-lg border border-border/50 shadow-sm">
             <FormField
-              label="Full Name"
+              label={t('full_name')}
               name="fullName"
               type="text"
-              placeholder="John Doe"
+              placeholder={t('john_doe')}
               value={formData.fullName}
               onChange={(value) => setFormData({ ...formData, fullName: value })}
               error={errors.fullName}
@@ -212,10 +216,10 @@ export default function RegisterPage() {
             />
 
             <FormField
-              label="Email"
+              label={t('email')}
               name="email"
               type="email"
-              placeholder="your.email@example.com"
+              placeholder={t('youremailexamplecom')}
               value={formData.email}
               onChange={(value) => setFormData({ ...formData, email: value })}
               error={errors.email}
@@ -223,10 +227,10 @@ export default function RegisterPage() {
             />
 
             <FormField
-              label="Password"
+              label={t('password')}
               name="password"
               type="password"
-              placeholder="Create a strong password"
+              placeholder={t('create_a_strong_password')}
               value={formData.password}
               onChange={(value) => setFormData({ ...formData, password: value })}
               error={errors.password}
@@ -235,10 +239,10 @@ export default function RegisterPage() {
             />
 
             <FormField
-              label="Confirm Password"
+              label={t('confirm_password')}
               name="confirmPassword"
               type="password"
-              placeholder="Re-enter your password"
+              placeholder={t('reenter_your_password')}
               value={formData.confirmPassword}
               onChange={(value) => setFormData({ ...formData, confirmPassword: value })}
               error={errors.confirmPassword}
@@ -248,14 +252,14 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="targetBandScore" className="text-sm font-medium">
-                Điểm số mục tiêu (Tùy chọn)
+                {t('target_score_optional')}
               </Label>
               <Select
                 value={formData.targetBandScore}
                 onValueChange={(value) => setFormData({ ...formData, targetBandScore: value })}
               >
                 <SelectTrigger id="targetBandScore">
-                  <SelectValue placeholder="Chọn điểm số mục tiêu của bạn" />
+                  <SelectValue placeholder={t('chn_im_s_mc_tiu_ca_bn')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5.5">5.5</SelectItem>
@@ -271,17 +275,17 @@ export default function RegisterPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
+              {isLoading ? t('creating_account') : t('create_account_button')}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Bằng việc tạo tài khoản, bạn đồng ý với{" "}
+              {t('by_creating_account')}{" "}
               <Link href="/terms" className="text-primary hover:underline">
-                Điều khoản dịch vụ
+                {t('terms_of_service')}
               </Link>{" "}
-              và{" "}
+              {t('and')}{" "}
               <Link href="/privacy" className="text-primary hover:underline">
-                Chính sách bảo mật
+                {t('privacy_policy')}
               </Link>
             </p>
           </form>
@@ -289,9 +293,9 @@ export default function RegisterPage() {
           {/* Login Link */}
           <div className="text-center pt-2">
             <p className="text-sm text-muted-foreground">
-              Đã có tài khoản?{" "}
+              {t('already_have_account')}{" "}
               <Link href="/login" className="text-primary hover:underline font-medium">
-                Đăng nhập ngay
+                {t('login_now')}
               </Link>
             </p>
           </div>

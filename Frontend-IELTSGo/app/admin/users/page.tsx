@@ -9,8 +9,12 @@ import { Plus, Download } from "lucide-react"
 import { adminApi } from "@/lib/api/admin"
 import type { User } from "@/types"
 import { useToast } from "@/hooks/use-toast"
+import { useTranslations } from '@/lib/i18n'
 
 export default function AdminUsersPage() {
+
+  const t = useTranslations('common')
+
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
@@ -34,8 +38,8 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error("Failed to fetch users:", error)
       toast({
-        title: "Error",
-        description: "Failed to load users",
+        title: t('error'),
+        description: t('failed_to_load_users'),
         variant: "destructive",
       })
       setUsers([])
@@ -58,19 +62,19 @@ export default function AdminUsersPage() {
   }
 
   const handleDelete = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return
+    if (!confirm(t('are_you_sure_delete_user'))) return
 
     try {
       await adminApi.deleteUser(userId)
       toast({
-        title: "Success",
-        description: "User deleted successfully",
+        title: t('success'),
+        description: t('user_deleted_successfully'),
       })
       fetchUsers()
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to delete user",
+        title: t('error'),
+        description: t('failed_to_delete_user'),
         variant: "destructive",
       })
     }
@@ -80,14 +84,14 @@ export default function AdminUsersPage() {
     try {
       await adminApi.updateUser(userId, { status })
       toast({
-        title: "Success",
-        description: `User ${status === "active" ? "activated" : "suspended"} successfully`,
+        title: t('success'),
+        description: status === "active" ? t('user_activated_successfully') : t('user_suspended_successfully'),
       })
       fetchUsers()
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update user status",
+        title: t('error'),
+        description: t('failed_to_update_user_status'),
         variant: "destructive",
       })
     }
@@ -98,14 +102,14 @@ export default function AdminUsersPage() {
       if (editingUser) {
         await adminApi.updateUser(editingUser.id, data)
         toast({
-          title: "Success",
-          description: "User updated successfully",
+          title: t('success'),
+          description: t('user_updated_successfully'),
         })
       } else {
         await adminApi.createUser(data)
         toast({
-          title: "Success",
-          description: "User created successfully",
+          title: t('success'),
+          description: t('user_created_successfully'),
         })
       }
       setModalOpen(false)
@@ -113,8 +117,8 @@ export default function AdminUsersPage() {
       fetchUsers()
     } catch (error) {
       toast({
-        title: "Error",
-        description: `Failed to ${editingUser ? "update" : "create"} user`,
+        title: t('error'),
+        description: editingUser ? t('failed_to_update_user') : t('failed_to_create_user'),
         variant: "destructive",
       })
     }
@@ -124,17 +128,17 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">User Management</h1>
-          <p className="text-muted-foreground mt-1">Manage all users in the system</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('user_management')}</h1>
+          <p className="text-muted-foreground mt-1">{t('manage_all_users_in_the_system')}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t('export')}
           </Button>
           <Button onClick={() => setModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Add User
+            {t('add_user')}
           </Button>
         </div>
       </div>
@@ -142,7 +146,7 @@ export default function AdminUsersPage() {
       <UserFilters filters={filters} onFilterChange={handleFilterChange} onReset={handleResetFilters} />
 
       {loading ? (
-        <div className="text-center py-12">Loading...</div>
+        <div className="text-center py-12">{t('loading')}</div>
       ) : (
         <UserTable users={users} onEdit={handleEdit} onDelete={handleDelete} onToggleStatus={handleToggleStatus} />
       )}

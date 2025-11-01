@@ -9,8 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { coursesApi, type CourseFilters } from "@/lib/api/courses"
 import type { Course } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 export default function CoursesPage() {
+
+  const tCourses = useTranslations('courses')
+  const t = useTranslations('common')
+
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +32,7 @@ export default function CoursesPage() {
       setTotalPages(response.totalPages || 1)
     } catch (error) {
       console.error("[v0] Failed to fetch courses:", error)
-      setError("Failed to load courses. Please try again later.")
+      setError(tCourses('failed_to_load_courses_please_try_again_'))
       setCourses([])
     } finally {
       setLoading(false)
@@ -70,9 +75,9 @@ export default function CoursesPage() {
     <AppLayout showFooter={true}>
       <PageContainer>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Explore Courses</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{tCourses('explore_courses')}</h1>
           <p className="text-base text-muted-foreground">
-            Discover IELTS courses designed by experts to help you achieve your goals
+            {tCourses('description')}
           </p>
         </div>
 
@@ -86,14 +91,14 @@ export default function CoursesPage() {
           <div className="text-center py-20">
             <p className="text-destructive text-lg mb-4">{error}</p>
             <Button variant="outline" className="bg-transparent" onClick={fetchCourses}>
-              Try Again
+              {t('try_again')}
             </Button>
           </div>
         ) : courses.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-muted-foreground text-lg">No courses found matching your criteria</p>
+            <p className="text-muted-foreground text-lg">{tCourses('no_courses_found_matching_your_criteria')}</p>
             <Button variant="outline" className="mt-4 bg-transparent" onClick={() => handleFiltersChange({})}>
-              Clear Filters
+              {t('clear_filters')}
             </Button>
           </div>
         ) : (
@@ -112,10 +117,10 @@ export default function CoursesPage() {
                   onClick={() => setPage(page - 1)}
                   className="bg-transparent"
                 >
-                  Previous
+                  {t('previous')}
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
+                  {t('page_of', { page, totalPages })}
                 </span>
                 <Button
                   variant="outline"
@@ -123,7 +128,7 @@ export default function CoursesPage() {
                   onClick={() => setPage(page + 1)}
                   className="bg-transparent"
                 >
-                  Next
+                  {t('next')}
                 </Button>
               </div>
             )}

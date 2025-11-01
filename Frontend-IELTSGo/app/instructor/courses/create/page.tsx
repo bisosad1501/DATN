@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { instructorApi } from "@/lib/api/instructor"
 import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react"
 import Link from "next/link"
+import { useTranslations } from '@/lib/i18n'
 
 interface Module {
   id: string
@@ -31,6 +32,9 @@ interface Lesson {
 }
 
 export default function CreateCoursePage() {
+
+  const t = useTranslations('common')
+
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -140,15 +144,15 @@ export default function CreateCoursePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Create New Course</h1>
-            <p className="text-muted-foreground mt-1">Fill in the details to create your course</p>
+            <h1 className="text-3xl font-bold text-foreground">{t('create_new_course')}</h1>
+            <p className="text-muted-foreground mt-1">{t('fill_in_the_details_to_create_your_cours')}</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <Card className="p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Basic Information</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-4">{t('basic_information')}</h2>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="title">Course Title *</Label>
@@ -175,31 +179,31 @@ export default function CreateCoursePage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="level">Level</Label>
+                  <Label htmlFor="level">{t('level')}</Label>
                   <select
                     id="level"
                     value={formData.level}
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                     className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="beginner">{t('beginner')}</option>
+                    <option value="intermediate">{t('intermediate')}</option>
+                    <option value="advanced">{t('advanced')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">{t('category')}</Label>
                   <select
                     id="category"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="listening">Listening</option>
-                    <option value="reading">Reading</option>
-                    <option value="writing">Writing</option>
-                    <option value="speaking">Speaking</option>
+                    <option value="listening">{t('listening')}</option>
+                    <option value="reading">{t('reading')}</option>
+                    <option value="writing">{t('writing')}</option>
+                    <option value="speaking">{t('speaking')}</option>
                   </select>
                 </div>
               </div>
@@ -221,7 +225,7 @@ export default function CreateCoursePage() {
           {/* Curriculum */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">Curriculum</h2>
+              <h2 className="text-xl font-semibold text-foreground">{t('curriculum')}</h2>
               <Button type="button" onClick={addModule} variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Module

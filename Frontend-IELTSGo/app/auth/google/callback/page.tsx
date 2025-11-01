@@ -1,16 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { authApi } from "@/lib/api/auth"
 import type { User } from "@/types"
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react"
+import { useTranslations } from "@/lib/i18n"
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('auth')
+  const tCommon = useTranslations('common')
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
-  const [message, setMessage] = useState("Processing Google authentication...")
+  const [message, setMessage] = useState(tCommon('processing_google_authentication'))
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -57,7 +60,7 @@ export default function GoogleCallbackPage() {
         // Handle error from backend
         if (error) {
           setStatus("error")
-          setMessage(`Google authentication failed: ${error}`)
+          setMessage(t('google_authentication_failed', { error }))
           setTimeout(() => router.push("/login"), 3000)
           return
         }
@@ -65,7 +68,7 @@ export default function GoogleCallbackPage() {
         // Backend redirect with tokens
         if (success === "true" && accessToken && refreshToken && userId && email && role) {
           console.log("[GoogleCallback] Processing backend redirect with tokens")
-          setMessage("Storing authentication tokens...")
+          setMessage(t('storing_authentication_tokens'))
 
           // Store tokens
           localStorage.setItem("access_token", accessToken)
@@ -107,7 +110,7 @@ export default function GoogleCallbackPage() {
           console.log("[GoogleCallback] Stored user data:", userData)
 
           setStatus("success")
-          setMessage("Successfully authenticated! Redirecting...")
+          setMessage(tCommon('successfully_authenticated_redirecting'))
 
           // Redirect based on role
           const redirectPath = userData.role === "admin" 
@@ -133,13 +136,13 @@ export default function GoogleCallbackPage() {
 
         if (code) {
           console.log("[GoogleCallback] Found authorization code, exchanging for tokens...")
-          setMessage("Processing authorization code...")
+          setMessage(t('processing_authorization_code'))
 
           // Verify state (CSRF protection)
           const storedState = localStorage.getItem("oauth_state")
           if (storedState && state !== storedState) {
             setStatus("error")
-            setMessage("Invalid state parameter. Possible CSRF attack.")
+            setMessage(t('invalid_state_parameter_csrf'))
             setTimeout(() => router.push("/login"), 3000)
             return
           }
@@ -193,7 +196,7 @@ export default function GoogleCallbackPage() {
           localStorage.setItem("user_data", JSON.stringify(userData))
 
           setStatus("success")
-          setMessage("Successfully authenticated! Redirecting...")
+          setMessage(tCommon('successfully_authenticated_redirecting'))
 
           // Redirect based on role
           setTimeout(() => {
@@ -210,12 +213,12 @@ export default function GoogleCallbackPage() {
 
         // No valid params
         setStatus("error")
-        setMessage("No authentication data received")
+        setMessage(t('no_authentication_data_received'))
         setTimeout(() => router.push("/login"), 3000)
       } catch (error: any) {
         console.error("Google callback error:", error)
         setStatus("error")
-        setMessage(error.message || "Authentication failed. Please try again.")
+        setMessage(error.message || tCommon('authentication_failed_please_try_again'))
         setTimeout(() => router.push("/login"), 3000)
       }
     }
@@ -241,9 +244,9 @@ export default function GoogleCallbackPage() {
 
             {/* Title */}
             <h2 className="text-2xl font-bold text-center">
-              {status === "loading" && "Authenticating..."}
-              {status === "success" && "Success!"}
-              {status === "error" && "Authentication Failed"}
+              {status === "loading" && t('authenticating')}
+              {status === "success" && t('success')}
+              {status === "error" && tCommon('authentication_failed')}
             </h2>
 
             {/* Message */}
@@ -263,10 +266,22 @@ export default function GoogleCallbackPage() {
         {/* Help text */}
         {status === "error" && (
           <p className="text-center text-sm text-muted-foreground mt-4">
-            You will be redirected to the login page...
+            {t('you_will_be_redirected_to_login')}
           </p>
         )}
       </div>
     </div>
+  )
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+      </div>
+    }>
+      <GoogleCallbackContent />
+    </Suspense>
   )
 }

@@ -23,8 +23,12 @@ import {
 } from "lucide-react"
 import { instructorApi } from "@/lib/api/instructor"
 import type { Course, Module, Lesson } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 export default function CourseBuilderPage() {
+
+  const t = useTranslations('common')
+
   const params = useParams()
   const router = useRouter()
   const [course, setCourse] = useState<Partial<Course>>({
@@ -133,7 +137,7 @@ export default function CourseBuilderPage() {
             <Input
               value={course.title}
               onChange={(e) => setCourse({ ...course, title: e.target.value })}
-              placeholder="Course Title"
+              placeholder={t('course_title')}
               className="text-xl font-semibold border-none focus-visible:ring-0 max-w-md"
             />
             <Badge variant={course.status === "published" ? "default" : "secondary"}>{course.status || "Draft"}</Badge>
@@ -141,9 +145,7 @@ export default function CourseBuilderPage() {
 
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
-              <Eye className="w-4 h-4 mr-2" />
-              Preview
-            </Button>
+              <Eye className="w-4 h-4 mr-2" />{t('preview')}</Button>
             <Button variant="outline" size="sm" onClick={handleSave} disabled={loading}>
               <Save className="w-4 h-4 mr-2" />
               Save Draft
@@ -168,12 +170,12 @@ export default function CourseBuilderPage() {
               }`}
               onClick={() => setActiveSection("info")}
             >
-              <div className="font-medium">Course Info</div>
+              <div className="font-medium">{t('course_info')}</div>
             </div>
 
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="font-medium text-sm text-gray-600">Modules</div>
+                <div className="font-medium text-sm text-gray-600">{t('modules')}</div>
                 <Button size="sm" variant="ghost" onClick={addModule}>
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -258,13 +260,13 @@ export default function CourseBuilderPage() {
           <Card className="p-6">
             {activeSection === "info" && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Course Information</h2>
+                <h2 className="text-2xl font-bold">{t('course_information')}</h2>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Thumbnail</label>
+                  <label className="block text-sm font-medium mb-2">{t('thumbnail')}</label>
                   <div className="border-2 border-dashed rounded-lg p-8 text-center">
                     <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+                    <p className="text-sm text-gray-600">{t('click_to_upload_or_drag_and_drop')}</p>
                   </div>
                 </div>
 
@@ -273,7 +275,7 @@ export default function CourseBuilderPage() {
                   <Input
                     value={course.title}
                     onChange={(e) => setCourse({ ...course, title: e.target.value })}
-                    placeholder="Enter course title"
+                    placeholder={t('enter_course_title')}
                   />
                 </div>
 
@@ -282,38 +284,38 @@ export default function CourseBuilderPage() {
                   <Textarea
                     value={course.description}
                     onChange={(e) => setCourse({ ...course, description: e.target.value })}
-                    placeholder="Enter course description"
+                    placeholder={t('enter_course_description')}
                     rows={5}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Category</label>
+                    <label className="block text-sm font-medium mb-2">{t('category')}</label>
                     <select
                       value={course.category}
                       onChange={(e) => setCourse({ ...course, category: e.target.value })}
                       className="w-full border rounded-md px-3 py-2"
                     >
-                      <option value="">Select category</option>
-                      <option value="reading">Reading</option>
-                      <option value="listening">Listening</option>
-                      <option value="writing">Writing</option>
-                      <option value="speaking">Speaking</option>
-                      <option value="general">General</option>
+                      <option value="">{t('select_category')}</option>
+                      <option value="reading">{t('reading')}</option>
+                      <option value="listening">{t('listening')}</option>
+                      <option value="writing">{t('writing')}</option>
+                      <option value="speaking">{t('speaking')}</option>
+                      <option value="general">{t('general')}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Level</label>
+                    <label className="block text-sm font-medium mb-2">{t('level')}</label>
                     <select
                       value={course.level}
                       onChange={(e) => setCourse({ ...course, level: e.target.value as any })}
                       className="w-full border rounded-md px-3 py-2"
                     >
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
+                      <option value="beginner">{t('beginner')}</option>
+                      <option value="intermediate">{t('intermediate')}</option>
+                      <option value="advanced">{t('advanced')}</option>
                     </select>
                   </div>
                 </div>
@@ -323,7 +325,7 @@ export default function CourseBuilderPage() {
             {activeSection === "module" && selectedModule && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">Module Settings</h2>
+                  <h2 className="text-2xl font-bold">{t('module_settings')}</h2>
                   <Button variant="destructive" size="sm">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Module
@@ -342,12 +344,12 @@ export default function CourseBuilderPage() {
                         ),
                       })
                     }}
-                    placeholder="e.g., Module 1: Introduction"
+                    placeholder={t('eg_module_1_introduction')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Module Description</label>
+                  <label className="block text-sm font-medium mb-2">{t('module_description')}</label>
                   <Textarea
                     value={selectedModule.description}
                     onChange={(e) => {
@@ -358,7 +360,7 @@ export default function CourseBuilderPage() {
                         ),
                       })
                     }}
-                    placeholder="Describe what students will learn in this module"
+                    placeholder={t('describe_what_students_will_learn_in_thi')}
                     rows={4}
                   />
                 </div>
@@ -368,7 +370,7 @@ export default function CourseBuilderPage() {
             {activeSection === "lesson" && selectedLesson && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">Lesson Settings</h2>
+                  <h2 className="text-2xl font-bold">{t('lesson_settings')}</h2>
                   <Button variant="destructive" size="sm">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Lesson
@@ -377,22 +379,22 @@ export default function CourseBuilderPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Lesson Title *</label>
-                  <Input value={selectedLesson.title} placeholder="Enter lesson title" />
+                  <Input value={selectedLesson.title} placeholder={t('enter_lesson_title')} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Lesson Type</label>
+                  <label className="block text-sm font-medium mb-2">{t('lesson_type')}</label>
                   <select className="w-full border rounded-md px-3 py-2">
-                    <option value="video">Video Lesson</option>
+                    <option value="video">{t('video_lesson')}</option>
                     <option value="text">Text/Article</option>
-                    <option value="quiz">Quiz</option>
+                    <option value="quiz">{t('quiz')}</option>
                   </select>
                 </div>
 
                 {selectedLesson.type === "video" && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">Video URL</label>
-                    <Input placeholder="YouTube URL or upload video" />
+                    <label className="block text-sm font-medium mb-2">{t('video_url')}</label>
+                    <Input placeholder={t('youtube_url_or_upload_video')} />
                   </div>
                 )}
 
@@ -407,9 +409,9 @@ export default function CourseBuilderPage() {
 
         {/* Right Sidebar - Preview */}
         <div className="w-96 bg-white border-l p-4 overflow-y-auto">
-          <div className="text-sm font-medium mb-4">Preview</div>
+          <div className="text-sm font-medium mb-4">{t('preview')}</div>
           <div className="border rounded-lg p-4 bg-gray-50">
-            <p className="text-sm text-gray-600">Preview will appear here</p>
+            <p className="text-sm text-gray-600">{t('preview_will_appear_here')}</p>
           </div>
         </div>
       </div>

@@ -23,8 +23,12 @@ import {
 } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
 import { exercisesApi } from "@/lib/api/exercises"
+import { useTranslations } from '@/lib/i18n'
 
 export default function LessonDetailPage() {
+
+  const t = useTranslations('common')
+
   const params = useParams()
   const router = useRouter()
   const [lesson, setLesson] = useState<any>(null)
@@ -105,8 +109,8 @@ export default function LessonDetailPage() {
     return (
       <AppLayout>
         <PageContainer className="py-12 text-center">
-          <h1 className="text-2xl font-bold mb-4">Lesson Not Found</h1>
-          <Button onClick={() => router.back()}>Go Back</Button>
+          <h1 className="text-2xl font-bold mb-4">{t('lesson_not_found')}</h1>
+          <Button onClick={() => router.back()}>{t('go_back')}</Button>
         </PageContainer>
       </AppLayout>
     )
@@ -136,7 +140,7 @@ export default function LessonDetailPage() {
                 {contentType === 'article' && <FileText className="h-5 w-5 text-cyan-500" />}
                 {contentType === 'exercise' && <PenTool className="h-5 w-5 text-pink-500" />}
                 <Badge variant="outline">{contentType}</Badge>
-                {lessonData.is_free && <Badge variant="secondary">FREE</Badge>}
+                {lessonData.is_free && <Badge variant="secondary">{t('free')}</Badge>}
               </div>
               <h1 className="text-3xl font-bold tracking-tight mb-2">{lessonData.title}</h1>
               {lessonData.description && (
@@ -221,7 +225,7 @@ export default function LessonDetailPage() {
                         />
                       ) : (
                         <div className="flex items-center justify-center h-full text-white">
-                          <p>Video player not available</p>
+                          <p>{t('video_player_not_available')}</p>
                         </div>
                       )}
                     </div>
@@ -301,7 +305,7 @@ export default function LessonDetailPage() {
           {materials && materials.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Downloadable Materials</CardTitle>
+                <CardTitle>{t('downloadable_materials')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -331,11 +335,11 @@ export default function LessonDetailPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Lesson Progress</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('lesson_progress')}</p>
                   <p className="text-2xl font-bold">0%</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Time Spent</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('time_spent')}</p>
                   <p className="text-2xl font-bold">0m</p>
                 </div>
               </div>

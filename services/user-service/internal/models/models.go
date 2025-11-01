@@ -150,6 +150,7 @@ type UserPreferences struct {
 	WeeklyReport          bool      `json:"weekly_report" db:"weekly_report"`
 	Theme                 string    `json:"theme" db:"theme"`         // light, dark, auto
 	FontSize              string    `json:"font_size" db:"font_size"` // small, medium, large
+	Locale                string    `json:"locale" db:"locale"`       // vi, en
 	AutoPlayNextLesson    bool      `json:"auto_play_next_lesson" db:"auto_play_next_lesson"`
 	ShowAnswerExplanation bool      `json:"show_answer_explanation" db:"show_answer_explanation"`
 	PlaybackSpeed         float64   `json:"playback_speed" db:"playback_speed"`         // 0.75, 1.0, 1.25, 1.5, 2.0

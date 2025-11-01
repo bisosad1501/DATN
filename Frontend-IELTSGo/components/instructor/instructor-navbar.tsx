@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTranslations } from '@/lib/i18n'
 
 const navItems = [
   { href: "/instructor", label: "Dashboard", icon: Home },
@@ -42,6 +43,9 @@ const navItems = [
 ]
 
 export function InstructorNavbar() {
+
+  const t = useTranslations('common')
+
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -53,7 +57,7 @@ export function InstructorNavbar() {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <Logo />
-            <span className="text-xs text-muted-foreground hidden sm:block">Instructor Portal</span>
+            <span className="text-xs text-muted-foreground hidden sm:block">{t('instructor_portal')}</span>
           </div>
 
           {/* Desktop Navigation */}

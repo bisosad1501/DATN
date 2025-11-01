@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { User } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 interface UserFormModalProps {
   open: boolean
@@ -18,6 +19,9 @@ interface UserFormModalProps {
 }
 
 export function UserFormModal({ open, onClose, onSubmit, user }: UserFormModalProps) {
+
+  const t = useTranslations('common')
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -57,7 +61,7 @@ export function UserFormModal({ open, onClose, onSubmit, user }: UserFormModalPr
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{t('name')}</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -66,7 +70,7 @@ export function UserFormModal({ open, onClose, onSubmit, user }: UserFormModalPr
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -76,28 +80,28 @@ export function UserFormModal({ open, onClose, onSubmit, user }: UserFormModalPr
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">{t('role')}</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="instructor">Instructor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="student">{t('student')}</SelectItem>
+                  <SelectItem value="instructor">{t('instructor')}</SelectItem>
+                  <SelectItem value="admin">{t('admin')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">{t('status')}</Label>
               <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="active">{t('active')}</SelectItem>
+                  <SelectItem value="suspended">{t('suspended')}</SelectItem>
+                  <SelectItem value="pending">{t('pending')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

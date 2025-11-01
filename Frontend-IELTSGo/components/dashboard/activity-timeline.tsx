@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, FileText, GraduationCap } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
+import { useTranslations } from '@/lib/i18n'
 
 interface Activity {
   id: string
@@ -35,6 +36,8 @@ const activityConfig = {
 }
 
 export function ActivityTimeline({ activities }: ActivityTimelineProps) {
+  const t = useTranslations('common')
+  
   // Group activities by type+title, keep only latest, count attempts
   const grouped: Record<string, { activity: Activity; count: number }> = {}
   activities.forEach((activity) => {
@@ -56,12 +59,12 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
+        <CardTitle>{t('recent_activity')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No recent activity</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t('no_recent_activity')}</p>
           ) : (
             sorted.map(({ activity, count }, index) => {
               const config = activityConfig[activity.type]
@@ -81,10 +84,10 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
                       <div>
                         <p className="font-medium text-sm">{activity.title}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {config.label} • {activity.duration} minutes
-                          {activity.score !== undefined && ` • Score: ${activity.score}`}
+                          {t(activity.type === 'course' ? 'course' : activity.type === 'exercise' ? 'exercise' : 'lesson')} • {activity.duration} {t('minutes')}
+                          {activity.score !== undefined && ` • ${t('score')}: ${activity.score}`}
                           {activity.type === "exercise" && count > 1 && (
-                            <span className="ml-2 text-orange-600">Đã làm lại: {count} lần</span>
+                            <span className="ml-2 text-orange-600">{t('retried_times', { count })}</span>
                           )}
                         </p>
                       </div>

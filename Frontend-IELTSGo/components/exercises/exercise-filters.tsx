@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type { ExerciseFilters } from "@/lib/api/exercises"
+import { useTranslations } from '@/lib/i18n'
 
 interface ExerciseFiltersProps {
   filters: ExerciseFilters
@@ -19,27 +20,30 @@ interface ExerciseFiltersProps {
 }
 
 const SKILL_OPTIONS = [
-  { value: "listening", label: "Listening", color: "bg-blue-500" },
-  { value: "reading", label: "Reading", color: "bg-green-500" },
-  { value: "writing", label: "Writing", color: "bg-orange-500" },
-  { value: "speaking", label: "Speaking", color: "bg-purple-500" },
+  { value: "listening", color: "bg-blue-500" },
+  { value: "reading", color: "bg-green-500" },
+  { value: "writing", color: "bg-orange-500" },
+  { value: "speaking", color: "bg-purple-500" },
 ]
 
 const TYPE_OPTIONS = [
-  { value: "multiple_choice", label: "Multiple Choice" },
-  { value: "fill_in_blanks", label: "Fill in Blanks" },
-  { value: "true_false", label: "True/False" },
-  { value: "matching", label: "Matching" },
-  { value: "essay", label: "Essay" },
+  { value: "multiple_choice", color: "bg-blue-500" },
+  { value: "fill_in_blanks", color: "bg-green-500" },
+  { value: "true_false", color: "bg-orange-500" },
+  { value: "matching", color: "bg-purple-500" },
+  { value: "essay", color: "bg-pink-500" },
 ]
 
 const DIFFICULTY_OPTIONS = [
-  { value: "easy", label: "Easy", color: "bg-emerald-500" },
-  { value: "medium", label: "Medium", color: "bg-yellow-500" },
-  { value: "hard", label: "Hard", color: "bg-red-500" },
+  { value: "easy", color: "bg-emerald-500" },
+  { value: "medium", color: "bg-yellow-500" },
+  { value: "hard", color: "bg-red-500" },
 ]
 
 export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }: ExerciseFiltersProps) {
+
+  const t = useTranslations('common')
+
   const [searchValue, setSearchValue] = useState(filters.search || "")
   const [isOpen, setIsOpen] = useState(false)
 
@@ -103,7 +107,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <Input
-            placeholder="Search exercises by title or keyword..."
+            placeholder={t('search_exercises_by_title_or_keyword')}
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyDown={(e) => {
@@ -118,7 +122,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
           onClick={() => onSearch(searchValue)} 
           className="h-12 px-8 text-base font-medium shadow-md hover:shadow-lg transition-shadow"
         >
-          Search
+          {t('search')}
         </Button>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
@@ -127,7 +131,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
               className="relative h-12 px-5 border-2 hover:border-primary transition-all shadow-sm"
             >
               <Filter className="w-4 h-4 mr-2" />
-              <span className="font-medium">Filters</span>
+              <span className="font-medium">{t('filters')}</span>
               {activeFilterCount > 0 && (
                 <Badge
                   className="absolute -top-2 -right-2 w-6 h-6 p-0 flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground shadow-md"
@@ -140,12 +144,12 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
           <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
             <div className="sticky top-0 bg-background z-10 border-b px-6 py-5 shadow-sm">
               <SheetHeader>
-                <SheetTitle className="text-2xl font-bold tracking-tight">Filter Exercises</SheetTitle>
+                <SheetTitle className="text-2xl font-bold tracking-tight">{t('filter_exercises')}</SheetTitle>
                 <p className="text-sm text-muted-foreground mt-1.5">
-                  Narrow down your search to find the perfect exercise
+                  {t('filter_description')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2 italic">
-                  Tip: Select multiple options in the same category for "OR" logic (e.g., Listening OR Reading). Different categories use "AND" logic.
+                  {t('filter_tip')}
                 </p>
               </SheetHeader>
             </div>
@@ -154,8 +158,8 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
               {/* Skill Type */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold text-foreground">Skill Type</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                  <Label className="text-base font-semibold text-foreground">{t('skill_type')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t('select_one_or_more')}</p>
                 </div>
                 <div className="space-y-2.5">
                   {SKILL_OPTIONS.map((option) => {
@@ -181,7 +185,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                           "flex-1 text-sm font-medium transition-colors",
                           isSelected && "text-primary"
                         )}>
-                          {option.label}
+                          {t(option.value)}
                         </span>
                         {isSelected && (
                           <Check className="w-4 h-4 text-primary" />
@@ -197,8 +201,8 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
               {/* Exercise Type */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold text-foreground">Exercise Type</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                  <Label className="text-base font-semibold text-foreground">{t('exercise_type')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t('select_one_or_more')}</p>
                 </div>
                 <div className="space-y-2.5">
                   {TYPE_OPTIONS.map((option) => {
@@ -223,7 +227,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                           "flex-1 text-sm font-medium transition-colors",
                           isSelected && "text-primary"
                         )}>
-                          {option.label}
+                          {t(option.value)}
                         </span>
                         {isSelected && (
                           <Check className="w-4 h-4 text-primary" />
@@ -239,8 +243,8 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
               {/* Difficulty */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold text-foreground">Difficulty</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                  <Label className="text-base font-semibold text-foreground">{t('difficulty')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t('select_one_or_more')}</p>
                 </div>
                 <div className="space-y-2.5">
                   {DIFFICULTY_OPTIONS.map((option) => {
@@ -266,7 +270,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                           "flex-1 text-sm font-medium transition-colors",
                           isSelected && "text-primary"
                         )}>
-                          {option.label}
+                          {t(option.value)}
                         </span>
                         {isSelected && (
                           <Check className="w-4 h-4 text-primary" />
@@ -324,7 +328,7 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                   onSearch("")
                 }}
                 className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                aria-label="Remove search filter"
+                aria-label={t('remove_search_filter')}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -339,11 +343,11 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                 className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${option.color} shadow-sm`}></span>
-                {option.label}
+                {t(option.value)}
                 <button
                   onClick={() => handleSkillChange(skill)}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                  aria-label="Remove skill filter"
+                  aria-label={t('remove_skill_filter')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -358,11 +362,11 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                 variant="secondary" 
                 className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
               >
-                {option.label}
+                {t(option.value)}
                 <button
                   onClick={() => handleTypeChange(type)}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                  aria-label="Remove type filter"
+                  aria-label={t('remove_type_filter')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -378,11 +382,11 @@ export function ExerciseFiltersComponent({ filters, onFiltersChange, onSearch }:
                 className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${option.color} shadow-sm`}></span>
-                {option.label}
+                {t(option.value)}
                 <button
                   onClick={() => handleDifficultyChange(difficulty)}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                  aria-label="Remove difficulty filter"
+                  aria-label={t('remove_difficulty_filter')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

@@ -21,8 +21,12 @@ import { formatDistanceToNow } from "@/lib/utils/date"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useTranslations } from '@/lib/i18n'
 
 export default function AdminDashboard() {
+
+  const t = useTranslations('common')
+
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [userGrowthData, setUserGrowthData] = useState<{ date: string; count: number }[]>([])
   const [enrollmentData, setEnrollmentData] = useState<{ date: string; enrollments: number; completions: number }[]>([])
@@ -157,15 +161,15 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your platform.</p>
+        <h1 className="text-3xl font-bold text-foreground">{t('dashboard')}</h1>
+        <p className="text-muted-foreground mt-1">{t('admin_welcome_message')}</p>
       </div>
         {/* Stat Cards */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Users */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('total_users')}</CardTitle>
               <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -182,7 +186,7 @@ export default function AdminDashboard() {
                     <span className="text-red-500">{stats.userGrowth}%</span>
                   </>
                 )}
-                {" "}from last month
+                {" "}{t('from_last_month')}
               </p>
             </CardContent>
           </Card>
@@ -190,13 +194,13 @@ export default function AdminDashboard() {
           {/* Total Courses */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('total_courses')}</CardTitle>
               <BookOpen className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalCourses.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.activeCourses} active, {stats.draftCourses} draft
+                {stats.activeCourses} {t('active')}, {stats.draftCourses} {t('draft')}
               </p>
             </CardContent>
           </Card>
@@ -204,13 +208,13 @@ export default function AdminDashboard() {
           {/* Total Exercises */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Exercises</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('total_exercises')}</CardTitle>
               <PenTool className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalExercises.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.submissionsToday} submissions today
+                {stats.submissionsToday} {t('submissions_today')}
               </p>
             </CardContent>
           </Card>
@@ -218,13 +222,13 @@ export default function AdminDashboard() {
           {/* Total Students */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('total_students')}</CardTitle>
               <ActivityIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalStudents.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.totalInstructors} instructors
+                {stats.totalInstructors} {t('instructors')}
               </p>
             </CardContent>
           </Card>
@@ -235,7 +239,7 @@ export default function AdminDashboard() {
           {/* User Growth Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>User Growth (Last 30 Days)</CardTitle>
+              <CardTitle>{t('user_growth_last_30_days')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               <ResponsiveContainer width="100%" height={300}>
@@ -260,7 +264,7 @@ export default function AdminDashboard() {
           {/* Enrollment Statistics */}
           <Card>
             <CardHeader>
-              <CardTitle>Enrollment Statistics (Last 7 Days)</CardTitle>
+              <CardTitle>{t('enrollment_statistics_last_7_days')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               <ResponsiveContainer width="100%" height={300}>
@@ -277,8 +281,8 @@ export default function AdminDashboard() {
                     contentStyle={{ border: '1px solid #ED372A20', borderRadius: '8px' }}
                   />
                   <Legend />
-                  <Bar dataKey="enrollments" fill="#ED372A" name="New Enrollments" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="completions" fill="#101615" name="Completions" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="enrollments" fill="#ED372A" name={t('new_enrollments')} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completions" fill="#101615" name={t('completions')} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -290,7 +294,7 @@ export default function AdminDashboard() {
           {/* Activity Feed */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
+              <CardTitle>{t('recent_activity')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -305,11 +309,11 @@ export default function AdminDashboard() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm">
-                          <span className="font-medium">{activity.actorName || "Unknown"}</span>{" "}
-                          <span className="text-muted-foreground">{activity.action || "performed an action"}</span>
+                          <span className="font-medium">{activity.actorName || t('unknown')}</span>{" "}
+                          <span className="text-muted-foreground">{activity.action || t('performed_an_action')}</span>
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {activity.timestamp ? formatDistanceToNow(activity.timestamp) : "Just now"}
+                          {activity.timestamp ? formatDistanceToNow(activity.timestamp) : t('just_now')}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-xs">
@@ -319,7 +323,7 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No recent activity</p>
+                    <p>{t('no_recent_activity')}</p>
                   </div>
                 )}
               </div>
@@ -329,24 +333,24 @@ export default function AdminDashboard() {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>{t('quick_actions')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 pt-6">
               <Button className="w-full justify-start" variant="default">
                 <Bell className="mr-2 h-4 w-4" />
-                Create Notification
+                {t('create_notification')}
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <Users className="mr-2 h-4 w-4" />
-                Add New User
+                {t('add_new_user')}
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <BookOpen className="mr-2 h-4 w-4" />
-                Review Pending Content
+                {t('review_pending_content')}
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <FileText className="mr-2 h-4 w-4" />
-                View System Logs
+                {t('view_system_logs')}
               </Button>
             </CardContent>
           </Card>

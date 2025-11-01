@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { BookOpen, PenTool, Video } from "lucide-react"
+import { useTranslations } from '@/lib/i18n'
 
 interface QuickCreateModalProps {
   open: boolean
@@ -11,6 +12,9 @@ interface QuickCreateModalProps {
 }
 
 export function QuickCreateModal({ open, onOpenChange }: QuickCreateModalProps) {
+
+  const t = useTranslations('common')
+
   const router = useRouter()
 
   const options = [
@@ -49,7 +53,7 @@ export function QuickCreateModal({ open, onOpenChange }: QuickCreateModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl">What would you like to create?</DialogTitle>
+          <DialogTitle className="text-2xl">{t('what_would_you_like_to_create')}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-4 mt-4">
@@ -64,7 +68,7 @@ export function QuickCreateModal({ open, onOpenChange }: QuickCreateModalProps) 
               </div>
               <h3 className="font-semibold mb-2">{option.title}</h3>
               <p className="text-sm text-gray-600">{option.description}</p>
-              <Button className="w-full mt-4 bg-primary hover:bg-primary/90">Start</Button>
+              <Button className="w-full mt-4 bg-primary hover:bg-primary/90">{t('start')}</Button>
             </Card>
           ))}
         </div>

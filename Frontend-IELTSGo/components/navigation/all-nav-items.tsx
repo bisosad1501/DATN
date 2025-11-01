@@ -1,0 +1,161 @@
+"use client"
+
+import { useTranslations } from "@/lib/i18n"
+
+/**
+ * All navigation items hooks
+ * Provides translated navigation items for different contexts
+ */
+
+export function useNavItems() {
+  const t = useTranslations('common')
+  
+  return [
+    {
+      title: t('home'),
+      href: "/",
+      icon: "Home",
+    },
+    {
+      title: t('courses'),
+      href: "/courses",
+      icon: "BookOpen",
+    },
+    {
+      title: t('exercises'),
+      href: "/exercises",
+      icon: "PenTool",
+    },
+    {
+      title: t('leaderboard'),
+      href: "/leaderboard",
+      icon: "Trophy",
+    },
+  ] as const
+}
+
+export function useUserNavItems() {
+  const t = useTranslations('common')
+  
+  return [
+    {
+      title: t('profile'),
+      href: "/profile",
+      icon: "User",
+    },
+    {
+      title: t('settings'),
+      href: "/settings",
+      icon: "Settings",
+    },
+  ] as const
+}
+
+export function useSidebarNavItems() {
+  const t = useTranslations('common')
+  const tDashboard = useTranslations('dashboard')
+  
+  return [
+    {
+      title: t('dashboard'),
+      href: "/dashboard",
+      icon: "LayoutDashboard",
+    },
+    {
+      title: t('courses'),
+      href: "/my-courses",
+      icon: "BookOpen",
+    },
+    {
+      title: t('exercises'),
+      href: "/my-exercises",
+      icon: "CheckSquare",
+    },
+    {
+      title: t('leaderboard'),
+      href: "/leaderboard",
+      icon: "Trophy",
+    },
+    {
+      title: t('notifications'),
+      href: "/notifications",
+      icon: "Bell",
+    },
+  ] as const
+}
+
+export function useInstructorNavItems() {
+  const t = useTranslations('common')
+  
+  return [
+    {
+      title: t('dashboard'),
+      href: "/instructor",
+      icon: "LayoutDashboard",
+    },
+    {
+      title: t('courses'),
+      href: "/instructor/courses",
+      icon: "BookOpen",
+    },
+    {
+      title: t('exercises'),
+      href: "/instructor/exercises",
+      icon: "PenTool",
+    },
+    {
+      title: t('students'),
+      href: "/instructor/students",
+      icon: "Users",
+    },
+    {
+      title: t('messages'),
+      href: "/instructor/messages",
+      icon: "MessageSquare",
+    },
+  ] as const
+}
+
+export function useAdminNavItems() {
+  const t = useTranslations('common')
+  
+  return [
+    {
+      title: t('dashboard'),
+      href: "/admin",
+      icon: "LayoutDashboard",
+      children: [],
+    },
+    {
+      title: t('userManagement'),
+      href: "/admin/users",
+      icon: "Users",
+      children: [],
+    },
+    {
+      title: t('contentManagement'),
+      href: "/admin/content",
+      icon: "FileText",
+      children: [],
+    },
+    {
+      title: t('analytics'),
+      href: "/admin/analytics",
+      icon: "BarChart",
+      children: [],
+    },
+    {
+      title: t('notifications'),
+      href: "/admin/notifications",
+      icon: "Bell",
+      children: [],
+    },
+    {
+      title: t('systemSettings'),
+      href: "/admin/settings",
+      icon: "Settings",
+      children: [],
+    },
+  ] as const
+}
+

@@ -11,8 +11,12 @@ import { useState, useEffect } from "react"
 import { progressApi } from "@/lib/api/progress"
 import { Button } from "@/components/ui/button"
 import { Clock, TrendingUp, Target, Flame, BarChart3 } from "lucide-react"
+import { useTranslations } from '@/lib/i18n'
 
 export default function ProgressPage() {
+
+  const t = useTranslations('common')
+
   return (
     <ProtectedRoute>
       <ProgressContent />
@@ -21,6 +25,7 @@ export default function ProgressPage() {
 }
 
 function ProgressContent() {
+  const t = useTranslations('common')
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "all">("30d")
   const [analytics, setAnalytics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -36,7 +41,7 @@ function ProgressContent() {
       } catch (error) {
         console.error("Failed to fetch analytics:", error)
         console.error("Error details:", error.response?.data || error.message)
-        // Mock data for demo
+        // Mock data for demo - use hardcoded skill names, will be translated when displayed
         setAnalytics({
           studyTimeByDay: Array.from({ length: 30 }, (_, i) => ({
             date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
@@ -65,7 +70,7 @@ function ProgressContent() {
     }
 
     fetchAnalytics()
-  }, [timeRange])
+  }, [timeRange, t])
 
   // Calculate summary stats
   const calculateStats = () => {
@@ -97,15 +102,15 @@ function ProgressContent() {
       <PageContainer>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Progress Analytics</h1>
-          <p className="text-base text-muted-foreground">Detailed insights into your learning journey</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('progress_analytics')}</h1>
+          <p className="text-base text-muted-foreground">{t('detailed_insights_into_your_learning_jou')}</p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading analytics...</p>
+              <p className="text-muted-foreground">{t('loading_analytics')}</p>
             </div>
           </div>
         ) : (
@@ -117,55 +122,55 @@ function ProgressContent() {
                 size="sm" 
                 onClick={() => setTimeRange("7d")}
               >
-                7 Days
+                {t('last_7_days')}
               </Button>
               <Button 
                 variant={timeRange === "30d" ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => setTimeRange("30d")}
               >
-                30 Days
+                {t('last_30_days')}
               </Button>
               <Button 
                 variant={timeRange === "90d" ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => setTimeRange("90d")}
               >
-                90 Days
+                {t('last_90_days')}
               </Button>
               <Button 
                 variant={timeRange === "all" ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => setTimeRange("all")}
               >
-                All Time
+                {t('all_time')}
               </Button>
             </div>
 
             {/* Summary Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard
-                title="Total Study Time"
+                title={t('total_study_time')}
                 value={`${Math.floor(stats.totalMinutes / 60)}h ${stats.totalMinutes % 60}m`}
-                description={`${timeRange} period`}
+                description={t('period_label')}
                 icon={Clock}
               />
               <StatCard
-                title="Exercises Completed"
+                title={t('exercises_completed')}
                 value={stats.totalExercises}
-                description={`${timeRange} period`}
+                description={t('period_label')}
                 icon={BarChart3}
               />
               <StatCard
-                title="Average Score"
+                title={t('average_score')}
                 value={stats.avgScore.toFixed(1)}
-                description="Band score"
+                description={t('band_score')}
                 icon={Target}
               />
               <StatCard
-                title="Day Streak"
-                value={`${stats.activeStreak} days`}
-                description={`Active learning streak`}
+                title={t('day_streak')}
+                value={`${stats.activeStreak} ${t('days_label')}`}
+                description={t('active_learning_streak')}
                 icon={Flame}
               />
             </div>
@@ -173,23 +178,23 @@ function ProgressContent() {
             {/* Charts */}
             <Tabs defaultValue="study-time" className="space-y-6">
               <TabsList>
-                <TabsTrigger value="study-time">Study Time</TabsTrigger>
-                <TabsTrigger value="completion">Completion Rate</TabsTrigger>
-                <TabsTrigger value="exercises">Exercises</TabsTrigger>
+                <TabsTrigger value="study-time">{t('study_time')}</TabsTrigger>
+                <TabsTrigger value="completion">{t('completion_rate')}</TabsTrigger>
+                <TabsTrigger value="exercises">{t('exercises')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="study-time" className="space-y-6">
                 <ProgressChart
-                  title="Daily Study Time"
+                  title={t('daily_study_time')}
                   data={analytics?.studyTimeByDay || []}
                   color="#ED372A"
-                  valueLabel="minutes"
+                  valueLabel={t('minutes')}
                 />
               </TabsContent>
 
               <TabsContent value="completion" className="space-y-6">
                 <ProgressChart
-                  title="Daily Completion Rate"
+                  title={t('daily_completion_rate')}
                   data={analytics?.completionRate || []}
                   color="#10B981"
                   valueLabel="%"
@@ -198,25 +203,34 @@ function ProgressContent() {
 
               <TabsContent value="exercises" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {analytics?.exercisesByType?.map((item: any) => (
+                  {analytics?.exercisesByType?.map((item: any) => {
+                    // Translate skill type name
+                    const skillTypeLower = item.type?.toLowerCase() || ''
+                    const translatedType = skillTypeLower === 'listening' ? t('listening')
+                      : skillTypeLower === 'reading' ? t('reading')
+                      : skillTypeLower === 'writing' ? t('writing')
+                      : skillTypeLower === 'speaking' ? t('speaking')
+                      : item.type
+                    return (
                     <Card key={item.type}>
                       <CardHeader>
-                        <CardTitle className="text-base">{item.type}</CardTitle>
+                        <CardTitle className="text-base">{translatedType}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Completed</span>
+                            <span className="text-sm text-muted-foreground">{t('completed')}</span>
                             <span className="font-bold">{item.count}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Avg Score</span>
+                            <span className="text-sm text-muted-foreground">{t('avg_score')}</span>
                             <span className="font-bold">{item.avgScore.toFixed(1)}</span>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    )
+                  })}
                 </div>
               </TabsContent>
             </Tabs>

@@ -8,8 +8,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Save, X, Eye, Plus, Trash2, GripVertical, CheckCircle, Circle } from "lucide-react"
+import { useTranslations } from '@/lib/i18n'
 
 export default function ExerciseBuilderPage() {
+
+  const t = useTranslations('common')
+
   const params = useParams()
   const router = useRouter()
   const [exercise, setExercise] = useState({
@@ -48,17 +52,15 @@ export default function ExerciseBuilderPage() {
             <Input
               value={exercise.title}
               onChange={(e) => setExercise({ ...exercise, title: e.target.value })}
-              placeholder="Exercise Title"
+              placeholder={t('exercise_title')}
               className="text-xl font-semibold border-none focus-visible:ring-0 max-w-md"
             />
-            <Badge>Draft</Badge>
+            <Badge>{t('draft')}</Badge>
           </div>
 
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
-              <Eye className="w-4 h-4 mr-2" />
-              Preview
-            </Button>
+              <Eye className="w-4 h-4 mr-2" />{t('preview')}</Button>
             <Button variant="outline" size="sm">
               <Save className="w-4 h-4 mr-2" />
               Save Draft
@@ -76,33 +78,33 @@ export default function ExerciseBuilderPage() {
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Sidebar - Exercise Settings */}
         <div className="w-80 bg-white border-r overflow-y-auto p-4">
-          <h3 className="font-semibold mb-4">Exercise Settings</h3>
+          <h3 className="font-semibold mb-4">{t('exercise_settings')}</h3>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Type</label>
+              <label className="block text-sm font-medium mb-2">{t('type')}</label>
               <select
                 value={exercise.type}
                 onChange={(e) => setExercise({ ...exercise, type: e.target.value })}
                 className="w-full border rounded-md px-3 py-2"
               >
-                <option value="reading">Reading</option>
-                <option value="listening">Listening</option>
-                <option value="writing">Writing</option>
-                <option value="speaking">Speaking</option>
+                <option value="reading">{t('reading')}</option>
+                <option value="listening">{t('listening')}</option>
+                <option value="writing">{t('writing')}</option>
+                <option value="speaking">{t('speaking')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Difficulty</label>
+              <label className="block text-sm font-medium mb-2">{t('difficulty')}</label>
               <select
                 value={exercise.difficulty}
                 onChange={(e) => setExercise({ ...exercise, difficulty: e.target.value })}
                 className="w-full border rounded-md px-3 py-2"
               >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="easy">{t('easy')}</option>
+                <option value="medium">{t('medium')}</option>
+                <option value="hard">{t('hard')}</option>
               </select>
             </div>
 
@@ -116,14 +118,14 @@ export default function ExerciseBuilderPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
-              <Textarea rows={4} placeholder="Exercise description" />
+              <label className="block text-sm font-medium mb-2">{t('description')}</label>
+              <Textarea rows={4} placeholder={t('exercise_description')} />
             </div>
           </div>
 
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold">Questions</h3>
+              <h3 className="font-semibold">{t('questions')}</h3>
               <Button size="sm" onClick={addQuestion}>
                 <Plus className="w-4 h-4" />
               </Button>
@@ -163,22 +165,22 @@ export default function ExerciseBuilderPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Question Type</label>
+                  <label className="block text-sm font-medium mb-2">{t('question_type')}</label>
                   <select className="w-full border rounded-md px-3 py-2">
-                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="multiple_choice">{t('multiple_choice')}</option>
                     <option value="true_false">True/False</option>
-                    <option value="fill_blank">Fill in the Blank</option>
-                    <option value="short_answer">Short Answer</option>
+                    <option value="fill_blank">{t('fill_in_the_blank')}</option>
+                    <option value="short_answer">{t('short_answer')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Question Text *</label>
-                  <Textarea value={selectedQuestion.questionText} placeholder="Enter your question" rows={3} />
+                  <Textarea value={selectedQuestion.questionText} placeholder={t('enter_your_question')} rows={3} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Options</label>
+                  <label className="block text-sm font-medium mb-2">{t('options')}</label>
                   <div className="space-y-2">
                     {selectedQuestion.options.map((option, optIndex) => (
                       <div key={optIndex} className="flex items-center gap-2">
@@ -213,17 +215,17 @@ export default function ExerciseBuilderPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Explanation (Optional)</label>
-                  <Textarea placeholder="Explain the correct answer" rows={3} />
+                  <Textarea placeholder={t('explain_the_correct_answer')} rows={3} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Points</label>
+                  <label className="block text-sm font-medium mb-2">{t('points')}</label>
                   <Input type="number" value={selectedQuestion.points} min={1} />
                 </div>
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-600 mb-4">No question selected</p>
+                <p className="text-gray-600 mb-4">{t('no_question_selected')}</p>
                 <Button onClick={addQuestion}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add First Question
@@ -235,7 +237,7 @@ export default function ExerciseBuilderPage() {
 
         {/* Right Sidebar - Preview */}
         <div className="w-96 bg-white border-l p-4 overflow-y-auto">
-          <div className="text-sm font-medium mb-4">Preview</div>
+          <div className="text-sm font-medium mb-4">{t('preview')}</div>
           <div className="border rounded-lg p-4 bg-gray-50">
             {selectedQuestion ? (
               <div className="space-y-4">
@@ -255,7 +257,7 @@ export default function ExerciseBuilderPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-600">Select a question to preview</p>
+              <p className="text-sm text-gray-600">{t('select_a_question_to_preview')}</p>
             )}
           </div>
         </div>

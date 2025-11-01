@@ -21,6 +21,7 @@ import {
 import { coursesApi } from "@/lib/api/courses"
 import { useAuth } from "@/lib/contexts/auth-context"
 import type { Course, CourseEnrollment } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 interface EnrolledCourseWithProgress {
   course: Course
@@ -28,6 +29,9 @@ interface EnrolledCourseWithProgress {
 }
 
 export default function MyCoursesPage() {
+
+  const t = useTranslations('common')
+
   const router = useRouter()
   const { user } = useAuth()
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseWithProgress[]>([])
@@ -73,14 +77,14 @@ export default function MyCoursesPage() {
     return (
       <AppLayout>
         <PageContainer className="py-12 text-center">
-          <h1 className="text-2xl font-bold mb-4">Please Sign In</h1>
+          <h1 className="text-2xl font-bold mb-4">{t('please_sign_in')}</h1>
           <p className="text-muted-foreground mb-6">
-            You need to be signed in to view your courses
+            {t('you_need_to_be_signed_in_to_view_your_cou')}
           </p>
           <Button onClick={() => router.push('/auth/login')}>
-            Sign In
+            {t('sign_in')}
           </Button>
-        </div>
+        </PageContainer>
       </AppLayout>
     )
   }
@@ -102,9 +106,9 @@ export default function MyCoursesPage() {
       <PageContainer maxWidth="7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">My Learning</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('my_learning')}</h1>
           <p className="text-base text-muted-foreground">
-            Track your progress and continue your IELTS journey
+            {t('track_your_progress_and_continue_your_ielt')}
           </p>
         </div>
 
@@ -114,7 +118,7 @@ export default function MyCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Courses</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('total_courses')}</p>
                   <p className="text-3xl font-bold">{enrolledCourses.length}</p>
                 </div>
                 <BookOpen className="h-8 w-8 text-blue-500" />
@@ -126,7 +130,7 @@ export default function MyCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">In Progress</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('in_progress')}</p>
                   <p className="text-3xl font-bold">{inProgressCourses.length}</p>
                 </div>
                 <PlayCircle className="h-8 w-8 text-orange-500" />
@@ -138,7 +142,7 @@ export default function MyCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Completed</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('completed')}</p>
                   <p className="text-3xl font-bold">{completedCourses.length}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />
@@ -150,7 +154,7 @@ export default function MyCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Study Time</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('total_study_time')}</p>
                   <p className="text-3xl font-bold">
                     {totalStudyHours > 0 ? `${totalStudyHours}h ${totalStudyMins}m` : `${totalStudyMins}m`}
                   </p>
@@ -165,13 +169,13 @@ export default function MyCoursesPage() {
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
             <TabsTrigger value="all">
-              All Courses ({enrolledCourses.length})
+              {t('all_courses')} ({enrolledCourses.length})
             </TabsTrigger>
             <TabsTrigger value="in-progress">
-              In Progress ({inProgressCourses.length})
+              {t('in_progress_tab')} ({inProgressCourses.length})
             </TabsTrigger>
             <TabsTrigger value="completed">
-              Completed ({completedCourses.length})
+              {t('completed_tab')} ({completedCourses.length})
             </TabsTrigger>
           </TabsList>
 
@@ -184,12 +188,12 @@ export default function MyCoursesPage() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">No Courses Yet</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t('no_courses_yet')}</h3>
                   <p className="text-muted-foreground mb-6">
-                    Start your IELTS journey by enrolling in a course
+                    {t('start_your_ielts_journey_by_enrolling_in_a')}
                   </p>
                   <Button onClick={() => router.push('/courses')}>
-                    Browse Courses
+                    {t('browse_courses')}
                   </Button>
                 </CardContent>
               </Card>
@@ -239,7 +243,7 @@ export default function MyCoursesPage() {
                             {/* Progress */}
                             <div className="mt-4 space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Progress</span>
+                                <span className="text-muted-foreground">{t('progress')}</span>
                                 <span className="font-semibold">{progressPct}%</span>
                               </div>
                               <Progress value={progressPct} className="h-2" />
@@ -249,15 +253,15 @@ export default function MyCoursesPage() {
                             <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <BookOpen className="h-4 w-4" />
-                                <span>{enrollment.lessons_completed || 0}/{course.total_lessons || 0} lessons</span>
+                                <span>{enrollment.lessons_completed || 0}/{course.total_lessons || 0} {t('lessons')}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4" />
-                                <span>{enrollment.total_time_spent_minutes || 0} min</span>
+                                <span>{enrollment.total_time_spent_minutes || 0} {t('minutes')}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Target className="h-4 w-4" />
-                                <span>Band {course.target_band_score || '7.0'}</span>
+                                <span>{t('band')} {course.target_band_score || '7.0'}</span>
                               </div>
                             </div>
 
@@ -268,9 +272,7 @@ export default function MyCoursesPage() {
                                   e.stopPropagation()
                                   router.push(`/courses/${course.id}`)
                                 }}
-                              >
-                                Continue Learning
-                              </Button>
+                              >{t('continue_learning')}</Button>
                             </div>
                           </div>
                         </div>
@@ -288,7 +290,7 @@ export default function MyCoursesPage() {
                 <CardContent className="py-12 text-center">
                   <PlayCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">
-                    Start learning to see your progress here
+                    {t('start_learning_to_see_your_progress_here')}
                   </p>
                 </CardContent>
               </Card>
@@ -319,13 +321,13 @@ export default function MyCoursesPage() {
                             <h3 className="text-xl font-bold mb-2">{course.title}</h3>
                             <div className="mt-4 space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Progress</span>
+                                <span className="text-muted-foreground">{t('progress')}</span>
                                 <span className="font-semibold">{progressPct}%</span>
                               </div>
                               <Progress value={progressPct} className="h-2" />
                             </div>
                             <div className="mt-4">
-                              <Button size="sm">Continue Learning</Button>
+                              <Button size="sm">{t('continue_learning')}</Button>
                             </div>
                           </div>
                         </div>
@@ -343,7 +345,7 @@ export default function MyCoursesPage() {
                 <CardContent className="py-12 text-center">
                   <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">
-                    Complete your first course to earn achievements
+                    {t('complete_your_first_course_to_earn_achiev')}
                   </p>
                 </CardContent>
               </Card>
@@ -372,13 +374,13 @@ export default function MyCoursesPage() {
                           <div className="flex-1">
                             <div className="flex items-start justify-between">
                               <h3 className="text-xl font-bold mb-2">{course.title}</h3>
-                              <Badge className="bg-green-500">Completed</Badge>
+                              <Badge className="bg-green-500">{t('completed')}</Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {enrollment.lessons_completed} lessons • {enrollment.total_time_spent_minutes} min
-                            </p>
+                              <p className="text-sm text-muted-foreground">
+                                {enrollment.lessons_completed} {t('lessons')} • {enrollment.total_time_spent_minutes} {t('minutes')}
+                              </p>
                             <div className="mt-4">
-                              <Button size="sm" variant="outline">Review Course</Button>
+                              <Button size="sm" variant="outline">{t('review_course')}</Button>
                             </div>
                           </div>
                         </div>

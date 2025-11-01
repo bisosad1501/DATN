@@ -5,6 +5,7 @@ import "./globals.css"
 import { AuthProvider } from "@/lib/contexts/auth-context"
 import { PreferencesProvider } from "@/lib/contexts/preferences-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { LocaleSync } from "@/components/layout/locale-sync"
 import "@/lib/utils/console-filter"
 
 const notoSans = Noto_Sans({
@@ -22,10 +23,10 @@ const notoSansDisplay = Noto_Sans_Display({
 })
 
 export const metadata: Metadata = {
-  title: "IELTSGo - Master Your IELTS Journey",
-  description: "Comprehensive IELTS learning platform with courses, exercises, and progress tracking",
-  keywords: ["IELTS", "English Learning", "Test Preparation", "Online Courses"],
-    generator: 'v0.app'
+  title: "IELTSGo - Chinh phục IELTS",
+  description: "Nền tảng học IELTS toàn diện với khóa học, bài tập và theo dõi tiến độ",
+  keywords: ["IELTS", "Học Tiếng Anh", "Luyện Thi", "Khóa Học Trực Tuyến"],
+  generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -38,7 +39,10 @@ export default function RootLayout({
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <PreferencesProvider>{children}</PreferencesProvider>
+            <PreferencesProvider>
+              <LocaleSync />
+              {children}
+            </PreferencesProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

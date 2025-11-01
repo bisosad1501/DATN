@@ -9,6 +9,7 @@ import { CheckCircle, XCircle, Clock, Eye } from "lucide-react"
 import { adminApi } from "@/lib/api/admin"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate } from "@/lib/utils/date"
+import { useTranslations } from '@/lib/i18n'
 
 interface ContentItem {
   id: string
@@ -22,6 +23,9 @@ interface ContentItem {
 }
 
 export default function AdminContentPage() {
+
+  const t = useTranslations('common')
+
   const [content, setContent] = useState<ContentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("pending")
@@ -48,14 +52,14 @@ export default function AdminContentPage() {
     try {
       await adminApi.reviewContent(id, status)
       toast({
-        title: "Success",
-        description: `Content ${status} successfully`,
+        title: t('success'),
+        description: status === "approved" ? t('content_approved_successfully') : t('content_rejected_successfully'),
       })
       fetchContent()
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to review content",
+        title: t('error'),
+        description: t('failed_to_review_content'),
         variant: "destructive",
       })
     }
@@ -67,22 +71,18 @@ export default function AdminContentPage() {
         return (
           <Badge className="bg-yellow-500">
             <Clock className="w-3 h-3 mr-1" />
-            Pending
+            {t('pending')}
           </Badge>
         )
       case "approved":
         return (
           <Badge className="bg-green-500">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Approved
-          </Badge>
+            <CheckCircle className="w-3 h-3 mr-1" />{t('approved')}</Badge>
         )
       case "rejected":
         return (
           <Badge className="bg-red-500">
-            <XCircle className="w-3 h-3 mr-1" />
-            Rejected
-          </Badge>
+            <XCircle className="w-3 h-3 mr-1" />{t('rejected')}</Badge>
         )
       default:
         return null
@@ -101,23 +101,23 @@ export default function AdminContentPage() {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Content Management</h1>
-        <p className="text-muted-foreground mt-1">Review and moderate content submissions</p>
+        <h1 className="text-3xl font-bold text-foreground">{t('content_management')}</h1>
+        <p className="text-muted-foreground mt-1">{t('review_and_moderate_content_submissions')}</p>
       </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="pending">Pending Review</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+            <TabsTrigger value="pending">{t('pending_review')}</TabsTrigger>
+            <TabsTrigger value="approved">{t('approved')}</TabsTrigger>
+            <TabsTrigger value="rejected">{t('rejected')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4 mt-6">
             {loading ? (
-              <div className="text-center py-12">Loading...</div>
+              <div className="text-center py-12">{t('loading')}</div>
             ) : content.length === 0 ? (
               <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">No content found</CardContent>
+                <CardContent className="py-12 text-center text-muted-foreground">{t('no_content_found')}</CardContent>
               </Card>
             ) : (
               content.map((item) => (
@@ -131,13 +131,13 @@ export default function AdminContentPage() {
                         </div>
                         <CardTitle>{item.title}</CardTitle>
                         <CardDescription>
-                          By {item.author} • Submitted {formatDate(item.submittedAt)}
+                          {t('by')} {item.author} • {t('submitted')} {formatDate(item.submittedAt)}
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
                           <Eye className="w-4 h-4 mr-2" />
-                          Preview
+                          {t('preview')}
                         </Button>
                         {item.status === "pending" && (
                           <>
@@ -148,7 +148,7 @@ export default function AdminContentPage() {
                               onClick={() => handleReview(item.id, "approved")}
                             >
                               <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
+                              {t('approve')}
                             </Button>
                             <Button
                               size="sm"
@@ -157,7 +157,7 @@ export default function AdminContentPage() {
                               onClick={() => handleReview(item.id, "rejected")}
                             >
                               <XCircle className="w-4 h-4 mr-2" />
-                              Reject
+                              {t('reject')}
                             </Button>
                           </>
                         )}
@@ -167,7 +167,7 @@ export default function AdminContentPage() {
                   {item.reviewedAt && (
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Reviewed by {item.reviewedBy} on {formatDate(item.reviewedAt)}
+                        {t('reviewed_by')} {item.reviewedBy} {t('on')} {formatDate(item.reviewedAt)}
                       </p>
                     </CardContent>
                   )}

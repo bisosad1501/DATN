@@ -20,6 +20,7 @@ import {
 import { Loader2, Trophy, Medal, Award, Clock, Target, TrendingUp, Sparkles } from "lucide-react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/lib/i18n"
 
 type Period = "daily" | "weekly" | "monthly" | "all-time"
 
@@ -36,6 +37,8 @@ interface BackendLeaderboardEntry {
 
 export default function LeaderboardPage() {
   const { user } = useAuth()
+  const t = useTranslations('leaderboard')
+  const tCommon = useTranslations('common')
   const [period, setPeriod] = useState<Period>("all-time")
   const [page, setPage] = useState(1)
   const [leaderboard, setLeaderboard] = useState<BackendLeaderboardEntry[]>([])
@@ -96,13 +99,13 @@ export default function LeaderboardPage() {
   const getPeriodLabel = (p: Period) => {
     switch (p) {
       case "daily":
-        return "Hôm nay"
+        return t('today')
       case "weekly":
-        return "Tuần này"
+        return t('this_week')
       case "monthly":
-        return "Tháng này"
+        return t('this_month')
       case "all-time":
-        return "Tất cả thời gian"
+        return t('all_time')
       default:
         return p
     }
@@ -121,9 +124,9 @@ export default function LeaderboardPage() {
       <PageContainer maxWidth="6xl">
         {/* Header Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Bảng Xếp Hạng</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('leaderboard_title')}</h1>
           <p className="text-base text-muted-foreground max-w-2xl">
-            Theo dõi thứ hạng của bạn và cạnh tranh với cộng đồng học viên IELTS
+            {t('track_your_rank_and_compete')}
           </p>
         </div>
 
@@ -135,25 +138,25 @@ export default function LeaderboardPage() {
                 value="daily"
                 className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
-                Hôm nay
+                {t('today')}
               </TabsTrigger>
               <TabsTrigger
                 value="weekly"
                 className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
-                Tuần này
+                {t('this_week')}
               </TabsTrigger>
               <TabsTrigger
                 value="monthly"
                 className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
-                Tháng này
+                {t('this_month')}
               </TabsTrigger>
               <TabsTrigger
                 value="all-time"
                 className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
-                Tất cả
+                {t('all_time')}
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -215,21 +218,21 @@ export default function LeaderboardPage() {
                       <Award className="h-4 w-4 text-muted-foreground" />
                       <span className="text-lg font-bold">{userRank.achievements_count}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">Thành tích</span>
+                    <span className="text-xs text-muted-foreground">{t('achievements')}</span>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-lg font-bold">{formatStudyHours(userRank.total_study_hours)}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">Thời gian</span>
+                    <span className="text-xs text-muted-foreground">{t('study_time')}</span>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Target className="h-4 w-4 text-muted-foreground" />
                       <span className="text-lg font-bold">{userRank.current_streak_days}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">Chuỗi</span>
+                    <span className="text-xs text-muted-foreground">{t('streak')}</span>
                   </div>
                 </div>
               </div>
@@ -242,9 +245,9 @@ export default function LeaderboardPage() {
           <CardHeader className="border-b bg-muted/30 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-semibold">Bảng Xếp Hạng</CardTitle>
+                <CardTitle className="text-xl font-semibold">{t('leaderboard_title')}</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {getPeriodLabel(period)} • {pagination.total > 0 ? `${pagination.total} học viên` : "Đang tải..."}
+                  {getPeriodLabel(period)} • {pagination.total > 0 ? `${pagination.total} ${t('students')}` : t('loading_leaderboard')}
                 </p>
               </div>
             </div>
@@ -260,8 +263,8 @@ export default function LeaderboardPage() {
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
                   <Trophy className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground font-medium mb-2">Chưa có dữ liệu</p>
-                <p className="text-sm text-muted-foreground">Bắt đầu học để thấy thứ hạng của bạn!</p>
+                <p className="text-muted-foreground font-medium mb-2">{t('no_data_yet')}</p>
+                <p className="text-sm text-muted-foreground">{t('start_learning_to_see_rank')}</p>
               </div>
             ) : (
               <>
@@ -315,7 +318,7 @@ export default function LeaderboardPage() {
                               <p className="font-medium text-sm truncate">{entry.full_name}</p>
                               {isUser && (
                                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                  Bạn
+                                  {t('you')}
                                 </Badge>
                               )}
                             </div>
@@ -352,14 +355,14 @@ export default function LeaderboardPage() {
                             </div>
                             <div className="text-right min-w-[5ch]">
                               <span className="font-bold text-base">{entry.total_points.toLocaleString()}</span>
-                              <span className="text-xs text-muted-foreground ml-1">điểm</span>
+                              <span className="text-xs text-muted-foreground ml-1">{t('points')}</span>
                             </div>
                           </div>
 
                           {/* Mobile Stats */}
                           <div className="md:hidden flex flex-col items-end gap-1">
                             <span className="font-bold text-sm">{entry.total_points.toLocaleString()}</span>
-                            <span className="text-xs text-muted-foreground">điểm</span>
+                            <span className="text-xs text-muted-foreground">{t('points')}</span>
                           </div>
                         </div>
                       </div>

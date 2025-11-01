@@ -12,8 +12,12 @@ import { Loader2, CheckCircle2, XCircle, Clock, Target, TrendingUp, Home, Rotate
 import { exercisesApi } from "@/lib/api/exercises"
 import type { SubmissionResult } from "@/types"
 import { usePreferences } from "@/lib/contexts/preferences-context"
+import { useTranslations } from '@/lib/i18n'
 
 export default function ExerciseResultPage() {
+
+  const t = useTranslations('exercises')
+
   const params = useParams()
   const router = useRouter()
   const { preferences } = usePreferences()
@@ -51,12 +55,12 @@ export default function ExerciseResultPage() {
   if (!result) {
     return (
       <AppLayout>
-        <PageContainer className="text-center">
-          <p className="text-lg text-muted-foreground">Results not found</p>
-          <Button className="mt-4" onClick={() => router.push("/exercises/list")}>
-            Back to Exercises
-          </Button>
-        </PageContainer>
+          <PageContainer className="text-center">
+            <p className="text-lg text-muted-foreground">{t('results_not_found')}</p>
+            <Button className="mt-4" onClick={() => router.push("/exercises/list")}>
+              {t('back_to_exercises')}
+            </Button>
+          </PageContainer>
       </AppLayout>
     )
   }
@@ -84,12 +88,12 @@ export default function ExerciseResultPage() {
               )}
             </div>
             <CardTitle className="text-3xl mb-2">
-              {isPassed ? "Congratulations! 🎉" : "Keep Practicing! 💪"}
+              {isPassed ? t('congratulations') : t('keep_practicing')}
             </CardTitle>
             <p className="text-muted-foreground">
               {isPassed
-                ? "You've successfully completed this exercise"
-                : "Don't give up, practice makes perfect"}
+                ? t('successfully_completed')
+                : t('dont_give_up')}
             </p>
           </CardHeader>
           <CardContent>
@@ -99,10 +103,10 @@ export default function ExerciseResultPage() {
                 {performance.score}/{performance.total_questions}
               </div>
               <Progress value={performance.percentage} className="h-3 mb-2" />
-              <p className="text-sm text-muted-foreground">{performance.percentage.toFixed(1)}% Score</p>
+              <p className="text-sm text-muted-foreground">{t('percentage_score', { percentage: performance.percentage.toFixed(1) })}</p>
               {performance.band_score && (
                 <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-1">IELTS Band Score</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('ielts_band_score')}</p>
                   <p className="text-3xl font-bold text-primary">{performance.band_score}</p>
                 </div>
               )}
@@ -112,22 +116,22 @@ export default function ExerciseResultPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
                 <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-green-600" />
-                <p className="text-sm text-muted-foreground">Correct</p>
+                <p className="text-sm text-muted-foreground">{t('exercises.correct')}</p>
                 <p className="text-2xl font-bold text-green-600">{performance.correct_answers}</p>
               </div>
               <div className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg">
                 <XCircle className="w-6 h-6 mx-auto mb-2 text-red-600" />
-                <p className="text-sm text-muted-foreground">Incorrect</p>
+                <p className="text-sm text-muted-foreground">{t('exercises.incorrect')}</p>
                 <p className="text-2xl font-bold text-red-600">{performance.incorrect_answers}</p>
               </div>
               <div className="text-center p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <Target className="w-6 h-6 mx-auto mb-2 text-gray-600" />
-                <p className="text-sm text-muted-foreground">Skipped</p>
+                <p className="text-sm text-muted-foreground">{t('exercises.skipped')}</p>
                 <p className="text-2xl font-bold text-gray-600">{performance.skipped_answers}</p>
               </div>
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <Clock className="w-6 h-6 mx-auto mb-2 text-blue-600" />
-                <p className="text-sm text-muted-foreground">Time</p>
+                <p className="text-sm text-muted-foreground">{t('exercises.time')}</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {formatTime(performance.time_spent_seconds)}
                 </p>
@@ -137,11 +141,11 @@ export default function ExerciseResultPage() {
             {/* Additional Stats */}
             <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <span className="text-muted-foreground">Accuracy</span>
+                <span className="text-muted-foreground">{t('accuracy')}</span>
                 <span className="font-semibold">{performance.accuracy.toFixed(1)}%</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <span className="text-muted-foreground">Avg Time/Question</span>
+                <span className="text-muted-foreground">{t('avg_time_per_question')}</span>
                 <span className="font-semibold">
                   {performance.average_time_per_question.toFixed(0)}s
                 </span>
@@ -153,7 +157,7 @@ export default function ExerciseResultPage() {
         {/* Answer Review */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Answer Review</CardTitle>
+            <CardTitle>{t('answer_review')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {answers.map((answerData, index) => {
@@ -171,10 +175,10 @@ export default function ExerciseResultPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <p className="font-medium">
-                      Question {question.question_number}: {question.question_text}
+                      {t('question_label', { number: question.question_number.toString(), text: question.question_text })}
                     </p>
                     <Badge className={isCorrect ? "bg-green-500" : "bg-red-500"}>
-                      {isCorrect ? "✓ Correct" : "✗ Incorrect"}
+                      {isCorrect ? t('correct_badge') : t('incorrect_badge')}
                     </Badge>
                   </div>
 
@@ -186,18 +190,18 @@ export default function ExerciseResultPage() {
 
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">Your answer: </span>
+                      <span className="font-medium">{t('your_answer')} </span>
                       <span className={isCorrect ? "text-green-600" : "text-red-600"}>
                         {answer.answer_text ||
                           (typeof correct_answer === "object" && "selected_option_id" in answer
                             ? answer.selected_option_id
-                            : "Not answered")}
+                            : t('not_answered'))}
                       </span>
                     </div>
 
                     {!isCorrect && (
                       <div>
-                        <span className="font-medium">Correct answer: </span>
+                        <span className="font-medium">{t('correct_answer')} </span>
                         <span className="text-green-600">
                           {typeof correct_answer === "string"
                             ? correct_answer
@@ -208,14 +212,14 @@ export default function ExerciseResultPage() {
 
                     {answer.points_earned !== undefined && (
                       <div>
-                        <span className="font-medium">Points earned: </span>
+                        <span className="font-medium">{t('points_earned')} </span>
                         <span>{answer.points_earned} / {question.points}</span>
                       </div>
                     )}
 
                     {answer.time_spent_seconds !== undefined && (
                       <div>
-                        <span className="font-medium">Time spent: </span>
+                        <span className="font-medium">{t('time_spent_label')} </span>
                         <span>{answer.time_spent_seconds}s</span>
                       </div>
                     )}
@@ -225,7 +229,7 @@ export default function ExerciseResultPage() {
                   {question.explanation && showExplanations && (
                     <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <p className="font-medium text-blue-900 dark:text-blue-100 mb-1 text-sm">
-                        💡 Explanation:
+                        💡 {t('explanation')}
                       </p>
                       <p className="text-sm text-blue-800 dark:text-blue-200">
                         {question.explanation}
@@ -237,7 +241,7 @@ export default function ExerciseResultPage() {
                   {question.tips && !isCorrect && (
                     <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                       <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1 text-sm">
-                        💡 Tips:
+                        💡 {t('tips_label')}
                       </p>
                       <p className="text-sm text-yellow-800 dark:text-yellow-200">{question.tips}</p>
                     </div>
@@ -252,11 +256,11 @@ export default function ExerciseResultPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button variant="outline" onClick={() => router.push("/exercises/list")}>
             <Home className="w-4 h-4 mr-2" />
-            Back to Exercises
+            {t('back_to_exercises')}
           </Button>
           <Button onClick={() => router.push(`/exercises/${exerciseId}`)}>
             <RotateCcw className="w-4 h-4 mr-2" />
-            Try Again
+            {t('try_again')}
           </Button>
         </div>
       </PageContainer>

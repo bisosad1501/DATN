@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PageContainer } from "@/components/layout/page-container"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,8 +20,12 @@ import {
 } from "lucide-react"
 import { coursesApi } from "@/lib/api/courses"
 import { exercisesApi } from "@/lib/api/exercises"
+import { useTranslations } from '@/lib/i18n'
 
 export default function DataModelPage() {
+
+  const t = useTranslations('common')
+
   const [courseData, setCourseData] = useState<any>(null)
   const [exerciseData, setExerciseData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -81,7 +86,7 @@ export default function DataModelPage() {
           <TabsContent value="diagram" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Data Model Structure</CardTitle>
+                <CardTitle>{t('data_model_structure')}</CardTitle>
                 <CardDescription>
                   Visual representation of how Course, Module, Lesson, Video, and Exercise are connected
                 </CardDescription>
@@ -93,7 +98,7 @@ export default function DataModelPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <BookOpen className="h-8 w-8 text-blue-500" />
                       <div>
-                        <h3 className="text-2xl font-bold">COURSE</h3>
+                        <h3 className="text-2xl font-bold">{t('course')}</h3>
                         <p className="text-sm text-muted-foreground">Khóa học hoàn chỉnh</p>
                       </div>
                       <Badge variant="outline" className="ml-auto">1</Badge>
@@ -108,10 +113,10 @@ export default function DataModelPage() {
                       <div className="flex items-center gap-3 mb-4">
                         <FolderTree className="h-7 w-7 text-green-500" />
                         <div>
-                          <h3 className="text-xl font-bold">MODULE</h3>
+                          <h3 className="text-xl font-bold">{t('module')}</h3>
                           <p className="text-sm text-muted-foreground">Chương/Phần của khóa học</p>
                         </div>
-                        <Badge variant="outline" className="ml-auto">Many</Badge>
+                        <Badge variant="outline" className="ml-auto">{t('many')}</Badge>
                       </div>
                       <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg space-y-2">
                         <p className="text-sm"><strong>Examples:</strong></p>
@@ -127,10 +132,10 @@ export default function DataModelPage() {
                         <div className="flex items-center gap-3 mb-4">
                           <FileText className="h-6 w-6 text-purple-500" />
                           <div>
-                            <h3 className="text-lg font-bold">LESSON</h3>
+                            <h3 className="text-lg font-bold">{t('lesson')}</h3>
                             <p className="text-sm text-muted-foreground">Bài học cụ thể</p>
                           </div>
-                          <Badge variant="outline" className="ml-auto">Many</Badge>
+                          <Badge variant="outline" className="ml-auto">{t('many')}</Badge>
                         </div>
                         <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg space-y-3">
                           <p className="text-sm"><strong>Types:</strong></p>
@@ -139,7 +144,7 @@ export default function DataModelPage() {
                           <div className="border-l-2 border-orange-400 pl-4">
                             <div className="flex items-center gap-2 mb-2">
                               <Video className="h-5 w-5 text-orange-500" />
-                              <span className="font-semibold text-sm">VIDEO Lesson</span>
+                              <span className="font-semibold text-sm">{t('video_lesson')}</span>
                             </div>
                             <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded text-sm">
                               <p><strong>Example:</strong> "Welcome to IELTS Listening"</p>
@@ -151,7 +156,7 @@ export default function DataModelPage() {
                           <div className="border-l-2 border-cyan-400 pl-4">
                             <div className="flex items-center gap-2 mb-2">
                               <FileText className="h-5 w-5 text-cyan-500" />
-                              <span className="font-semibold text-sm">ARTICLE Lesson</span>
+                              <span className="font-semibold text-sm">{t('article_lesson')}</span>
                             </div>
                             <div className="bg-cyan-50 dark:bg-cyan-950/20 p-3 rounded text-sm">
                               <p><strong>Example:</strong> "Understanding IELTS Format"</p>
@@ -163,7 +168,7 @@ export default function DataModelPage() {
                           <div className="border-l-2 border-pink-400 pl-4">
                             <div className="flex items-center gap-2 mb-2">
                               <PenTool className="h-5 w-5 text-pink-500" />
-                              <span className="font-semibold text-sm">EXERCISE Lesson</span>
+                              <span className="font-semibold text-sm">{t('exercise_lesson')}</span>
                             </div>
                             <div className="bg-pink-50 dark:bg-pink-950/20 p-3 rounded text-sm">
                               <p><strong>Example:</strong> "Practice Exercise: Basic Listening"</p>
@@ -183,10 +188,10 @@ export default function DataModelPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <PenTool className="h-8 w-8 text-red-500" />
                       <div>
-                        <h3 className="text-2xl font-bold">EXERCISE</h3>
+                        <h3 className="text-2xl font-bold">{t('exercise')}</h3>
                         <p className="text-sm text-muted-foreground">Bài tập/Đề thi (Exercise Service)</p>
                       </div>
-                      <Badge variant="outline" className="ml-auto">Independent</Badge>
+                      <Badge variant="outline" className="ml-auto">{t('independent')}</Badge>
                     </div>
                     <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-lg space-y-2">
                       <p className="text-sm"><strong>Can be:</strong></p>
@@ -210,7 +215,7 @@ export default function DataModelPage() {
             {loading ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">Loading data...</p>
+                  <p className="text-muted-foreground">{t('loading_data')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -258,7 +263,7 @@ export default function DataModelPage() {
                                         </span>
                                       )}
                                       {lesson.is_free && (
-                                        <Badge variant="secondary" className="text-xs">FREE</Badge>
+                                        <Badge variant="secondary" className="text-xs">{t('free')}</Badge>
                                       )}
                                     </div>
 
@@ -307,19 +312,19 @@ export default function DataModelPage() {
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Skill</p>
+                          <p className="text-sm text-muted-foreground">{t('skill')}</p>
                           <Badge>{exerciseData.exercise?.skill_type}</Badge>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Difficulty</p>
+                          <p className="text-sm text-muted-foreground">{t('difficulty')}</p>
                           <Badge variant="outline">{exerciseData.exercise?.difficulty}</Badge>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Sections</p>
+                          <p className="text-sm text-muted-foreground">{t('sections')}</p>
                           <p className="font-semibold">{exerciseData.sections?.length || 0}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Questions</p>
+                          <p className="text-sm text-muted-foreground">{t('questions')}</p>
                           <p className="font-semibold">{exerciseData.exercise?.total_questions || 0}</p>
                         </div>
                       </div>
@@ -345,14 +350,14 @@ export default function DataModelPage() {
           <TabsContent value="explanation" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Key Concepts</CardTitle>
+                <CardTitle>{t('key_concepts')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <h3 className="font-semibold mb-2">🎓 COURSE vs EXERCISE</h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold text-blue-600 mb-2">COURSE</h4>
+                      <h4 className="font-semibold text-blue-600 mb-2">{t('course')}</h4>
                       <ul className="text-sm space-y-1">
                         <li>• Structured learning path</li>
                         <li>• Multiple modules/lessons</li>
@@ -362,7 +367,7 @@ export default function DataModelPage() {
                       </ul>
                     </div>
                     <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold text-red-600 mb-2">EXERCISE</h4>
+                      <h4 className="font-semibold text-red-600 mb-2">{t('exercise')}</h4>
                       <ul className="text-sm space-y-1">
                         <li>• Practice/Test only</li>
                         <li>• Single test/exercise</li>

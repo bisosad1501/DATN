@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, Edit, Trash2, Ban, CheckCircle } from "lucide-react"
 import type { User } from "@/types"
 import { formatDate } from "@/lib/utils/date"
+import { useTranslations } from '@/lib/i18n'
 
 interface UserTableProps {
   users: User[]
@@ -15,6 +16,9 @@ interface UserTableProps {
 }
 
 export function UserTable({ users, onEdit, onDelete, onToggleStatus }: UserTableProps) {
+
+  const t = useTranslations('common')
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
@@ -46,13 +50,13 @@ export function UserTable({ users, onEdit, onDelete, onToggleStatus }: UserTable
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Joined</TableHead>
-            <TableHead>Last Active</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t('user')}</TableHead>
+            <TableHead>{t('email')}</TableHead>
+            <TableHead>{t('role')}</TableHead>
+            <TableHead>{t('status')}</TableHead>
+            <TableHead>{t('joined')}</TableHead>
+            <TableHead>{t('last_active')}</TableHead>
+            <TableHead className="text-right">{t('actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type { CourseFilters } from "@/lib/api/courses"
+import { useTranslations } from '@/lib/i18n'
 
 interface CourseFiltersProps {
   filters: CourseFilters
@@ -18,18 +19,19 @@ interface CourseFiltersProps {
   onSearch: (search: string) => void
 }
 
+// SKILL_OPTIONS và LEVEL_OPTIONS sẽ được translate trong component
 const SKILL_OPTIONS = [
-  { value: "listening", label: "Listening", color: "bg-blue-500" },
-  { value: "reading", label: "Reading", color: "bg-green-500" },
-  { value: "writing", label: "Writing", color: "bg-orange-500" },
-  { value: "speaking", label: "Speaking", color: "bg-purple-500" },
-  { value: "general", label: "General", color: "bg-gray-500" },
+  { value: "listening", color: "bg-blue-500" },
+  { value: "reading", color: "bg-green-500" },
+  { value: "writing", color: "bg-orange-500" },
+  { value: "speaking", color: "bg-purple-500" },
+  { value: "general", color: "bg-gray-500" },
 ]
 
 const LEVEL_OPTIONS = [
-  { value: "beginner", label: "Beginner", color: "bg-emerald-500" },
-  { value: "intermediate", label: "Intermediate", color: "bg-yellow-500" },
-  { value: "advanced", label: "Advanced", color: "bg-red-500" },
+  { value: "beginner", color: "bg-emerald-500" },
+  { value: "intermediate", color: "bg-yellow-500" },
+  { value: "advanced", color: "bg-red-500" },
 ]
 
 const ENROLLMENT_TYPE_OPTIONS = [
@@ -38,6 +40,9 @@ const ENROLLMENT_TYPE_OPTIONS = [
 ]
 
 export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: CourseFiltersProps) {
+
+  const t = useTranslations('common')
+
   const [searchValue, setSearchValue] = useState(filters.search || "")
   const [isOpen, setIsOpen] = useState(false)
 
@@ -102,7 +107,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <Input
-            placeholder="Search courses by title, instructor, or keyword..."
+            placeholder={t('search_courses_by_title_instructor_or_ke')}
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyDown={(e) => {
@@ -117,7 +122,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
           onClick={() => onSearch(searchValue)} 
           className="h-12 px-8 text-base font-medium shadow-md hover:shadow-lg transition-shadow"
         >
-          Search
+          {t('search')}
         </Button>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
@@ -126,7 +131,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
               className="relative h-12 px-5 border-2 hover:border-primary transition-all shadow-sm"
             >
               <Filter className="w-4 h-4 mr-2" />
-              <span className="font-medium">Filters</span>
+              <span className="font-medium">{t('filters')}</span>
               {activeFilterCount > 0 && (
                 <Badge
                   className="absolute -top-2 -right-2 w-6 h-6 p-0 flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground shadow-md"
@@ -139,12 +144,12 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
           <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
             <div className="sticky top-0 bg-background z-10 border-b px-6 py-5 shadow-sm">
               <SheetHeader>
-                <SheetTitle className="text-2xl font-bold tracking-tight">Filter Courses</SheetTitle>
+                <SheetTitle className="text-2xl font-bold tracking-tight">{t('filter_courses')}</SheetTitle>
                 <p className="text-sm text-muted-foreground mt-1.5">
-                  Narrow down your search to find the perfect course
+                  {t('filter_description')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2 italic">
-                  Tip: Select multiple options in the same category for "OR" logic (e.g., Listening OR Reading). Different categories use "AND" logic.
+                  {t('filter_tip')}
                 </p>
               </SheetHeader>
             </div>
@@ -153,8 +158,8 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
               {/* Skill Type */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold text-foreground">Skill Type</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                  <Label className="text-base font-semibold text-foreground">{t('skill_type')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t('select_one_or_more')}</p>
                 </div>
                 <div className="space-y-2.5">
                   {SKILL_OPTIONS.map((option) => {
@@ -181,7 +186,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                           "flex-1 text-sm font-medium transition-colors",
                           isSelected && "text-primary"
                         )}>
-                          {option.label}
+                          {t(option.value)}
                         </span>
                         {isSelected && (
                           <Check className="w-4 h-4 text-primary" />
@@ -197,8 +202,8 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
               {/* Level */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold text-foreground">Difficulty Level</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                  <Label className="text-base font-semibold text-foreground">{t('difficulty_level')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t('select_one_or_more')}</p>
                 </div>
                 <div className="space-y-2.5">
                   {LEVEL_OPTIONS.map((option) => {
@@ -225,7 +230,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                           "flex-1 text-sm font-medium transition-colors",
                           isSelected && "text-primary"
                         )}>
-                          {option.label}
+                          {t(option.value)}
                         </span>
                         {isSelected && (
                           <Check className="w-4 h-4 text-primary" />
@@ -241,8 +246,8 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
               {/* Enrollment Type */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold text-foreground">Enrollment Type</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Select one or more (OR logic)</p>
+                  <Label className="text-base font-semibold text-foreground">{t('enrollment_type')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t('select_one_or_more')}</p>
                 </div>
                 <div className="space-y-2.5">
                   {ENROLLMENT_TYPE_OPTIONS.map((option) => {
@@ -273,7 +278,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                           "flex-1 text-sm font-medium transition-colors",
                           isSelected && "text-primary"
                         )}>
-                          {option.label}
+                          {t(`enrollment_${option.value}`)}
                         </span>
                         {isSelected && (
                           <Check className="w-4 h-4 text-primary" />
@@ -288,7 +293,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
 
               {/* Featured */}
               <div className="space-y-4">
-                <Label className="text-base font-semibold text-foreground">Special Options</Label>
+                <Label className="text-base font-semibold text-foreground">{t('special_options')}</Label>
                 <label
                   htmlFor="featured"
                   className={cn(
@@ -311,7 +316,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                     "flex-1 text-sm font-medium transition-colors",
                     filters.is_featured && "text-primary"
                   )}>
-                    Featured courses only
+                    {t('featured_courses_only')}
                   </span>
                 </label>
               </div>
@@ -327,13 +332,13 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                   disabled={activeFilterCount === 0}
                 >
                   <X className="w-4 h-4 mr-2" />
-                  Clear All
+                  {t('clear_all')}
                 </Button>
                 <Button 
                   className="flex-1 h-11 font-medium shadow-md hover:shadow-lg transition-shadow" 
                   onClick={() => setIsOpen(false)}
                 >
-                  Apply Filters
+                  {t('apply_filters')}
                   {activeFilterCount > 0 && (
                     <Badge className="ml-2 bg-primary-foreground text-primary">
                       {activeFilterCount}
@@ -349,7 +354,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
       {/* Active Filters */}
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap py-2">
-          <span className="text-sm font-medium text-muted-foreground mr-1">Active filters:</span>
+          <span className="text-sm font-medium text-muted-foreground mr-1">{t('active_filters')}:</span>
           {filters.search && (
             <Badge 
               variant="secondary" 
@@ -363,7 +368,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                   onSearch("")
                 }}
                 className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                aria-label="Remove search filter"
+                  aria-label={t('remove_search_filter')}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -378,11 +383,11 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                 className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${option.color} shadow-sm`}></span>
-                {option.label}
+                {t(option.value)}
                 <button
                   onClick={() => handleSkillChange(skill)}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                  aria-label="Remove skill filter"
+                  aria-label={t('remove_skill_filter')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -398,11 +403,11 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                 className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${option.color} shadow-sm`}></span>
-                {option.label}
+                {t(option.value)}
                 <button
                   onClick={() => handleLevelChange(level)}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                  aria-label="Remove level filter"
+                  aria-label={t('remove_level_filter')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -420,11 +425,11 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
                 className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
               >
                 <IconComponent className="w-3.5 h-3.5" />
-                {option.label}
+                {t(`enrollment_${type}`)}
                 <button
                   onClick={() => handleEnrollmentTypeChange(type)}
                   className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                  aria-label="Remove enrollment type filter"
+                  aria-label={t('remove_enrollment_type_filter')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -437,11 +442,11 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
               className="gap-1.5 px-3 py-1.5 text-sm font-medium border shadow-sm hover:shadow-md transition-shadow"
             >
               <Star className="w-3.5 h-3.5 fill-primary text-primary" />
-              Featured
+              {t('featured_courses_only')}
               <button
                 onClick={() => onFiltersChange({ ...filters, is_featured: false })}
                 className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
-                aria-label="Remove featured filter"
+                aria-label={t('remove_featured_filter')}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -454,7 +459,7 @@ export function CourseFiltersComponent({ filters, onFiltersChange, onSearch }: C
             className="h-8 px-3 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
           >
             <X className="w-3.5 h-3.5 mr-1.5" />
-            Clear all
+            {t('clear_all')}
           </Button>
         </div>
       )}

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Clock, Target, TrendingUp, GraduationCap, Zap, BookOpen } from "lucide-react"
 import type { Exercise } from "@/types"
+import { useTranslations } from '@/lib/i18n'
 
 interface ExerciseCardProps {
   exercise: Exercise
@@ -13,6 +14,9 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({ exercise, showCourseLink = true }: ExerciseCardProps) {
+
+  const t = useTranslations('common')
+
   // Support both snake_case (backend) and camelCase (legacy)
   const skillType = exercise.skill_type || exercise.skillType || 'reading'
   const difficulty = exercise.difficulty || 'medium'
@@ -104,7 +108,7 @@ export function ExerciseCard({ exercise, showCourseLink = true }: ExerciseCardPr
 
       <CardFooter className="p-4 pt-0">
         <Button asChild className="w-full">
-          <Link href={`/exercises/${exercise.id}`}>Start Practice</Link>
+          <Link href={`/exercises/${exercise.id}`}>{t('start_practice')}</Link>
         </Button>
       </CardFooter>
     </Card>
