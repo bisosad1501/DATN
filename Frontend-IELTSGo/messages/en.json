@@ -695,6 +695,9 @@
     "welcomeBack": "Welcome back, {name}!",
     "subtitle": "Track your learning journey and performance",
     "targetBand": "Target: Band {score}",
+    "quick_actions": "Quick Actions",
+    "goals": "Goals",
+    "set_and_track_goals": "Set and track goals",
     "timeRange": {
       "7d": "7 Days",
       "30d": "30 Days",
