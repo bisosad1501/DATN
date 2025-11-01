@@ -117,7 +117,12 @@ export default function UserProfilePage() {
       await userApi.updatePreferences({
         profile_visibility: value,
       })
-      // Success - visibility already updated
+      
+      // Show success toast
+      toast({
+        title: t('profile_visibility_updated'),
+        description: t('profile_visibility_updated_description'),
+      })
     } catch (error) {
       console.error("Failed to update profile visibility:", error)
       // Revert on error
@@ -273,6 +278,14 @@ export default function UserProfilePage() {
       console.log("[Follow] Reloading profile...")
       await loadProfile()
       console.log("[Follow] Profile reloaded")
+      
+      // Show success toast
+      toast({
+        title: wasFollowing ? t('unfollowed_successfully') : t('followed_successfully'),
+        description: wasFollowing 
+          ? t('user_unfollowed_description') 
+          : t('user_followed_description'),
+      })
     } catch (error: any) {
       console.error("[Follow] Error:", error)
       console.error("[Follow] Error response:", error?.response?.data)
