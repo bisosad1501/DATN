@@ -751,8 +751,17 @@ export default function UserProfilePage() {
                                   await loadFollowers(followersPage)
                                   // Reload profile to update count
                                   await loadProfile()
+                                  // Show success toast
+                                  toast({
+                                    title: t('follower_removed_successfully'),
+                                    description: t('follower_removed_description'),
+                                  })
                                 } catch (error: any) {
-                                  alert(error?.response?.data?.error?.message || error?.message || t('failed_to_remove_follower'))
+                                  toast({
+                                    title: t('error'),
+                                    description: error?.response?.data?.error?.message || error?.message || t('failed_to_remove_follower'),
+                                    variant: "destructive",
+                                  })
                                 }
                               }
                             }}
