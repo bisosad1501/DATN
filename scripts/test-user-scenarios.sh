@@ -235,37 +235,38 @@ echo ""
 
 echo "1. Getting all goals..."
 ALL_GOALS=$(auth_req "GET" "/user/goals")
-GOALS_COUNT=$(echo $ALL_GOALS | jq '.data | length // 0')
+GOALS_DATA=$(echo $ALL_GOALS | jq '.data // empty')
+# Handle both {count, goals} and array response
+if echo $GOALS_DATA | jq -e '.goals // empty' > /dev/null 2>&1; then
+    GOALS_COUNT=$(echo $GOALS_DATA | jq '.count // (.goals | length)')
+    GOALS_ARRAY=$(echo $GOALS_DATA | jq '.goals // []')
+else
+    GOALS_COUNT=$(echo $GOALS_DATA | jq 'if type == "array" then length else 0 end')
+    GOALS_ARRAY=$GOALS_DATA
+fi
 success "Found $GOALS_COUNT goals"
 
 if [ "$GOALS_COUNT" -gt 0 ]; then
     echo "2. Analyzing goal statuses..."
     
-    # Handle array or object response
-    GOALS_DATA=$(echo $ALL_GOALS | jq '.data // empty')
-    if echo $GOALS_DATA | jq -e '. | type == "array"' > /dev/null 2>&1; then
-        # Count by status
-        NOT_STARTED=$(echo $GOALS_DATA | jq '[.[] | select(.status == "not_started")] | length')
-        IN_PROGRESS=$(echo $GOALS_DATA | jq '[.[] | select(.status == "in_progress")] | length')
-        COMPLETED=$(echo $GOALS_DATA | jq '[.[] | select(.status == "completed")] | length')
-        
-        info "  Not Started: $NOT_STARTED"
-        info "  In Progress: $IN_PROGRESS"
-        info "  Completed: $COMPLETED"
-        
-        # Show progress for in-progress goals
-        if [ "$IN_PROGRESS" -gt 0 ]; then
-            echo "3. Showing in-progress goals:"
-            echo $GOALS_DATA | jq -r '.[] | select(.status == "in_progress") | "  - \(.title): \(.current_value)/\(.target_value) \(.target_unit)"'
-        fi
-        
-        # Show sample goals
-        echo "4. Sample goals:"
-        echo $GOALS_DATA | jq -r '.[0:2] | .[] | "  - \(.title) (\(.goal_type)): \(.current_value // 0)/\(.target_value) - \(.status)"'
-    else
-        info "  Goals data structure: $(echo $GOALS_DATA | jq -r 'keys | join(", ")' 2>/dev/null || echo 'unknown')"
-        echo $ALL_GOALS | jq '.data' | head -10
+    # Count by status
+    NOT_STARTED=$(echo $GOALS_ARRAY | jq '[.[] | select(.status == "not_started")] | length')
+    IN_PROGRESS=$(echo $GOALS_ARRAY | jq '[.[] | select(.status == "in_progress")] | length')
+    COMPLETED=$(echo $GOALS_ARRAY | jq '[.[] | select(.status == "completed")] | length')
+    
+    info "  Not Started: $NOT_STARTED"
+    info "  In Progress: $IN_PROGRESS"
+    info "  Completed: $COMPLETED"
+    
+    # Show progress for in-progress goals
+    if [ "$IN_PROGRESS" -gt 0 ]; then
+        echo "3. Showing in-progress goals:"
+        echo $GOALS_ARRAY | jq -r '.[] | select(.status == "in_progress") | "  - \(.title): \(.current_value // 0)/\(.target_value) \(.target_unit)"'
     fi
+    
+    # Show sample goals
+    echo "4. Sample goals:"
+    echo $GOALS_ARRAY | jq -r '.[0:2] | .[] | "  - \(.title) (\(.goal_type)): \(.current_value // 0)/\(.target_value) - \(.status)"'
 fi
 
 echo ""
@@ -278,22 +279,30 @@ echo ""
 
 echo "1. Getting all reminders..."
 ALL_REMS=$(auth_req "GET" "/user/reminders")
-REMS_COUNT=$(echo $ALL_REMS | jq '.data | length // 0')
+REMS_DATA=$(echo $ALL_REMS | jq '.data // empty')
+# Handle both {count, reminders} and array response
+if echo $REMS_DATA | jq -e '.reminders // empty' > /dev/null 2>&1; then
+    REMS_COUNT=$(echo $REMS_DATA | jq '.count // (.reminders | length)')
+    REMS_ARRAY=$(echo $REMS_DATA | jq '.reminders // []')
+else
+    REMS_COUNT=$(echo $REMS_DATA | jq 'if type == "array" then length else 0 end')
+    REMS_ARRAY=$REMS_DATA
+fi
 success "Found $REMS_COUNT reminders"
 
 if [ "$REMS_COUNT" -gt 0 ]; then
     echo "2. Analyzing reminders..."
     
-    ACTIVE=$(echo $ALL_REMS | jq '[.data[] | select(.is_active == true)] | length')
-    INACTIVE=$(echo $ALL_REMS | jq '[.data[] | select(.is_active == false)] | length')
-    DAILY=$(echo $ALL_REMS | jq '[.data[] | select(.reminder_type == "daily")] | length')
-    WEEKLY=$(echo $ALL_REMS | jq '[.data[] | select(.reminder_type == "weekly")] | length')
+    ACTIVE=$(echo $REMS_ARRAY | jq '[.[] | select(.is_active == true)] | length')
+    INACTIVE=$(echo $REMS_ARRAY | jq '[.[] | select(.is_active == false)] | length')
+    DAILY=$(echo $REMS_ARRAY | jq '[.[] | select(.reminder_type == "daily")] | length')
+    WEEKLY=$(echo $REMS_ARRAY | jq '[.[] | select(.reminder_type == "weekly")] | length')
     
     info "  Active: $ACTIVE, Inactive: $INACTIVE"
     info "  Daily: $DAILY, Weekly: $WEEKLY"
     
     echo "3. Active reminders:"
-    echo $ALL_REMS | jq -r '.data[] | select(.is_active == true) | "  - \(.title) (\(.reminder_type)) at \(.reminder_time)"'
+    echo $REMS_ARRAY | jq -r '.[] | select(.is_active == true) | "  - \(.title) (\(.reminder_type)) at \(.reminder_time)"'
 fi
 
 echo ""
