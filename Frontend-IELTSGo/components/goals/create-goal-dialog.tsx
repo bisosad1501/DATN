@@ -160,14 +160,14 @@ export function CreateGoalDialog({ open, onOpenChange, onSuccess }: CreateGoalDi
             <div className="space-y-2">
               <Label htmlFor="skill_type">{t('skill_type')}</Label>
               <Select
-                value={formData.skill_type || ""}
-                onValueChange={(value) => setFormData({ ...formData, skill_type: value || undefined })}
+                value={formData.skill_type || "all"}
+                onValueChange={(value) => setFormData({ ...formData, skill_type: value === "all" ? undefined : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={tCommon('select') || "Select..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{tCommon('all') || "All"}</SelectItem>
+                  <SelectItem value="all">{tCommon('all') || "All"}</SelectItem>
                   <SelectItem value="listening">{t('listening') || "Listening"}</SelectItem>
                   <SelectItem value="reading">{t('reading') || "Reading"}</SelectItem>
                   <SelectItem value="writing">{t('writing') || "Writing"}</SelectItem>
