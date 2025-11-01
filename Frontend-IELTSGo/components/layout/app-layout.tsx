@@ -14,9 +14,10 @@ interface AppLayoutProps {
   showSidebar?: boolean
   showFooter?: boolean
   hideNavbar?: boolean // Hide navbar when sidebar is shown (for dashboard-like pages)
+  hideTopBar?: boolean // Hide topbar when custom header is used (e.g., DashboardHeader)
 }
 
-export function AppLayout({ children, showSidebar = false, showFooter = true, hideNavbar = false }: AppLayoutProps) {
+export function AppLayout({ children, showSidebar = false, showFooter = true, hideNavbar = false, hideTopBar = false }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -29,14 +30,18 @@ export function AppLayout({ children, showSidebar = false, showFooter = true, hi
         />
       )}
 
-      {/* Show compact topbar when sidebar is shown and navbar is hidden */}
-      {hideNavbar && showSidebar && <TopBar />}
+      {/* Show compact topbar when sidebar is shown and navbar is hidden (unless custom header is used) */}
+      {hideNavbar && showSidebar && !hideTopBar && (
+        <div className="relative z-50">
+          <TopBar />
+        </div>
+      )}
 
-      <div className="flex flex-1 relative z-10">
+      <div className="flex flex-1 relative z-10 min-h-0">
         {showSidebar && (
           <>
             {/* Desktop sidebar */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block relative self-stretch">
               <Sidebar />
             </div>
 
@@ -53,8 +58,8 @@ export function AppLayout({ children, showSidebar = false, showFooter = true, hi
         )}
 
         <main className={cn(
-          "flex-1 relative z-10",
-          hideNavbar && showSidebar ? "bg-muted/30" : "bg-background"
+          "flex-1 relative z-10 flex flex-col",
+          hideNavbar && showSidebar ? "bg-gradient-to-b from-background via-muted/20 to-background" : "bg-background"
         )}>
           {children}
         </main>

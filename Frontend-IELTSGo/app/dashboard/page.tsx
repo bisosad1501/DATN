@@ -9,6 +9,7 @@ import { StatCard } from "@/components/dashboard/stat-card"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
 import { SkillProgressCard } from "@/components/dashboard/skill-progress-card"
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { BookOpen, CheckCircle, Clock, TrendingUp, Flame, BarChart3, Target, ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -125,92 +126,78 @@ function DashboardContent() {
   }
 
   return (
-    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true}>
+    <AppLayout showSidebar={true} showFooter={false} hideNavbar={true} hideTopBar={true}>
+      {/* Integrated Dashboard Header */}
+      <DashboardHeader
+        welcomeMessage={t('welcomeBack', { name: user?.fullName?.split(" ")[0] || tCommon('student') })}
+        subtitle={`${t('subtitle')}${user?.targetBandScore ? ` • ${t('targetBand', { score: user.targetBandScore })}` : ''}`}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        timeRangeLabels={{
+          "7d": t('timeRange.7d'),
+          "30d": t('timeRange.30d'),
+          "90d": t('timeRange.90d'),
+          "all": t('timeRange.all'),
+        }}
+      />
+
       <PageContainer className="py-6">
-        {/* Page Header */}
-        <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight mb-2">{t('welcomeBack', { name: user?.fullName?.split(" ")[0] || tCommon('student') })}</h1>
-            <p className="text-base text-muted-foreground">
-              {t('subtitle')}
-              {user?.targetBandScore && ` • ${t('targetBand', { score: user.targetBandScore })}`}
-            </p>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button 
-              variant={timeRange === "7d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("7d")}
-            >
-              {t('timeRange.7d')}
-            </Button>
-            <Button 
-              variant={timeRange === "30d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("30d")}
-            >
-              {t('timeRange.30d')}
-            </Button>
-            <Button 
-              variant={timeRange === "90d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("90d")}
-            >
-              {t('timeRange.90d')}
-            </Button>
-            <Button 
-              variant={timeRange === "all" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setTimeRange("all")}
-            >
-              {t('timeRange.all')}
-            </Button>
-          </div>
-        </div>
 
-        {/* Quick Actions - Always visible for better UX */}
+        {/* Quick Actions - Refined design */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer group border-2 hover:border-primary/20" onClick={() => router.push("/courses")}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                  <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <Card 
+            className="group relative overflow-hidden border hover:border-primary/30 transition-all duration-200 cursor-pointer bg-gradient-to-br from-white to-blue-50/50 dark:from-card dark:to-blue-950/10 hover:shadow-lg hover:shadow-blue-500/10" 
+            onClick={() => router.push("/courses")}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-blue-500/0 to-blue-500/5 group-hover:from-blue-500/5 group-hover:via-blue-500/5 group-hover:to-blue-500/10 transition-all duration-200" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-all duration-200 shadow-sm group-hover:shadow-md">
+                  <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm mb-1">{tCommon('courses')}</h3>
-                  <p className="text-xs text-muted-foreground">{tCommon('explore_courses') || "Khám phá khóa học"}</p>
+                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">{tCommon('courses')}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{tCommon('explore_courses') || "Khám phá khóa học"}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 flex-shrink-0 mt-1" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow cursor-pointer group border-2 hover:border-primary/20" onClick={() => router.push("/exercises")}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <Card 
+            className="group relative overflow-hidden border hover:border-primary/30 transition-all duration-200 cursor-pointer bg-gradient-to-br from-white to-green-50/50 dark:from-card dark:to-green-950/10 hover:shadow-lg hover:shadow-green-500/10" 
+            onClick={() => router.push("/exercises")}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 via-green-500/0 to-green-500/5 group-hover:from-green-500/5 group-hover:via-green-500/5 group-hover:to-green-500/10 transition-all duration-200" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-green-100 dark:bg-green-900/40 group-hover:bg-green-200 dark:group-hover:bg-green-900/60 transition-all duration-200 shadow-sm group-hover:shadow-md">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm mb-1">{tCommon('exercises')}</h3>
-                  <p className="text-xs text-muted-foreground">{tCommon('practice_exercises') || "Luyện tập bài tập"}</p>
+                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">{tCommon('exercises')}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{tCommon('practice_exercises') || "Luyện tập bài tập"}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 flex-shrink-0 mt-1" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow cursor-pointer group border-2 hover:border-primary/20" onClick={() => router.push("/goals")}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                  <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <Card 
+            className="group relative overflow-hidden border hover:border-primary/30 transition-all duration-200 cursor-pointer bg-gradient-to-br from-white to-purple-50/50 dark:from-card dark:to-purple-950/10 hover:shadow-lg hover:shadow-purple-500/10" 
+            onClick={() => router.push("/goals")}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-purple-500/5 group-hover:from-purple-500/5 group-hover:via-purple-500/5 group-hover:to-purple-500/10 transition-all duration-200" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/40 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/60 transition-all duration-200 shadow-sm group-hover:shadow-md">
+                  <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm mb-1">{t('goals')}</h3>
-                  <p className="text-xs text-muted-foreground">{t('set_and_track_goals') || "Đặt và theo dõi mục tiêu"}</p>
+                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">{t('goals')}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{t('set_and_track_goals') || "Đặt và theo dõi mục tiêu"}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 flex-shrink-0 mt-1" />
               </div>
             </CardContent>
           </Card>
@@ -218,7 +205,7 @@ function DashboardContent() {
 
         {/* Stats Grid - Only show if user preference allows */}
         {showStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
             <StatCard
               title={t('stats.coursesInProgress')}
               value={summary?.inProgressCourses || 0}
@@ -255,16 +242,35 @@ function DashboardContent() {
         {/* Tabs for different views */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className={cn(
-            "grid w-full max-w-md",
+            "grid w-full max-w-md bg-muted/50 p-1 h-auto",
             showStats ? "grid-cols-3" : "grid-cols-1"
           )}>
-            <TabsTrigger value="overview">{t('tabs.overview')}</TabsTrigger>
-            {showStats && <TabsTrigger value="analytics">{t('tabs.analytics')}</TabsTrigger>}
-            {showStats && <TabsTrigger value="skills">{t('tabs.skills')}</TabsTrigger>}
+            <TabsTrigger 
+              value="overview"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              {t('tabs.overview')}
+            </TabsTrigger>
+            {showStats && (
+              <TabsTrigger 
+                value="analytics"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+              >
+                {t('tabs.analytics')}
+              </TabsTrigger>
+            )}
+            {showStats && (
+              <TabsTrigger 
+                value="skills"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+              >
+                {t('tabs.skills')}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-6 mt-6">
             {showStats && (
               <>
                 <ProgressChart

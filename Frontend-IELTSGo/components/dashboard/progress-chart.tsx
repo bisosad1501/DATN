@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useMemo } from "react"
+import { EmptyState } from "./empty-state"
 
 interface DataPoint {
   date: string
@@ -29,12 +30,23 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
   // Ensure data is valid
   const validData = data?.filter(d => d && typeof d.value === 'number' && !isNaN(d.value)) || []
 
+  const hasData = validData.length > 0
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
       <CardContent>
+        {!hasData ? (
+          <EmptyState 
+            type="chart"
+            title="Chưa có dữ liệu học tập"
+            description="Bắt đầu học để xem biểu đồ tiến độ của bạn theo thời gian"
+            actionLabel="Khám phá khóa học"
+            actionHref="/courses"
+          />
+        ) : (
         <div className="relative" style={{ height: chartHeight }}>
           {/* Y-axis labels */}
           <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground pr-2">
@@ -105,6 +117,7 @@ export function ProgressChart({ title, data, color = "#ED372A", valueLabel = "Va
             )}
           </div>
         </div>
+        )}
       </CardContent>
     </Card>
   )

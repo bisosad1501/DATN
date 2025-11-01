@@ -3,6 +3,7 @@ import { BookOpen, FileText, GraduationCap } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 import { useTranslations } from '@/lib/i18n'
+import { EmptyState } from "./empty-state"
 
 interface Activity {
   id: string
@@ -57,16 +58,22 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   // Sort by completedAt desc
   const sorted = Object.values(grouped).sort((a, b) => new Date(b.activity.completedAt).getTime() - new Date(a.activity.completedAt).getTime())
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('recent_activity')}</CardTitle>
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">{t('recent_activity')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{t('no_recent_activity')}</p>
-          ) : (
-            sorted.map(({ activity, count }, index) => {
+        {sorted.length === 0 ? (
+          <EmptyState 
+            type="activity"
+            title={t('no_recent_activity') || "Chưa có hoạt động gần đây"}
+            description="Hoàn thành bài học hoặc bài tập đầu tiên để xem hoạt động của bạn"
+            actionLabel="Bắt đầu học"
+            actionHref="/courses"
+          />
+        ) : (
+          <div className="space-y-4">
+            {sorted.map(({ activity, count }, index) => {
               const config = activityConfig[activity.type] || activityConfig.exercise // Fallback to exercise if type unknown
               const Icon = config.icon
               return (
@@ -101,9 +108,9 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
                   </div>
                 </div>
               )
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

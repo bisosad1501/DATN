@@ -50,15 +50,16 @@ export function Sidebar({ className, defaultCollapsed = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "relative flex flex-col h-screen border-r bg-background transition-all duration-300",
+        "relative flex flex-col h-full min-h-0 border-r border-border bg-background transition-all duration-300",
         collapsed ? "w-20" : "w-[280px]",
         className,
       )}
     >
-      {/* Logo Section */}
+      {/* Logo Section - Aligned with Dashboard Header */}
       <div className={cn(
-        "flex items-center border-b shrink-0 transition-all duration-300",
-        collapsed ? "h-16 justify-center px-2" : "h-16 px-4"
+        "flex items-center shrink-0 transition-all duration-300",
+        "h-16 border-b border-border",
+        collapsed ? "justify-center px-2" : "px-4"
       )}>
         <Logo collapsed={collapsed} noLink={false} />
       </div>
@@ -195,3 +196,4 @@ export function Sidebar({ className, defaultCollapsed = false }: SidebarProps) {
     </aside>
   )
 }
+

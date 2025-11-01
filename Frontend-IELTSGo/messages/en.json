@@ -45,6 +45,8 @@
     "logout": "Log out",
     "login": "Log in",
     "register": "Register",
+    "explore_courses": "Explore Courses",
+    "practice_exercises": "Practice Exercises",
     "save": "Save",
     "cancel": "Cancel",
     "loading": "Loading...",

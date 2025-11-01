@@ -50,7 +50,7 @@ export function TopBar({ className }: TopBarProps) {
   }
 
   return (
-    <header className={`sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-sm ${className || ""}`}>
+    <header className={`sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md shadow-sm ${className || ""}`}>
       <div className="flex h-14 items-center justify-end px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Language Selector */}
